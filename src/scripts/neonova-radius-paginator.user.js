@@ -12,8 +12,8 @@
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/core/utils.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/models/radius-entry.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/models/radius-metrics.js
-// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/collectors/radius-collector.js
-// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/analyzers/radius-analyzer.js
+// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/controllers/radius-collector.js
+// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/controllers/radius-analyzer.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/views/radius-report-view.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/controllers/radius-controller.js
 // ==/UserScript==
