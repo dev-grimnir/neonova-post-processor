@@ -1,28 +1,34 @@
 // ==UserScript==
-// @name         NeoNova RADIUS Search Paginator (Proof of Concept)
+// @name         NovaSubscriber - Full Session Report (Modular)
 // @namespace    http://tampermonkey.net/
-// @version      0.2
-// @description  OOP classes to paginate through RADIUS search results and collect Start/Stop events
+// @version      8.19
+// @description  Full report with graphs, collapsible long disconnects, stats table, and HTML export
 // @author       dev-grimnir
+// @match        https://admin.neonova.net/index.php*
 // @match        https://admin.neonova.net/*
 // @grant        none
 // @run-at       document-end
-// @updateURL    https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/scripts/neonova-radius-paginator.user.js
-// @downloadURL  https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/scripts/neonova-radius-paginator.user.js
+// @updateURL    https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/scripts/neonova-full-report.user.js
+// @downloadURL  https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/scripts/neonova-full-report.user.js
+
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/core/utils.js
-// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/models/radius-entry.js
-// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/models/radius-metrics.js
-// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/controllers/radius-collector.js
-// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/controllers/radius-analyzer.js
-// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/views/radius-report-view.js
-// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/controllers/radius-controller.js
+// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/models/log-entry.js
+// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/controllers/neonova-collector.js
+// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/controllers/neonova-analyzer.js
+// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/views/neonova-report-view.js
+// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/controllers/neonova-report-controller.js
 // ==/UserScript==
 
 (function() {
     'use strict';
 
-    // All classes are now available globally via @require
+    console.log('Full report script loaded - checking for controller...');
 
-    const controller = new RadiusController();
-    controller.run();
+    if (typeof NeonovaReportController === 'undefined') {
+        console.error('NeonovaReportController is not defined - check @require loads');
+    } else {
+        console.log('Controller found - initializing');
+        const controller = new NeonovaReportController();
+        controller.run();
+    }
 })();
