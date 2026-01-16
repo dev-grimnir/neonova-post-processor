@@ -35,3 +35,6 @@ Fork → PR welcome.
 
 ## License
 MIT
+
+ [NovaSubscriber Session Report.pdf](https://github.com/user-attachments/files/24676085/NovaSubscriber.Session.Report.pdf)
+
