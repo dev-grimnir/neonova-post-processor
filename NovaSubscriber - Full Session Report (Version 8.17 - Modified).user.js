@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         NovaSubscriber - Full Session Report (Version 8.17 - Modified)
+// @name         neonova-full-report.user.js
 // @namespace    http://tampermonkey.net/
 // @version      8.17
 // @description  Full report with graphs, collapsible long disconnects, stats table, and HTML export
@@ -8,8 +8,8 @@
 // @match        https://admin.neonova.net/*
 // @grant        none
 // @run-at       document-end
-// @updateURL    https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/NovaSubscriber%20-%20Full%20Session%20Report%20(Version%208.17%20-%20Modified).user.js
-// @downloadURL  https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/NovaSubscriber%20-%20Full%20Session%20Report%20(Version%208.17%20-%20Modified).user.js
+// @updateURL    https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/neonova-full-report.user.js
+// @downloadURL  https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/neonova-full-report.user.js
 // ==/UserScript==
 
 (function() {
