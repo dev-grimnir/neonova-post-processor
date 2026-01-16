@@ -8,6 +8,8 @@
 // @match        https://admin.neonova.net/*
 // @grant        none
 // @run-at       document-end
+// @updateURL    https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/NovaSubscriber%20-%20Full%20Session%20Report%20(Version%208.17%20-%20Modified).user.js
+// @downloadURL  https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/NovaSubscriber%20-%20Full%20Session%20Report%20(Version%208.17%20-%20Modified).user.js
 // ==/UserScript==
 
 (function() {
