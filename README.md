@@ -20,9 +20,14 @@ Designed for DSL/field techs and small ISP admins dealing with frequent modem fl
 - Mobile-friendly report view
 
 ## Installation
-1. Install Tampermonkey extension (Chrome/Firefox/Edge)
-2. Click the raw link below → Tampermonkey will prompt to install  
-   [Install script](https://raw.githubusercontent.com/YOURUSERNAME/neonova-subscriber-report/main/neonova-report.user.js)
+1. Install Tampermonkey extension.
+2. Click the raw links below — Tampermonkey will install:
+
+   - [Full Session Report](https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/NovaSubscriber%20-%20Full%20Session%20Report%20(Version%208.17%20-%20Modified).user.js)  
+     (Main: scores, charts, exports)
+
+   - [Reconnect Time Fill](https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/NovaSubscriber%20-%20Reconnect%20Time%20Fill%20Only%20(Color%20Text%20Only).user.js)  
+     (Helper: fills reconnect times with colors)
 3. Go to https://admin.neonova.net → login → search for a customer → run a radius search → click "Run Full Report" button
 
 ## Usage
