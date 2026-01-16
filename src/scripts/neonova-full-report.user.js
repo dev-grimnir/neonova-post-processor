@@ -8,8 +8,8 @@
 // @match        https://admin.neonova.net/*
 // @grant        none
 // @run-at       document-end
-// @updateURL    https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/neonova-full-report.user.js
-// @downloadURL  https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/neonova-full-report.user.js
+// @updateURL    https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/scripts/neonova-full-report.user.js
+// @downloadURL  https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/scripts/neonova-full-report.user.js
 // ==/UserScript==
 
 (function() {
