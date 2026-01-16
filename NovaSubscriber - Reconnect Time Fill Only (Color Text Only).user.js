@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         NovaSubscriber - Reconnect Time Fill Only (Color Text Only)
+// @name         neonova-reconnect-fill
 // @namespace    http://tampermonkey.net/
 // @version      2.4
 // @description  Fills reconnect time for "Start" rows as colored bold text in h/m/s, keeps existing session time on "Stop" rows
@@ -8,8 +8,8 @@
 // @match        https://admin.neonova.net/*
 // @grant        none
 // @run-at       document-end
-// @updateURL    https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/NovaSubscriber%20-%20Reconnect%20Time%20Fill%20Only%20(Color%20Text%20Only).user.js
-// @downloadURL  https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/NovaSubscriber%20-%20Reconnect%20Time%20Fill%20Only%20(Color%20Text%20Only).user.js
+// @updateURL    https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/neonova-reconnect-fill.user.js
+// @downloadURL  https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/neonova-reconnect-fill.user.js
 // ==/UserScript==
 
 (function() {
