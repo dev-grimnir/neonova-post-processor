@@ -82,7 +82,7 @@ class NeonovaAnalyzer {
     computeMetrics() {
         const peakHourCount = Math.max(...this.hourlyCount);
         const peakHour = this.hourlyCount.indexOf(peakHourCount);
-        const peakHourStr = peakHourCount > 0 ? `${peakHour}:00–${peakHour + 1}:00 (${peakHourCount} disconnects)` : 'None';
+        const peakHourStr = peakHourCount > 0 ? `${peakHour}:00-${peakHour + 1}:00 (${peakHourCount} disconnects)` : 'None';
 
         let peakDayStr = 'None';
         let peakDayCount = 0;
