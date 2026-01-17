@@ -19,6 +19,7 @@ class NeonovaAnalyzer {
     this.hourlyCount = Array(24).fill(0);
     this.dailyCount = {};
     this.disconnectDates = []; // Force array
+    console.log('[Analyzer] Constructor complete - disconnectDates:', this.disconnectDates);
     console.log('[Analyzer] Constructor - disconnectDates initialized as array');
     this.analyze();
 }
