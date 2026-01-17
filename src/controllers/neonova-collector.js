@@ -27,6 +27,9 @@ class NeonovaCollector {
             }
         });
         localStorage.setItem('novaEntries', JSON.stringify(this.allEntries));
+        console.log('[Collector] collectFromPage finished');
+        console.log('  - Rows processed:', rows.length);
+        console.log('  - Total entries now:', this.allEntries.length);
     }
 
     startAnalysis() {
@@ -64,6 +67,9 @@ class NeonovaCollector {
                 lastStatus = entry.status;
             }
         });
+        console.log('[Collector] cleanEntries finished');
+        console.log('  - Raw entries before clean:', this.allEntries.length);
+        console.log('  - Cleaned entries after:', cleaned.length);
         return cleaned;
     }
 
