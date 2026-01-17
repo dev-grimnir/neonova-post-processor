@@ -77,6 +77,11 @@ class NeonovaAnalyzer {
             const finalDuration = (this.lastDate.getTime() - lastTransitionTime) / 1000;
             if (finalDuration > 0) this.sessionSeconds.push(finalDuration);
         }
+            console.log('[Analyzer] analyze() finished');
+            console.log('  - disconnectDates length:', this.disconnectDates.length);
+            console.log('  - disconnectDates type:', typeof this.disconnectDates, Array.isArray(this.disconnectDates));
+            console.log('  - sessionSeconds length:', this.sessionSeconds.length);
+            console.log('  - reconnectSeconds length:', this.reconnectSeconds.length);
     }
 
     computeMetrics() {
@@ -193,6 +198,9 @@ class NeonovaAnalyzer {
             reconnectBins: this.computeReconnectBins(),
             console.log('disconnectDates before sort:', this.disconnectDates);
             console.log('Type of disconnectDates:', typeof this.disconnectDates, Array.isArray(this.disconnectDates));
+            console.log('[Analyzer] About to call computeRolling7Day');
+            console.log('  - disconnectDates before call:', this.disconnectDates);
+            console.log('  - is array?', Array.isArray(this.disconnectDates));
             rolling7Day: this.computeRolling7Day(),
             rollingLabels: this.rollingLabels,
             longDisconnects: this.longDisconnects,
@@ -228,6 +236,7 @@ class NeonovaAnalyzer {
     }
 
     computeRolling7Day() {
+        console.log('[Analyzer] computeRolling7Day started');
         // Extra guard: if undefined, set to empty array
         if (this.disconnectDates === undefined || this.disconnectDates === null) {
             this.disconnectDates = [];
