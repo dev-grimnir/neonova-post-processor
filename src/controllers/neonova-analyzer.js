@@ -18,7 +18,7 @@ class NeonovaAnalyzer {
         this.dailyDisconnects = Array(7).fill(0);
         this.hourlyCount = Array(24).fill(0);
         this.dailyCount = {};
-        this.disconnectDates = [];
+        this.disconnectDates = [];  // Force array here
         this.analyze();
     }
 
@@ -191,6 +191,8 @@ class NeonovaAnalyzer {
             rawMeanScore, rawMedianScore, monitoringPeriod: this.firstDate && this.lastDate ? `${this.firstDate.toLocaleString()} to ${this.lastDate.toLocaleString()}` : 'N/A',
             sessionBins: this.computeSessionBins(),
             reconnectBins: this.computeReconnectBins(),
+            console.log('disconnectDates before sort:', this.disconnectDates);
+            console.log('Type of disconnectDates:', typeof this.disconnectDates, Array.isArray(this.disconnectDates));
             rolling7Day: this.computeRolling7Day(),
             rollingLabels: this.rollingLabels,
             longDisconnects: this.longDisconnects,
@@ -225,29 +227,30 @@ class NeonovaAnalyzer {
         return bins;
     }
 
-computeRolling7Day() {
-    // Guard: ensure disconnectDates is an array
-    if (!Array.isArray(this.disconnectDates)) {
-        this.disconnectDates = [];
-        console.warn('disconnectDates was undefined - initialized to empty array');
+    computeRolling7Day() {
+        // Extra guard: if undefined, set to empty array
+        if (this.disconnectDates === undefined || this.disconnectDates === null) {
+            this.disconnectDates = [];
+            console.warn('disconnectDates was undefined/null - reset to empty array');
+        }
+    
+        // Now safe to sort
+        this.disconnectDates.sort((a, b) => a - b);
+    
+        const rolling7Day = [];
+        this.rollingLabels = [];
+        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    
+        let currentDate = new Date(this.firstDate || Date.now());
+        currentDate.setHours(0,0,0,0);
+    
+        while (currentDate <= (this.lastDate || new Date())) {
+            const windowStart = new Date(currentDate - sevenDaysMs);
+            const count = this.disconnectDates.filter(d => d >= windowStart && d <= currentDate).length;
+            rolling7Day.push(count);
+            this.rollingLabels.push(currentDate.toLocaleDateString());
+            currentDate = new Date(currentDate.getTime() + 24*60*60*1000);
+        }
+        return rolling7Day;
     }
-
-    this.disconnectDates.sort((a, b) => a - b);
-
-    const rolling7Day = [];
-    this.rollingLabels = [];
-    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-
-    let currentDate = new Date(this.firstDate || Date.now());
-    currentDate.setHours(0,0,0,0);
-
-    while (currentDate <= (this.lastDate || new Date())) {
-        const windowStart = new Date(currentDate - sevenDaysMs);
-        const count = this.disconnectDates.filter(d => d >= windowStart && d <= currentDate).length;
-        rolling7Day.push(count);
-        this.rollingLabels.push(currentDate.toLocaleDateString());
-        currentDate = new Date(currentDate.getTime() + 24*60*60*1000);
-    }
-    return rolling7Day;
-}
 }
