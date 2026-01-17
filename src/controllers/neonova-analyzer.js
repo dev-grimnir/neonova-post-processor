@@ -5,22 +5,23 @@
  */
 class NeonovaAnalyzer {
     constructor(cleanedEntries) {
-        this.cleanEntries = cleanedEntries;
-        this.disconnects = 0;
-        this.sessionSeconds = [];
-        this.reconnectSeconds = [];
-        this.reconnects = [];
-        this.longDisconnects = [];
-        this.firstDate = null;
-        this.lastDate = null;
-        this.lastDisconnectDate = null;
-        this.hourlyDisconnects = Array(24).fill(0);
-        this.dailyDisconnects = Array(7).fill(0);
-        this.hourlyCount = Array(24).fill(0);
-        this.dailyCount = {};
-        this.disconnectDates = [];  // Force array here
-        this.analyze();
-    }
+    this.cleanEntries = cleanedEntries;
+    this.disconnects = 0;
+    this.sessionSeconds = [];
+    this.reconnectSeconds = [];
+    this.reconnects = [];
+    this.longDisconnects = [];
+    this.firstDate = null;
+    this.lastDate = null;
+    this.lastDisconnectDate = null;
+    this.hourlyDisconnects = Array(24).fill(0);
+    this.dailyDisconnects = Array(7).fill(0);
+    this.hourlyCount = Array(24).fill(0);
+    this.dailyCount = {};
+    this.disconnectDates = []; // Force array
+    console.log('[Analyzer] Constructor - disconnectDates initialized as array');
+    this.analyze();
+}
 
     analyze() {
         let currentState = null;
