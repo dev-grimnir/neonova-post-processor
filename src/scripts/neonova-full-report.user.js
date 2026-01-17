@@ -28,7 +28,9 @@
     'use strict';
 
     // All classes are now loaded globally via @require
-
+    console.log('[Entry] Script started');
     const controller = new NeonovaReportController();
+    console.log('[Entry] Controller instantiated');
     controller.run();
+    console.log('[Entry] run() called');
 })();
