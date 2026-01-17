@@ -85,7 +85,7 @@ class NeonovaReportView {
             Stability Score (Mean-Based): ${meanStabilityScore}/100
             <span class="tooltip">
                 <strong>How this score is calculated (using average session length, more sensitive to frequent short sessions):</strong><br><br>
-                • Uptime component: ${this.metrics.percentConnected}% × 0.6 = ${this.metrics.uptimeComponent.toFixed(1)}<br>
+                • Uptime component: ${this.metrics.percentConnected}% * 0.6 = ${this.metrics.uptimeComponent.toFixed(1)}<br>
                 • Session quality bonus: ${this.metrics.sessionBonusMean.toFixed(1)}<br>
                 • Fast recovery bonus (<30s, capped 18/day): ${this.metrics.totalFastBonus.toFixed(1)}<br>
                 • Flapping penalty: -${this.metrics.flappingPenalty.toFixed(1)}<br>
@@ -99,7 +99,7 @@ class NeonovaReportView {
             Stability Score (Median-Based): ${medianStabilityScore}/100
             <span class="tooltip">
                 <strong>How this score is calculated (using median session length, more resistant to outliers):</strong><br><br>
-                • Uptime component: ${this.metrics.percentConnected}% × 0.6 = ${this.metrics.uptimeComponent.toFixed(1)}<br>
+                • Uptime component: ${this.metrics.percentConnected}% * 0.6 = ${this.metrics.uptimeComponent.toFixed(1)}<br>
                 • Session quality bonus: ${this.metrics.sessionBonusMedian.toFixed(1)}<br>
                 • Fast recovery bonus (<30s, capped 18/day): ${this.metrics.totalFastBonus.toFixed(1)}<br>
                 • Flapping penalty: -${this.metrics.flappingPenalty.toFixed(1)}<br>
