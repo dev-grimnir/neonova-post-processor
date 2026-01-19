@@ -195,7 +195,7 @@ class NeonovaAnalyzer {
             rollingLabels: this.rollingLabels,
             longDisconnects: this.longDisconnects,
             disconnects: this.disconnects,
-            allEntriesLength: this.allEntries.length,
+            //allEntriesLength: this.allEntries.length,
             cleanedEntriesLength: this.cleanEntries.length
         };
     }
