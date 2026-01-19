@@ -238,11 +238,9 @@ class NeonovaAnalyzer {
     }
 
     computeRolling7Day() {
-        console.log('[Analyzer] computeRolling7Day started');
         // Extra guard: if undefined, set to empty array
         if (this.disconnectDates === undefined || this.disconnectDates === null) {
             this.disconnectDates = [];
-            console.warn('disconnectDates was undefined/null - reset to empty array');
         }
     
         // Now safe to sort
