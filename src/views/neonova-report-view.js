@@ -49,21 +49,21 @@ class NeonovaReportView {
     }
 
 generateReportHTML(csvContent) {
-    const { meanStabilityScore, medianStabilityScore } = this.metrics;
+    const { meanStabilityScore, medianStabilityScore } = this.metrics || {};
 
-    const meanClass = meanStabilityScore >= 80 ? 'score-good' : meanStabilityScore >= 50 ? 'score-fair' : 'score-poor';
-    const medianClass = medianStabilityScore >= 80 ? 'score-good' : medianStabilityScore >= 50 ? 'score-fair' : 'score-poor';
+    const meanClass = (meanStabilityScore ?? 0) >= 80 ? 'score-good' : (meanStabilityScore ?? 0) >= 50 ? 'score-fair' : 'score-poor';
+    const medianClass = (medianStabilityScore ?? 0) >= 80 ? 'score-good' : (medianStabilityScore ?? 0) >= 50 ? 'score-fair' : 'score-poor';
 
-    // Safe defaults for any potentially undefined arrays (prevents .join() crashes)
-    const safeHourlyDisconnects = this.metrics.hourlyDisconnects ?? Array(24).fill(0);
-    const safeDailyDisconnects = this.metrics.dailyDisconnects ?? Array(7).fill(0);
-    const safeRollingLabels = this.metrics.rollingLabels ?? [];
-    const safeRolling7Day = this.metrics.rolling7Day ?? [];
-    const safeSessionBins = this.metrics.sessionBins ?? [0, 0, 0, 0, 0];
-    const safeReconnectBins = this.metrics.reconnectBins ?? [0, 0, 0, 0];
+    // Defensive safe arrays for charts (prevents undefined crashes)
+    const safeHourlyDisconnects = this.metrics?.hourlyDisconnects ?? Array(24).fill(0);
+    const safeDailyDisconnects = this.metrics?.dailyDisconnects ?? Array(7).fill(0);
+    const safeRollingLabels = this.metrics?.rollingLabels ?? [];
+    const safeRolling7Day = this.metrics?.rolling7Day ?? [];
+    const safeSessionBins = this.metrics?.sessionBins ?? [0, 0, 0, 0, 0];
+    const safeReconnectBins = this.metrics?.reconnectBins ?? [0, 0, 0, 0];
 
-    // Safe fallback for raw entries count (since we removed allEntriesLength)
-    const safeRawEntries = this.metrics.allEntriesLength ?? this.metrics.cleanedEntriesLength ?? 0;
+    // Safe raw count fallback
+    const safeRawEntries = this.metrics?.allEntriesLength ?? (this.metrics?.cleanedEntriesLength ?? 0);
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -72,59 +72,61 @@ generateReportHTML(csvContent) {
     <title>NovaSubscriber Session Report</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        button.export-btn { padding: 12px 24px; margin: 10px; font-size: 18px; background: #006400; color: white; border: none; border-radius: 8px; cursor: pointer; }
-        button.export-btn:hover { background: #008000; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0fff0; }
+        .container { max-width: 1200px; margin: 40px auto; padding: 30px; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        h1 { text-align: center; color: #006400; font-size: 44px; margin-bottom: 10px; }
         .stability-score { font-size: 32px; font-weight: bold; text-align: center; margin: 20px 0; cursor: help; position: relative; }
         .score-good { color: #006400; }
         .score-fair { color: #ff8c00; }
         .score-poor { color: #c00; }
-        .tooltip { visibility: hidden; width: 520px; background-color: #333; color: #fff; text-align: left; border-radius: 6px; padding: 18px; position: absolute; z-index: 1; top: 100%; left: 50%; margin-left: -260px; opacity: 0; transition: opacity 0.3s; font-size: 15px; line-height: 1.5; }
+        .tooltip { visibility: hidden; width: 520px; background: #333; color: #fff; text-align: left; border-radius: 6px; padding: 18px; position: absolute; z-index: 1; top: 100%; left: 50%; margin-left: -260px; opacity: 0; transition: opacity 0.3s; font-size: 15px; line-height: 1.5; }
         .stability-score:hover .tooltip { visibility: visible; opacity: 1; }
         .tooltip strong { color: #4fc3f7; }
         .tooltip .formula { font-style: italic; color: #ffeb3b; margin: 8px 0; display: block; }
         .collapsible-header { cursor: pointer; background: #ffebee; padding: 12px; margin: 20px 0 0 0; border-radius: 6px; font-weight: bold; color: #c62828; text-align: center; border: 1px solid #ef9a9a; }
         .collapsible-header:hover { background: #ffcdd2; }
-        @media print {
-            #longDisconnectsContainer { display: block !important; }
-        }
+        button.export-btn { padding: 12px 24px; margin: 10px; font-size: 18px; background: #006400; color: white; border: none; border-radius: 8px; cursor: pointer; }
+        button.export-btn:hover { background: #008000; }
+        canvas { max-width: 100%; }
+        @media print { #longDisconnectsContainer { display: block !important; } }
     </style>
 </head>
 <body>
-    <div style="font-family: Arial, sans-serif; max-width: 1200px; margin: 40px auto; padding: 30px; background: #f0fff0; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-        <h1 style="text-align:center; color:#006400; font-size:44px; margin-bottom:10px;">Session Report Complete</h1>
+    <div class="container">
+        <h1>Session Report Complete</h1>
+
         <div class="stability-score ${meanClass}">
-            Stability Score (Mean-Based): ${meanStabilityScore}/100
+            Stability Score (Mean-Based): ${meanStabilityScore ?? 0}/100
             <span class="tooltip">
-                <strong>How this score is calculated (using average session length, more sensitive to frequent short sessions):</strong><br><br>
-                • Uptime component: ${this.metrics.percentConnected ?? 'N/A'}% * 0.6 = ${(this.metrics.uptimeComponent ?? 0).toFixed(1)}<br>
-                • Session quality bonus: ${(this.metrics.sessionBonusMean ?? 0).toFixed(1)}<br>
-                • Fast recovery bonus (<30s, capped 18/day): ${(this.metrics.totalFastBonus ?? 0).toFixed(1)}<br>
-                • Flapping penalty: -${(this.metrics.flappingPenalty ?? 0).toFixed(1)}<br>
-                • Long outage penalty (>30min): -${(this.metrics.longOutagePenalty ?? 0).toFixed(1)}<br><br>
-                Raw score: ${(this.metrics.rawMeanScore ?? 0).toFixed(1)}<br>
-                Displayed score (clamped 0–100): ${meanStabilityScore}/100<br>
-                Penalties scaled by timespan for fairness over long periods.
+                <strong>Mean-based calculation (sensitive to frequent short sessions):</strong><br><br>
+                Uptime: ${(this.metrics?.uptimeComponent ?? 0).toFixed(1)}<br>
+                Session bonus: ${(this.metrics?.sessionBonusMean ?? 0).toFixed(1)}<br>
+                Fast recoveries: ${(this.metrics?.totalFastBonus ?? 0).toFixed(1)}<br>
+                Flapping penalty: -${(this.metrics?.flappingPenalty ?? 0).toFixed(1)}<br>
+                Long outage penalty: -${(this.metrics?.longOutagePenalty ?? 0).toFixed(1)}<br>
+                Raw: ${(this.metrics?.rawMeanScore ?? 0).toFixed(1)}
             </span>
         </div>
+
         <div class="stability-score ${medianClass}">
-            Stability Score (Median-Based): ${medianStabilityScore}/100
+            Stability Score (Median-Based): ${medianStabilityScore ?? 0}/100
             <span class="tooltip">
-                <strong>How this score is calculated (using median session length, more resistant to outliers):</strong><br><br>
-                • Uptime component: ${this.metrics.percentConnected ?? 'N/A'}% * 0.6 = ${(this.metrics.uptimeComponent ?? 0).toFixed(1)}<br>
-                • Session quality bonus: ${(this.metrics.sessionBonusMedian ?? 0).toFixed(1)}<br>
-                • Fast recovery bonus (<30s, capped 18/day): ${(this.metrics.totalFastBonus ?? 0).toFixed(1)}<br>
-                • Flapping penalty: -${(this.metrics.flappingPenalty ?? 0).toFixed(1)}<br>
-                • Long outage penalty (>30min): -${(this.metrics.longOutagePenalty ?? 0).toFixed(1)}<br><br>
-                Raw score: ${(this.metrics.rawMedianScore ?? 0).toFixed(1)}<br>
-                Displayed score (clamped 0–100): ${medianStabilityScore}/100<br>
-                Penalties scaled by timespan for fairness over long periods.
+                <strong>Median-based calculation (resistant to outliers):</strong><br><br>
+                Uptime: ${(this.metrics?.uptimeComponent ?? 0).toFixed(1)}<br>
+                Session bonus: ${(this.metrics?.sessionBonusMedian ?? 0).toFixed(1)}<br>
+                Fast recoveries: ${(this.metrics?.totalFastBonus ?? 0).toFixed(1)}<br>
+                Flapping penalty: -${(this.metrics?.flappingPenalty ?? 0).toFixed(1)}<br>
+                Long outage penalty: -${(this.metrics?.longOutagePenalty ?? 0).toFixed(1)}<br>
+                Raw: ${(this.metrics?.rawMedianScore ?? 0).toFixed(1)}
             </span>
         </div>
-        <h2 style="text-align:center; color:#555; font-size:22px; margin:20px 0;">
-            ${this.pages} pages | ${safeRawEntries} raw records (${this.metrics.cleanedEntriesLength ?? 0} after de-duplication)
+
+        <h2 style="text-align:center; color:#555;">
+            ${this.pages ?? 0} pages | ${safeRawEntries} raw records (${this.metrics?.cleanedEntriesLength ?? 0} after de-duplication)
         </h2>
-        <h3 style="text-align:center; color:#777; font-size:18px; margin-bottom:30px;">
-            Monitoring period: ${this.metrics.monitoringPeriod ?? 'N/A'} (${(this.metrics.daysSpanned ?? 0).toFixed(1)} days spanned)
+
+        <h3 style="text-align:center; color:#777;">
+            Monitoring period: ${this.metrics?.monitoringPeriod ?? 'N/A'} (${(this.metrics?.daysSpanned ?? 0).toFixed(1)} days)
         </h3>
 
         <div style="background:white; padding:20px; border-radius:10px; margin-bottom:40px;">
@@ -147,29 +149,113 @@ generateReportHTML(csvContent) {
             <canvas id="reconnectHist" height="120"></canvas>
         </div>
 
-        ${this.generateLongDisconnSection()}
+        ${this.generateLongDisconnSection() ?? '<p style="text-align:center; color:#666;">No long disconnects found.</p>'}
 
         <table style="width:100%; font-size:18px; border-collapse:collapse; margin-top:40px;">
-            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Number of Sessions</td><td style="padding:18px; text-align:right; background:#e8f5e8;"><b>${this.metrics.numSessions ?? 0}</b></td></tr>
-            <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">Number of Disconnects</td><td style="padding:18px; text-align:right; background:#f0f8f0;"><b>${this.metrics.disconnects ?? 0}</b></td></tr>
-            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Reconnects Within 5 Minutes</td><td style="padding:18px; text-align:right; background:#e8f5e8;"><b>${this.metrics.quickReconnects ?? 0}</b></td></tr>
-            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Longest Continuous Connected</td><td style="padding:18px; text-align:right; background:#e8f5e8;"><b>${formatDuration((this.metrics.longestSessionMin ?? 0) * 60)}</b></td></tr>
-            <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">Shortest Session Length</td><td style="padding:18px; text-align:right; background:#f0f8f0;"><b>${this.metrics.shortestSessionMin === 'N/A' ? 'N/A' : formatDuration((this.metrics.shortestSessionMin ?? 0) * 60)}</b></td></tr>
-            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Average Session Length</td><td style="padding:18px; text-align:right; background:#e8f5e8;"><b>${this.metrics.avgSessionMin ?? 'N/A'} minutes</b></td></tr>
-            <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">95th Percentile Reconnect Time</td><td style="padding:18px; text-align:right; background:#f0f8f0;"><b>${this.metrics.p95ReconnectMin ?? 'N/A'} minutes</b></td></tr>
-            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Average Time to Reconnect</td><td style="padding:18px; text-align:right; background:#e8f5e8;"><b>${this.metrics.avgReconnectMin ?? 'N/A'} minutes</b></td></tr>
-            <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">Median Time to Reconnect</td><td style="padding:18px; text-align:right; background:#f0f8f0;"><b>${this.metrics.medianReconnectMin ?? 'N/A'} minutes</b></td></tr>
-            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Peak Disconnect Hour</td><td style="padding:18px; text-align:right; background:#e8f5e8;"><b>${this.metrics.peakHourStr ?? 'N/A'}</b></td></tr>
-            <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">Peak Disconnect Day</td><td style="padding:18px; text-align:right; background:#f0f8f0;"><b>${this.metrics.peakDayStr ?? 'N/A'}</b></td></tr>
-            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Disconnects (Business Hours 8AM-6PM)</td><td style="padding:18px; text-align:right; background:#e8f5e8;"><b>${this.metrics.businessDisconnects ?? 0}</b></td></tr>
-            <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">Disconnects (Off-Hours)</td><td style="padding:18px; text-align:right; background:#f0f8f0;"><b>${this.metrics.offHoursDisconnects ?? 0}</b></td></tr>
-            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Time Since Last Disconnect</td><td style="padding:18px; text-align:right; background:#e8f5e8;"><b>${this.metrics.timeSinceLastStr ?? 'N/A'}</b></td></tr>
+            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Number of Sessions</td><td style="padding:18px; text-align:right;"><b>${this.metrics?.numSessions ?? 0}</b></td></tr>
+            <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">Number of Disconnects</td><td style="padding:18px; text-align:right;"><b>${this.metrics?.disconnects ?? 0}</b></td></tr>
+            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Reconnects Within 5 Minutes</td><td style="padding:18px; text-align:right;"><b>${this.metrics?.quickReconnects ?? 0}</b></td></tr>
+            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Longest Continuous Connected</td><td style="padding:18px; text-align:right;"><b>${formatDuration((this.metrics?.longestSessionMin ?? 0) * 60)}</b></td></tr>
+            <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">Shortest Session Length</td><td style="padding:18px; text-align:right;"><b>${this.metrics?.shortestSessionMin === 'N/A' ? 'N/A' : formatDuration((this.metrics?.shortestSessionMin ?? 0) * 60)}</b></td></tr>
+            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Average Session Length</td><td style="padding:18px; text-align:right;"><b>${this.metrics?.avgSessionMin ?? 'N/A'} minutes</b></td></tr>
+            <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">95th Percentile Reconnect Time</td><td style="padding:18px; text-align:right;"><b>${this.metrics?.p95ReconnectMin ?? 'N/A'} minutes</b></td></tr>
+            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Average Time to Reconnect</td><td style="padding:18px; text-align:right;"><b>${this.metrics?.avgReconnectMin ?? 'N/A'} minutes</b></td></tr>
+            <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">Median Time to Reconnect</td><td style="padding:18px; text-align:right;"><b>${this.metrics?.medianReconnectMin ?? 'N/A'} minutes</b></td></tr>
+            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Peak Disconnect Hour</td><td style="padding:18px; text-align:right;"><b>${this.metrics?.peakHourStr ?? 'N/A'}</b></td></tr>
+            <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">Peak Disconnect Day</td><td style="padding:18px; text-align:right;"><b>${this.metrics?.peakDayStr ?? 'N/A'}</b></td></tr>
+            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Disconnects (Business Hours)</td><td style="padding:18px; text-align:right;"><b>${this.metrics?.businessDisconnects ?? 0}</b></td></tr>
+            <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">Disconnects (Off-Hours)</td><td style="padding:18px; text-align:right;"><b>${this.metrics?.offHoursDisconnects ?? 0}</b></td></tr>
+            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Time Since Last Disconnect</td><td style="padding:18px; text-align:right;"><b>${this.metrics?.timeSinceLastStr ?? 'N/A'}</b></td></tr>
         </table>
 
-        <!-- If you have export button or more content, add it here -->
+        <div style="text-align:center; margin-top:40px;">
+            <button class="export-btn" onclick="exportToCSV()">Export CSV</button>
+            <button class="export-btn" onclick="exportToHTML()">Export HTML</button>
+            <button class="export-btn" onclick="exportToPDF()">Export PDF</button>
+        </div>
     </div>
 
-    <!-- Note: Chart initialization scripts should be added here or in openReport() -->
+    <script>
+        // Chart initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            new Chart(document.getElementById('hourlyChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['00-01','01-02','02-03','03-04','04-05','05-06','06-07','07-08','08-09','09-10','10-11','11-12',
+                             '12-13','13-14','14-15','15-16','16-17','17-18','18-19','19-20','20-21','21-22','22-23','23-00'],
+                    datasets: [{ label: 'Disconnects per Hour', data: ${JSON.stringify(safeHourlyDisconnects)}, backgroundColor: 'rgba(255,99,132,0.6)' }]
+                },
+                options: { scales: { y: { beginAtZero: true } } }
+            });
+
+            new Chart(document.getElementById('dailyChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+                    datasets: [{ label: 'Disconnects per Day', data: ${JSON.stringify(safeDailyDisconnects)}, backgroundColor: 'rgba(54,162,235,0.6)' }]
+                },
+                options: { scales: { y: { beginAtZero: true } } }
+            });
+
+            new Chart(document.getElementById('rolling7DayChart'), {
+                type: 'line',
+                data: {
+                    labels: ${JSON.stringify(safeRollingLabels)},
+                    datasets: [{ label: 'Rolling 7-Day Disconnects', data: ${JSON.stringify(safeRolling7Day)}, borderColor: 'rgba(75,192,192,1)', fill: false }]
+                },
+                options: { scales: { y: { beginAtZero: true } } }
+            });
+
+            new Chart(document.getElementById('sessionHist'), {
+                type: 'bar',
+                data: {
+                    labels: ['≤5min', '5-30min', '30-60min', '1-4h', '>4h'],
+                    datasets: [{ label: 'Session Length Distribution', data: ${JSON.stringify(safeSessionBins)}, backgroundColor: 'rgba(153,102,255,0.6)' }]
+                },
+                options: { scales: { y: { beginAtZero: true } } }
+            });
+
+            new Chart(document.getElementById('reconnectHist'), {
+                type: 'bar',
+                data: {
+                    labels: ['≤1min', '1-5min', '5-30min', '>30min'],
+                    datasets: [{ label: 'Reconnect Time Distribution', data: ${JSON.stringify(safeReconnectBins)}, backgroundColor: 'rgba(255,159,64,0.6)' }]
+                },
+                options: { scales: { y: { beginAtZero: true } } }
+            });
+        });
+
+        // Export functions
+        function exportToCSV() {
+            const csv = ${JSON.stringify(csvContent)};
+            const blob = new Blob([csv], {type: 'text/csv'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'nova_session_report.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function exportToHTML() {
+            const html = document.documentElement.outerHTML;
+            const blob = new Blob([html], {type: 'text/html'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'nova_session_report.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function exportToPDF() {
+            alert('PDF export not implemented yet. You can use browser print-to-PDF or add jsPDF library.');
+        }
+    </script>
 </body>
 </html>`;
 }
