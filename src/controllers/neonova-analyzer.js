@@ -196,8 +196,8 @@ class NeonovaAnalyzer {
             longDisconnects: this.longDisconnects,
             disconnects: this.disconnects,
             hourlyDisconnects: this.hourlyDisconnects, 
-            cleanedEntriesLength: this.cleanEntries.length
-            allEntriesLength: this.cleanEntries.length,  // Use cleaned as proxy (since raw not tracked)
+            cleanedEntriesLength: this.cleanEntries.length,
+            allEntriesLength: this.cleanEntries.length,
             hourlyDisconnects: this.hourlyDisconnects,
             dailyDisconnects: this.dailyDisconnects,
             hourlyCount: this.hourlyCount
