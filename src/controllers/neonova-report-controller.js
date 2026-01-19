@@ -1,4 +1,4 @@
-const/**
+/**
  * @file src/controllers/neonova-report-controller.js
  * @requires ../collectors/neonova-collector
  * @requires ../controllers/neonova-analyzer
