@@ -195,7 +195,10 @@ class NeonovaAnalyzer {
             rollingLabels: this.rollingLabels,
             longDisconnects: this.longDisconnects,
             disconnects: this.disconnects,
-            //allEntriesLength: this.allEntries.length,
+            hourlyDisconnects: this.hourlyDisconnects, 
+            // If there's a separate peak-hour or daily chart, also add:
+            // hourlyCount: this.hourlyCount,
+            // dailyDisconnects: this.dailyDisconnects,
             cleanedEntriesLength: this.cleanEntries.length
         };
     }
