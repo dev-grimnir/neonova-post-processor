@@ -196,10 +196,11 @@ class NeonovaAnalyzer {
             longDisconnects: this.longDisconnects,
             disconnects: this.disconnects,
             hourlyDisconnects: this.hourlyDisconnects, 
-            // If there's a separate peak-hour or daily chart, also add:
-            // hourlyCount: this.hourlyCount,
-            // dailyDisconnects: this.dailyDisconnects,
             cleanedEntriesLength: this.cleanEntries.length
+            allEntriesLength: this.cleanEntries.length,  // Use cleaned as proxy (since raw not tracked)
+            hourlyDisconnects: this.hourlyDisconnects,
+            dailyDisconnects: this.dailyDisconnects,
+            hourlyCount: this.hourlyCount
         };
     }
 
