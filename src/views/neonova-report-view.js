@@ -187,7 +187,7 @@ class NeonovaReportView {
                 labels: Array.from({length: 24}, (_, i) => i + ':00'),
                 datasets: [{
                     label: 'Disconnects by Hour',
-                    data: [${this.metrics.hourlyDisconnects.join(',')}],
+                    data: [${(this.metrics.hourlyDisconnects ?? Array(24).fill(0)).join(',')}],
                     backgroundColor: '#006400'
                 }]
             },
