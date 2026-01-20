@@ -1,10 +1,14 @@
 class NeonovaDashboardView {
-    constructor(controller) {
-        this.controller = controller;
-        this.panel = null;
-        this.minimizeBar = null;
-        this.createUI();
-    }
+    constructor() {
+    this.customers = this.load();
+    this.panelVisible = false;
+    this.minimized = false;
+    this.pollInterval = null;
+    this.pollIntervalMs = 60000;
+    console.log('Controller constructor: creating view');
+    this.view = new NeonovaDashboardView(this);
+    console.log('View created successfully:', !!this.view);
+}
 
     createUI() {
         // Persistent minimize bar (bottom of MAIN frame)
