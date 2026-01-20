@@ -49,12 +49,12 @@ class NeonovaReportView {
     }
 
     generateReportHTML(csvContent) {
-    const { meanStabilityScore, medianStabilityScore } = this.metrics;
+        const { meanStabilityScore, medianStabilityScore } = this.metrics;
 
-    const meanClass = meanStabilityScore >= 80 ? 'score-good' : meanStabilityScore >= 50 ? 'score-fair' : 'score-poor';
-    const medianClass = medianStabilityScore >= 80 ? 'score-good' : medianStabilityScore >= 50 ? 'score-fair' : 'score-poor';
+        const meanClass = meanStabilityScore >= 80 ? 'score-good' : meanStabilityScore >= 50 ? 'score-fair' : 'score-poor';
+        const medianClass = medianStabilityScore >= 80 ? 'score-good' : medianStabilityScore >= 50 ? 'score-fair' : 'score-poor';
 
-    return `<!DOCTYPE html>
+        return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -110,7 +110,7 @@ class NeonovaReportView {
             </span>
         </div>
         <h2 style="text-align:center; color:#555; font-size:22px; margin:20px 0;">
-            ${this.pages} pages | ${this.metrics.allEntriesLength ?? 'N/A'} raw records (${this.metrics.cleanedEntriesLength} after de-duplication)
+            ${this.pages} pages | ${this.metrics.allEntriesLength} raw records (${this.metrics.cleanedEntriesLength} after de-duplication)
         </h2>
         <h3 style="text-align:center; color:#777; font-size:18px; margin-bottom:30px;">
             Monitoring period: ${this.metrics.monitoringPeriod} (${this.metrics.daysSpanned.toFixed(1)} days spanned)
@@ -183,7 +183,6 @@ class NeonovaReportView {
 </body>
 </html>`;
     }
-}
 
     openReport(reportHTML) {
         const reportWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
