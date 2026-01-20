@@ -37,16 +37,35 @@ class NeonovaReportView {
     }
 
     generateLongDisconnSection() {
-        if (this.longDisconnects.length > 0) {
-            return `
-                <div class="collapsible-header" id="longDisconnectsHeader" onclick="toggleLongDisconnects()">
-                    Long Disconnects (>30 minutes): ${this.longDisconnects.length} — click to collapse
-                </div>
-                ${this.generateLongDisconnectsHTML()}
-            `;
-        }
-        return '<p style="font-style:italic; color:#666;">No disconnects longer than 30 minutes.</p>';
+    if (this.longDisconnects.length === 0) {
+        return '<p style="font-style:italic; color:#666; text-align:center;">No disconnects longer than 30 minutes.</p>';
     }
+
+    let html = `
+        <div class="collapsible-header" id="longDisconnectsHeader" onclick="toggleLongDisconnects()">
+            Long Disconnects (>30 minutes): ${this.longDisconnects.length} — click to collapse
+        </div>
+        <div id="longDisconnectsContainer" style="display:block; margin-top:10px;">
+            <table style="width:100%; font-size:14px; border-collapse:collapse;">
+                <tr style="background:#fcc;">
+                    <th style="padding:10px; text-align:left;">Disconnected At</th>
+                    <th style="padding:10px; text-align:left;">Reconnected At</th>
+                    <th style="padding:10px; text-align:right;">Duration</th>
+                </tr>`;
+
+    this.longDisconnects.forEach(ld => {
+        const durationStr = formatDuration(ld.durationSec);
+        html += `
+            <tr style="background:#fee;">
+                <td style="padding:10px;">${ld.stopDate.toLocaleString()}</td>
+                <td style="padding:10px;">${ld.startDate.toLocaleString()}</td>
+                <td style="padding:10px; text-align:right;"><b>${durationStr}</b></td>
+            </tr>`;
+    });
+
+    html += `</table></div>`;
+    return html;
+}
 
 generateReportHTML(csvContent) {
     const { meanStabilityScore, medianStabilityScore } = this.metrics || {};
@@ -75,7 +94,7 @@ generateReportHTML(csvContent) {
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0fff0; }
         .container { max-width: 1200px; margin: 40px auto; padding: 30px; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
         h1 { text-align: center; color: #006400; font-size: 44px; margin-bottom: 10px; }
-        .stability-score { font-size: 32px; font-weight: bold; text-align: center; margin: 20px 0; cursor: help; position: relative; }
+        .stability-score { font-size: 18px; font-weight: bold; text-align: center; margin: 15px 0; cursor: help; position: relative; }
         .score-good { color: #006400; }
         .score-fair { color: #ff8c00; }
         .score-poor { color: #c00; }
@@ -91,6 +110,33 @@ generateReportHTML(csvContent) {
         @media print { #longDisconnectsContainer { display: block !important; } }
     </style>
 </head>
+<script>
+    function toggleLongDisconnects() {
+        const container = document.getElementById('longDisconnectsContainer');
+        if (container) {
+            const isHidden = container.style.display === 'none';
+            container.style.display = isHidden ? 'block' : 'none';
+            
+            // Update header text
+            const header = document.getElementById('longDisconnectsHeader');
+            if (header) {
+                header.textContent = isHidden 
+                    ? 'Long Disconnects (>30 minutes): ' + ${this.longDisconnects.length} — click to collapse'
+                    : 'Long Disconnects (>30 minutes): ' + ${this.longDisconnects.length} — click to expand';
+            }
+        }
+    }
+
+    // Optional: Start collapsed if more than 5 entries
+    document.addEventListener('DOMContentLoaded', function() {
+        if (${this.longDisconnects.length > 5}) {
+            const container = document.getElementById('longDisconnectsContainer');
+            if (container) container.style.display = 'none';
+            const header = document.getElementById('longDisconnectsHeader');
+            if (header) header.textContent = 'Long Disconnects (>30 minutes): ' + ${this.longDisconnects.length} — click to expand';
+        }
+    });
+</script>
 <body>
     <div class="container">
         <h1>Session Report Complete</h1>
@@ -155,9 +201,9 @@ generateReportHTML(csvContent) {
             <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Number of Sessions</td><td style="padding:18px; text-align:right;"><b>${this.metrics?.numSessions ?? 0}</b></td></tr>
             <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">Number of Disconnects</td><td style="padding:18px; text-align:right;"><b>${this.metrics?.disconnects ?? 0}</b></td></tr>
             <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Reconnects Within 5 Minutes</td><td style="padding:18px; text-align:right;"><b>${this.metrics?.quickReconnects ?? 0}</b></td></tr>
-            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Longest Continuous Connected</td><td style="padding:18px; text-align:right;"><b>${formatDuration((this.metrics?.longestSessionMin ?? 0) * 60)}</b></td></tr>
-            <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">Shortest Session Length</td><td style="padding:18px; text-align:right;"><b>${this.metrics?.shortestSessionMin === 'N/A' ? 'N/A' : formatDuration((this.metrics?.shortestSessionMin ?? 0) * 60)}</b></td></tr>
-            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Average Session Length</td><td style="padding:18px; text-align:right;"><b>${this.metrics?.avgSessionMin ?? 'N/A'} minutes</b></td></tr>
+            <tr><td ...>Longest Continuous Connected</td><td ...><b>${formatDuration((this.metrics?.longestSessionMin ?? 0) * 60)}</b></td></tr>
+            <tr><td ...>Shortest Session Length</td><td ...><b>${this.metrics?.shortestSessionMin === 'N/A' ? 'N/A' : formatDuration((this.metrics?.shortestSessionMin ?? 0) * 60)}</b></td></tr>
+            <tr><td ...>Average Session Length</td><td ...><b>${formatDuration((this.metrics?.avgSessionMin ?? 0) * 60)}</b></td></tr>
             <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">95th Percentile Reconnect Time</td><td style="padding:18px; text-align:right;"><b>${this.metrics?.p95ReconnectMin ?? 'N/A'} minutes</b></td></tr>
             <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Average Time to Reconnect</td><td style="padding:18px; text-align:right;"><b>${this.metrics?.avgReconnectMin ?? 'N/A'} minutes</b></td></tr>
             <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">Median Time to Reconnect</td><td style="padding:18px; text-align:right;"><b>${this.metrics?.medianReconnectMin ?? 'N/A'} minutes</b></td></tr>
