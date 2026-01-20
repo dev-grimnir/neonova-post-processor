@@ -87,4 +87,30 @@ class NeonovaDashboardView {
         }
         this.updateMinimize();
     }
+
+    show() {
+        if (!this.panel) {
+            this.createElements();  // Ensure panel exists
+        }
+        if (this.panel) {
+            console.log('show() - displaying panel');
+            this.panel.style.display = 'block';
+        }
+        this.updateMinimize();
+    }
+    
+    hide() {
+        if (this.panel) {
+            console.log('hide() - hiding panel');
+            this.panel.style.display = 'none';
+        }
+        this.updateMinimize();
+    }
+    
+    createElements() {
+        console.log('createElements() running');
+        // The panel and minimize bar creation code here (copy from toggle() if needed)
+        // For now, if you want to keep toggle() as-is, just call this from toggle() when creating.
+    }
+    
 }
