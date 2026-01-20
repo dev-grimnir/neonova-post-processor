@@ -1,10 +1,19 @@
 class NeonovaDashboardController {
-    constructor() {
-        this.customers = this.load();
-        this.panelVisible = false;
-        this.minimized = false;
-        this.pollInterval = null;
+constructor() {
+    this.customers = this.load();
+    this.panelVisible = false;
+    this.minimized = false;
+    this.pollInterval = null;
+    this.pollIntervalMs = 60000;
+    console.log('Controller constructor started - view class exists?', typeof NeonovaDashboardView !== 'undefined');
+    try {
+        this.view = new NeonovaDashboardView(this);
+        console.log('View instantiated successfully:', !!this.view);
+    } catch (err) {
+        console.error('View instantiation failed:', err);
+        this.view = null; // explicit null to avoid undefined confusion
     }
+}
 
     load() {
         const data = localStorage.getItem('novaDashboardCustomers');
