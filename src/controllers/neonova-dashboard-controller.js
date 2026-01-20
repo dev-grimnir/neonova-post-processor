@@ -46,11 +46,20 @@ class NeonovaDashboardController {
     }
 
     togglePanel() {
-        this.panelVisible = !this.panelVisible;
-        if (this.panelVisible) this.startPolling();
-        else this.stopPolling();
-        if (this.view) this.view.updateVisibility();
+    console.log('togglePanel called - before flip:', this.panelVisible);
+    this.panelVisible = !this.panelVisible;
+    console.log('togglePanel called - after flip:', this.panelVisible);
+
+    if (this.panelVisible) {
+        console.log('Calling view.show()');
+        this.view.show();
+        this.startPolling();
+    } else {
+        console.log('Calling view.hide()');
+        this.view.hide();
+        this.stopPolling();
     }
+}
 
     startPolling() {
         if (this.pollInterval) return;
