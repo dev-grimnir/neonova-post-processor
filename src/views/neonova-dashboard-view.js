@@ -33,17 +33,18 @@ class NeonovaDashboardView {
 
         this.render();
     }
-
-        render() {
+    
+    render() {
         let rows = '';
         this.controller.customers.forEach(c => {
             const color = c.status === 'Connected' ? '#006400' : c.status === 'Not Connected' ? '#c00' : '#666';
+            const durationStyle = (c.status === 'Not Connected' && c.durationSec > 1800) ? 'color:red;' : '';  // optional red for long down
             rows += `
                 <tr>
                     <td>${c.friendlyName}</td>
                     <td>${c.radiusUsername}</td>
                     <td style="color:${color}; font-weight:bold;">${c.status}</td>
-                    <td>${c.getDurationStr()}</td>
+                    <td style="${durationStyle}">${c.getDurationStr()}</td>
                     <td><button class="remove-btn" data-username="${c.radiusUsername}">Remove</button></td>
                 </tr>
             `;
@@ -78,17 +79,23 @@ class NeonovaDashboardView {
     
             <div style="margin-top:12px; text-align:center;">
                 <button class="close-btn" style="padding:6px 12px;">Close</button>
+                <button class="refresh-btn" style="padding:6px 12px; margin-left:10px;">Refresh Now</button>
             </div>
         `;
     
-        // Wire up buttons with event listeners
-        this.panel.querySelector('.add-btn').addEventListener('click', () => {
+        // Attach listeners (all in script scope)
+        const addBtn = this.panel.querySelector('.add-btn');
+        addBtn.addEventListener('click', () => {
             const id = this.panel.querySelector('#radiusId').value.trim();
             const name = this.panel.querySelector('#friendlyName').value.trim();
-            this.controller.addCustomer(id, name);
-            // Clear inputs
-            this.panel.querySelector('#radiusId').value = '';
-            this.panel.querySelector('#friendlyName').value = '';
+            if (id) {
+                this.controller.addCustomer(id, name);
+                // Clear inputs
+                this.panel.querySelector('#radiusId').value = '';
+                this.panel.querySelector('#friendlyName').value = '';
+            } else {
+                alert('RADIUS username required');
+            }
         });
     
         this.panel.querySelector('.close-btn').addEventListener('click', () => {
@@ -97,6 +104,11 @@ class NeonovaDashboardView {
     
         this.panel.querySelector('.minimize-btn').addEventListener('click', () => {
             this.controller.toggleMinimize();
+        });
+    
+        // Refresh button
+        this.panel.querySelector('.refresh-btn').addEventListener('click', () => {
+            this.controller.poll();
         });
     
         // Remove buttons (dynamic)
