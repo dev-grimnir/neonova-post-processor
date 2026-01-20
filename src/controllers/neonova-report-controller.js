@@ -55,8 +55,6 @@ class NeonovaReportController {
 
                 setTimeout(() => {
                     const cleanedEntries = this.collector.cleanEntries();
-                    console.log('[Controller] Starting final report generation');
-                    console.log('  - Pages processed:', this.collector.getPages());
                     const analyzer = new NeonovaAnalyzer(cleanedEntries);
                     const metrics = analyzer.computeMetrics();
                     const view = new NeonovaReportView(metrics, this.collector.getPages(), analyzer.longDisconnects);
