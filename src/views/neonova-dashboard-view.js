@@ -34,7 +34,7 @@ class NeonovaDashboardView {
         this.render();
     }
 
-    render() {
+        render() {
         let rows = '';
         this.controller.customers.forEach(c => {
             const color = c.status === 'Connected' ? '#006400' : c.status === 'Not Connected' ? '#c00' : '#666';
@@ -44,25 +44,25 @@ class NeonovaDashboardView {
                     <td>${c.radiusUsername}</td>
                     <td style="color:${color}; font-weight:bold;">${c.status}</td>
                     <td>${c.getDurationStr()}</td>
-                    <td><button onclick="dashboardController.removeCustomer('${c.radiusUsername}')">Remove</button></td>
+                    <td><button class="remove-btn" data-username="${c.radiusUsername}">Remove</button></td>
                 </tr>
             `;
         });
-
+    
         this.panel.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                 <h3 style="margin:0;">Dashboard</h3>
-                <button onclick="dashboardController.toggleMinimize()" style="padding:4px 8px; font-size:14px;">
+                <button class="minimize-btn" style="padding:4px 8px; font-size:14px;">
                     ${this.controller.minimized ? 'Restore' : 'Minimize'}
                 </button>
             </div>
-
+    
             <div style="margin-bottom:12px;">
                 <input id="radiusId" placeholder="RADIUS Username" style="width:220px; padding:6px; margin-right:6px;">
                 <input id="friendlyName" placeholder="Friendly Name" style="width:220px; padding:6px; margin-right:6px;">
-                <button onclick="dashboardController.addCustomer(document.getElementById('radiusId').value, document.getElementById('friendlyName').value)">Add</button>
+                <button class="add-btn">Add</button>
             </div>
-
+    
             <table style="width:100%; border-collapse:collapse; font-size:14px;">
                 <thead style="background:#eee;">
                     <tr>
@@ -75,11 +75,37 @@ class NeonovaDashboardView {
                 </thead>
                 <tbody>${rows}</tbody>
             </table>
-
+    
             <div style="margin-top:12px; text-align:center;">
-                <button onclick="dashboardController.togglePanel()" style="padding:6px 12px;">Close</button>
+                <button class="close-btn" style="padding:6px 12px;">Close</button>
             </div>
         `;
+    
+        // Wire up buttons with event listeners
+        this.panel.querySelector('.add-btn').addEventListener('click', () => {
+            const id = this.panel.querySelector('#radiusId').value.trim();
+            const name = this.panel.querySelector('#friendlyName').value.trim();
+            this.controller.addCustomer(id, name);
+            // Clear inputs
+            this.panel.querySelector('#radiusId').value = '';
+            this.panel.querySelector('#friendlyName').value = '';
+        });
+    
+        this.panel.querySelector('.close-btn').addEventListener('click', () => {
+            this.controller.togglePanel();
+        });
+    
+        this.panel.querySelector('.minimize-btn').addEventListener('click', () => {
+            this.controller.toggleMinimize();
+        });
+    
+        // Remove buttons (dynamic)
+        this.panel.querySelectorAll('.remove-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const username = btn.dataset.username;
+                this.controller.remove(username);
+            });
+        });
     }
 
     update() {
