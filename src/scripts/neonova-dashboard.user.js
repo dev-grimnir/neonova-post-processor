@@ -36,7 +36,10 @@
         padding: 10px 20px; background: #1e40af; color: white; border: none;
         border-radius: 6px; cursor: pointer; font-family: Arial; font-size: 16px;
     `;
-    openBtn.onclick = () => dashboardController.togglePanel();
+    openBtn.onclick = () => {
+        alert('Button was clicked!');
+        dashboardController.togglePanel();
+};
     document.body.appendChild(openBtn);
 
 })();
