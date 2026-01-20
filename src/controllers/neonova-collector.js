@@ -27,9 +27,6 @@ class NeonovaCollector {
             }
         });
         localStorage.setItem('novaEntries', JSON.stringify(this.allEntries));
-        console.log('[Collector] collectFromPage finished');
-        console.log('  - Rows processed:', rows.length);
-        console.log('  - Total entries now:', this.allEntries.length);
     }
 
     startAnalysis() {
