@@ -49,15 +49,12 @@ class NeonovaReportView {
     }
 
     generateReportHTML(csvContent) {
-        const { meanStabilityScore, medianStabilityScore } = this.metrics;
+    const { meanStabilityScore, medianStabilityScore } = this.metrics;
 
-        const meanClass = meanStabilityScore >= 80 ? 'score-good' : meanStabilityScore >= 50 ? 'score-fair' : 'score-poor';
-        const medianClass = medianStabilityScore >= 80 ? 'score-good' : medianStabilityScore >= 50 ? 'score-fair' : 'score-poor';
+    const meanClass = meanStabilityScore >= 80 ? 'score-good' : meanStabilityScore >= 50 ? 'score-fair' : 'score-poor';
+    const medianClass = medianStabilityScore >= 80 ? 'score-good' : medianStabilityScore >= 50 ? 'score-fair' : 'score-poor';
 
-        // Store CSV content globally for export access
-        window.reportCSVContent = csvContent;
-
-        return `<!DOCTYPE html>
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -66,7 +63,7 @@ class NeonovaReportView {
     <style>
         button.export-btn { padding: 12px 24px; margin: 10px; font-size: 18px; background: #006400; color: white; border: none; border-radius: 8px; cursor: pointer; }
         button.export-btn:hover { background: #008000; }
-        .stability-score { font-size: 24px; font-weight: bold; text-align: center; margin: 12px 0; cursor: help; position: relative; }
+        .stability-score { font-size: 24px; font-weight: bold; text-align: center; margin: 12px 0; cursor: help; position: relative; }  /* Changed font and margin as requested */
         .score-good { color: #006400; }
         .score-fair { color: #ff8c00; }
         .score-poor { color: #c00; }
@@ -113,7 +110,7 @@ class NeonovaReportView {
             </span>
         </div>
         <h2 style="text-align:center; color:#555; font-size:22px; margin:20px 0;">
-            ${this.pages} pages | ${safeRawEntries} raw records (${this.metrics.cleanedEntriesLength} after de-duplication)
+            ${this.pages} pages | ${this.metrics.allEntriesLength} raw records (${this.metrics.cleanedEntriesLength} after de-duplication)
         </h2>
         <h3 style="text-align:center; color:#777; font-size:18px; margin-bottom:30px;">
             Monitoring period: ${this.metrics.monitoringPeriod} (${this.metrics.daysSpanned.toFixed(1)} days spanned)
@@ -145,87 +142,27 @@ class NeonovaReportView {
             <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Number of Sessions</td><td style="padding:18px; text-align:right; background:#e8f5e8;"><b>${this.metrics.numSessions}</b></td></tr>
             <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">Number of Disconnects</td><td style="padding:18px; text-align:right; background:#f0f8f0;"><b>${this.metrics.disconnects}</b></td></tr>
             <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Reconnects Within 5 Minutes</td><td style="padding:18px; text-align:right; background:#e8f5e8;"><b>${this.metrics.quickReconnects}</b></td></tr>
-            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Longest Continuous Connected</td><td style="padding:18px; text-align:right; background:#e8f5e8;"><b>${formatDuration((this.metrics.longestSessionMin ?? 0) * 60)}</b></td></tr>
-            <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">Shortest Session Length</td><td style="padding:18px; text-align:right; background:#f0f8f0;"><b>${this.metrics.shortestSessionMin === 'N/A' ? 'N/A' : formatDuration((this.metrics.shortestSessionMin ?? 0) * 60)}</b></td></tr>
-            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Average Session Length</td><td style="padding:18px; text-align:right; background:#e8f5e8;"><b>${formatDuration((this.metrics.avgSessionMin ?? 0) * 60)}</b></td></tr>
-            <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">95th Percentile Reconnect Time</td><td style="padding:18px; text-align:right; background:#f0f8f0;"><b>${formatDuration((this.metrics.p95ReconnectMin ?? 0) * 60)}</b></td></tr>
-            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Average Time to Reconnect</td><td style="padding:18px; text-align:right; background:#e8f5e8;"><b>${formatDuration((this.metrics.avgReconnectMin ?? 0) * 60)}</b></td></tr>
-            <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">Median Time to Reconnect</td><td style="padding:18px; text-align:right; background:#f0f8f0;"><b>${formatDuration((this.metrics.medianReconnectMin ?? 0) * 60)}</b></td></tr>
+            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Longest Continuous Connected</td><td style="padding:18px; text-align:right; background:#e8f5e8;"><b>${formatDuration(this.metrics.longestSessionMin * 60)}</b></td></tr>
+            <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">Shortest Session Length</td><td style="padding:18px; text-align:right; background:#f0f8f0;"><b>${this.metrics.shortestSessionMin === 'N/A' ? 'N/A' : formatDuration(this.metrics.shortestSessionMin * 60)}</b></td></tr>
+            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Average Session Length</td><td style="padding:18px; text-align:right; background:#e8f5e8;"><b>${formatDuration(this.metrics.avgSessionMin * 60)}</b></td></tr>
+            <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">95th Percentile Reconnect Time</td><td style="padding:18px; text-align:right; background:#f0f8f0;"><b>${formatDuration(this.metrics.p95ReconnectMin * 60)}</b></td></tr>
+            <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Average Time to Reconnect</td><td style="padding:18px; text-align:right; background:#e8f5e8;"><b>${formatDuration(this.metrics.avgReconnectMin * 60)}</b></td></tr>
+            <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">Median Time to Reconnect</td><td style="padding:18px; text-align:right; background:#f0f8f0;"><b>${formatDuration(this.metrics.medianReconnectMin * 60)}</b></td></tr>
             <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Peak Disconnect Hour</td><td style="padding:18px; text-align:right; background:#e8f5e8;"><b>${this.metrics.peakHourStr}</b></td></tr>
             <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">Peak Disconnect Day</td><td style="padding:18px; text-align:right; background:#f0f8f0;"><b>${this.metrics.peakDayStr}</b></td></tr>
             <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Disconnects (Business Hours 8AM-6PM)</td><td style="padding:18px; text-align:right; background:#e8f5e8;"><b>${this.metrics.businessDisconnects}</b></td></tr>
             <tr><td style="padding:18px; background:#f0f8f0; font-weight:bold;">Disconnects (Off-Hours)</td><td style="padding:18px; text-align:right; background:#f0f8f0;"><b>${this.metrics.offHoursDisconnects}</b></td></tr>
             <tr><td style="padding:18px; background:#e8f5e8; font-weight:bold;">Time Since Last Disconnect</td><td style="padding:18px; text-align:right; background:#e8f5e8;"><b>${this.metrics.timeSinceLastStr}</b></td></tr>
         </table>
-
-        <div style="text-align:center; margin-top:40px;">
-            <button class="export-btn" onclick="exportToCSV()">Export CSV</button>
-            <button class="export-btn" onclick="exportToHTML()">Export HTML</button>
-            <button class="export-btn" onclick="exportToPDF()">Export PDF</button>
-        </div>
     </div>
 
     <script>
-        // Toggle function for long disconnects
         function toggleLongDisconnects() {
             const container = document.getElementById('longDisconnectsContainer');
             if (container) {
                 const isHidden = container.style.display === 'none';
                 container.style.display = isHidden ? 'block' : 'none';
-                
-                const header = document.getElementById('longDisconnectsHeader');
-                if (header) {
-                    header.textContent = isHidden 
-                        ? 'Long Disconnects (>30 minutes): ${this.longDisconnects.length} — click to collapse'
-                        : 'Long Disconnects (>30 minutes): ${this.longDisconnects.length} — click to expand';
-                }
-            }
-        }
-
-        // Auto-collapse if many entries
-        document.addEventListener('DOMContentLoaded', function() {
-            if (${this.longDisconnects.length > 5}) {
-                const container = document.getElementById('longDisconnectsContainer');
-                if (container) container.style.display = 'none';
-                const header = document.getElementById('longDisconnectsHeader');
-                if (header) header.textContent = 'Long Disconnects (>30 minutes): ${this.longDisconnects.length} — click to expand';
-            }
-        });
-
-        // Export functions
-        window.exportToCSV = function() {
-            const csv = window.reportCSVContent || '';
-            const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', 'nova_report.csv');
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        };
-
-        window.exportToHTML = function() {
-            const htmlContent = document.documentElement.outerHTML;
-            const blob = new Blob([htmlContent], {type: 'text/html'});
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', 'nova_report.html');
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        };
-
-        window.exportToPDF = function() {
-            alert('PDF export not yet implemented. Use browser Print → Save as PDF.');
-        };
-    </script>
-</body>
-</html>`;
-    }
+                const header = document.getElementById
 
     openReport(reportHTML) {
         const reportWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
