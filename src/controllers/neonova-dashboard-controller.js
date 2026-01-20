@@ -19,31 +19,32 @@ class NeonovaDashboardController {
     }
 
     togglePanel() {
-        console.log('togglePanel - view exists?', !!this.view);
-        if (!this.view) {
-            if (typeof NeonovaDashboardView === 'undefined') {
-                console.error('View class still missing');
-                return;
+        console.log('togglePanel started - panelVisible before:', this.panelVisible);
+        this.panelVisible = !this.panelVisible;
+        console.log('panelVisible after flip:', this.panelVisible);
+    
+        if (this.panelVisible) {
+            console.log('Showing - checking view');
+            if (!this.view) {
+                console.log('View missing - attempting creation');
+                try {
+                    this.view = new NeonovaDashboardView(this);
+                    console.log('View created OK');
+                } catch (err) {
+                    console.error('View creation error:', err);
+                    return;
+                }
             }
-            try {
-                this.view = new NeonovaDashboardView(this);
-                console.log('View created on first toggle');
-            } catch (err) {
-                console.error('View creation failed:', err);
-                return;
-            }
+            console.log('Calling view.show()');
+            this.view.show();
+            this.startPolling();
+            console.log('Show complete');
+        } else {
+            console.log('Hiding - calling view.hide()');
+            this.view?.hide();
+            this.stopPolling();
+            console.log('Hide complete');
         }
-                console.log('togglePanel called - before:', this.panelVisible);
-            this.panelVisible = !this.panelVisible;
-            console.log('togglePanel called - after:', this.panelVisible);
-        
-            this.view.toggle();  // <-- Call the existing toggle() in view
-        
-            if (this.panelVisible) {
-                this.startPolling();
-            } else {
-                this.stopPolling();
-            }
     }
 
     load() {
