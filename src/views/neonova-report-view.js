@@ -63,7 +63,7 @@ class NeonovaReportView {
     <style>
         button.export-btn { padding: 12px 24px; margin: 10px; font-size: 18px; background: #006400; color: white; border: none; border-radius: 8px; cursor: pointer; }
         button.export-btn:hover { background: #008000; }
-        .stability-score { font-size: 24px; font-weight: bold; text-align: center; margin: 12px 0; cursor: help; position: relative; }  /* Changed font and margin as requested */
+        .stability-score { font-size: 24px; font-weight: bold; text-align: center; margin: 12px 0; cursor: help; position: relative; }
         .score-good { color: #006400; }
         .score-fair { color: #ff8c00; }
         .score-poor { color: #c00; }
@@ -110,7 +110,7 @@ class NeonovaReportView {
             </span>
         </div>
         <h2 style="text-align:center; color:#555; font-size:22px; margin:20px 0;">
-            ${this.pages} pages | ${this.metrics.allEntriesLength} raw records (${this.metrics.cleanedEntriesLength} after de-duplication)
+            ${this.pages} pages | ${this.metrics.allEntriesLength ?? 'N/A'} raw records (${this.metrics.cleanedEntriesLength} after de-duplication)
         </h2>
         <h3 style="text-align:center; color:#777; font-size:18px; margin-bottom:30px;">
             Monitoring period: ${this.metrics.monitoringPeriod} (${this.metrics.daysSpanned.toFixed(1)} days spanned)
@@ -162,7 +162,28 @@ class NeonovaReportView {
             if (container) {
                 const isHidden = container.style.display === 'none';
                 container.style.display = isHidden ? 'block' : 'none';
-                const header = document.getElementById
+                const header = document.getElementById('longDisconnectsHeader');
+                if (header) {
+                    header.textContent = isHidden 
+                        ? 'Long Disconnects (>30 minutes): ${this.longDisconnects.length} — click to collapse'
+                        : 'Long Disconnects (>30 minutes): ${this.longDisconnects.length} — click to expand';
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (${this.longDisconnects.length > 5}) {
+                const container = document.getElementById('longDisconnectsContainer');
+                if (container) container.style.display = 'none';
+                const header = document.getElementById('longDisconnectsHeader');
+                if (header) header.textContent = 'Long Disconnects (>30 minutes): ${this.longDisconnects.length} — click to expand';
+            }
+        });
+    </script>
+</body>
+</html>`;
+    }
+}
 
     openReport(reportHTML) {
         const reportWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
