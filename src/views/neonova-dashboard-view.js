@@ -88,7 +88,7 @@ class NeonovaDashboardView {
             const id = this.panel.querySelector('#radiusId').value.trim();
             const name = this.panel.querySelector('#friendlyName').value.trim();
             if (id) {
-                this.controller.addCustomer(id, name);
+                this.controller.add(id, name);
                 this.panel.querySelector('#radiusId').value = '';
                 this.panel.querySelector('#friendlyName').value = '';
             } else {
