@@ -24,6 +24,10 @@
 
     // Instantiate the controller (it creates its own view internally)
     const dashboardController = new NeonovaDashboardController();
+    const dashboardController = new NeonovaDashboardController();
+    console.log('DashboardController created');
+    console.log('View instance attached?', !!dashboardController.view);
+    console.log('View has toggle method?', typeof dashboardController.view?.toggle === 'function');
 
     // Create persistent open button (bottom left of MAIN frame)
     const openBtn = document.createElement('button');
