@@ -27,8 +27,13 @@
 (function() {
     'use strict';
 
-    // All classes are now loaded globally via @require
-    console.log('[Entry] Script started');
+    // Only run in the main content frame (named "MAIN")
+    if (window.name !== 'MAIN') {
+        console.log('[Script] Skipping execution in frame:', window.name);
+        return;
+    }
+
+    console.log('[Entry] Script started in MAIN frame');
     const controller = new NeonovaReportController();
     console.log('[Entry] Controller instantiated');
     controller.run();
