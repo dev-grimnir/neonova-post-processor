@@ -78,6 +78,89 @@ class NeonovaReportView {
         }
     </style>
 </head>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Hourly Disconnects Chart
+        new Chart(document.getElementById('hourlyChart'), {
+            type: 'bar',
+            data: {
+                labels: ['00-01','01-02','02-03','03-04','04-05','05-06','06-07','07-08','08-09','09-10','10-11','11-12',
+                         '12-13','13-14','14-15','15-16','16-17','17-18','18-19','19-20','20-21','21-22','22-23','23-00'],
+                datasets: [{
+                    label: 'Disconnects per Hour',
+                    data: ${JSON.stringify(this.metrics.hourlyDisconnects || Array(24).fill(0))},
+                    backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: { scales: { y: { beginAtZero: true } } }
+        });
+
+        // Daily Disconnects Chart
+        new Chart(document.getElementById('dailyChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+                datasets: [{
+                    label: 'Disconnects per Day',
+                    data: ${JSON.stringify(this.metrics.dailyDisconnects || Array(7).fill(0))},
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: { scales: { y: { beginAtZero: true } } }
+        });
+
+        // Rolling 7-Day Chart
+        new Chart(document.getElementById('rolling7DayChart'), {
+            type: 'line',
+            data: {
+                labels: ${JSON.stringify(this.metrics.rollingLabels || [])},
+                datasets: [{
+                    label: 'Rolling 7-Day Disconnects',
+                    data: ${JSON.stringify(this.metrics.rolling7Day || [])},
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    fill: false
+                }]
+            },
+            options: { scales: { y: { beginAtZero: true } } }
+        });
+
+        // Session Histogram
+        new Chart(document.getElementById('sessionHist'), {
+            type: 'bar',
+            data: {
+                labels: ['≤5min', '5-30min', '30-60min', '1-4h', '>4h'],
+                datasets: [{
+                    label: 'Session Length Distribution',
+                    data: ${JSON.stringify(this.metrics.sessionBins || [0,0,0,0,0])},
+                    backgroundColor: 'rgba(153, 102, 255, 0.6)',
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: { scales: { y: { beginAtZero: true } } }
+        });
+
+        // Reconnect Histogram
+        new Chart(document.getElementById('reconnectHist'), {
+            type: 'bar',
+            data: {
+                labels: ['≤1min', '1-5min', '5-30min', '>30min'],
+                datasets: [{
+                    label: 'Reconnect Time Distribution',
+                    data: ${JSON.stringify(this.metrics.reconnectBins || [0,0,0,0])},
+                    backgroundColor: 'rgba(255, 159, 64, 0.6)',
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: { scales: { y: { beginAtZero: true } } }
+        });
+    });
+</script>
 <body>
     <div style="font-family: Arial, sans-serif; max-width: 1200px; margin: 40px auto; padding: 30px; background: #f0fff0; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
         <h1 style="text-align:center; color:#006400; font-size:44px; margin-bottom:10px;">Session Report Complete</h1>
@@ -184,9 +267,14 @@ class NeonovaReportView {
 </html>`;
     }
 
-    openReport(reportHTML) {
-        const reportWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+openReport(reportHTML) {
+    const reportWindow = window.open('about:blank', '_blank');
+    if (reportWindow) {
         reportWindow.document.write(reportHTML);
         reportWindow.document.close();
+        reportWindow.focus();
+    } else {
+        alert('Popup blocked - please allow popups for this site to view the report.');
     }
+}
 }
