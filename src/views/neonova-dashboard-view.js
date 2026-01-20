@@ -1,34 +1,31 @@
 class NeonovaDashboardView {
-    constructor() {
-    this.customers = this.load();
-    this.panelVisible = false;
-    this.minimized = false;
-    this.pollInterval = null;
-    this.pollIntervalMs = 60000;
-    console.log('Controller constructor: creating view');
-    this.view = new NeonovaDashboardView(this);
-    console.log('View created successfully:', !!this.view);
-}
+    constructor(controller) {
+        this.controller = controller;
+        this.panel = null;
+        this.minimizeBar = null;
+        this.createElements();
+    }
 
-    createUI() {
-        // Persistent minimize bar (bottom of MAIN frame)
+    createElements() {
+        // Minimize bar (shown when minimized)
         this.minimizeBar = document.createElement('div');
         this.minimizeBar.style.cssText = `
-          position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-          background: #333; color: white; padding: 8px 16px; border-radius: 8px 8px 0 0;
-          cursor: pointer; z-index: 9999; font-family: Arial; display: none;
+            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+            background: #444; color: white; padding: 6px 12px; border-radius: 6px 6px 0 0;
+            cursor: pointer; z-index: 9999; font-family: Arial; display: none;
         `;
-        this.minimizeBar.innerHTML = 'Dashboard (click to restore)';
+        this.minimizeBar.textContent = 'Dashboard (click to show)';
         this.minimizeBar.onclick = () => this.controller.togglePanel();
         document.body.appendChild(this.minimizeBar);
 
-        // Floating panel
+        // Main panel
         this.panel = document.createElement('div');
         this.panel.style.cssText = `
-          position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
-          width: 800px; max-height: 60vh; background: #fff; border: 1px solid #ccc;
-          overflow-y: auto; z-index: 9998; padding: 15px; box-shadow: 0 0 20px rgba(0,0,0,0.5);
-          font-family: Arial; display: none;
+            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 900px; max-height: 50vh; overflow-y: auto;
+            background: #fff; border: 1px solid #999; border-bottom: none;
+            border-radius: 8px 8px 0 0; box-shadow: 0 -4px 12px rgba(0,0,0,0.3);
+            padding: 12px; font-family: Arial; z-index: 9998; display: none;
         `;
         document.body.appendChild(this.panel);
 
@@ -38,83 +35,79 @@ class NeonovaDashboardView {
     render() {
         let rows = '';
         this.controller.customers.forEach(c => {
-            const color = c.status === 'Connected' ? 'green' : c.status === 'Not Connected' ? 'red' : 'gray';
+            const color = c.status === 'Connected' ? '#006400' : c.status === 'Not Connected' ? '#c00' : '#666';
             rows += `
-              <tr>
-                <td>${c.friendlyName}</td>
-                <td>${c.radiusUsername}</td>
-                <td style="color:${color};">${c.status}</td>
-                <td>${c.getDurationStr()}</td>
-                <td><button onclick="dashboardController.removeCustomer('${c.radiusUsername}')">Remove</button></td>
-              </tr>
+                <tr>
+                    <td>${c.friendlyName}</td>
+                    <td>${c.radiusUsername}</td>
+                    <td style="color:${color}; font-weight:bold;">${c.status}</td>
+                    <td>${c.getDurationStr()}</td>
+                    <td><button onclick="dashboardController.removeCustomer('${c.radiusUsername}')">Remove</button></td>
+                </tr>
             `;
         });
 
         this.panel.innerHTML = `
-          <h3 style="margin-top:0;">Dashboard</h3>
-          <div style="margin-bottom:15px;">
-            <input id="radiusId" placeholder="RADIUS Username" style="width:200px; margin-right:8px;">
-            <input id="friendlyName" placeholder="Friendly Name" style="width:200px; margin-right:8px;">
-            <button onclick="dashboardController.addCustomer(document.getElementById('radiusId').value, document.getElementById('friendlyName').value)">Add</button>
-          </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="margin:0;">Dashboard</h3>
+                <button onclick="dashboardController.toggleMinimize()" style="padding:4px 8px; font-size:14px;">
+                    ${this.controller.minimized ? 'Restore' : 'Minimize'}
+                </button>
+            </div>
 
-          <table style="width:100%; border-collapse:collapse;">
-            <thead style="background:#eee;">
-              <tr>
-                <th>Friendly Name</th>
-                <th>RADIUS Username</th>
-                <th>Status</th>
-                <th>Duration</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
+            <div style="margin-bottom:12px;">
+                <input id="radiusId" placeholder="RADIUS Username" style="width:220px; padding:6px; margin-right:6px;">
+                <input id="friendlyName" placeholder="Friendly Name" style="width:220px; padding:6px; margin-right:6px;">
+                <button onclick="dashboardController.addCustomer(document.getElementById('radiusId').value, document.getElementById('friendlyName').value)">Add</button>
+            </div>
 
-          <button onclick="dashboardController.togglePanel()" style="margin-top:15px;">Close</button>
+            <table style="width:100%; border-collapse:collapse; font-size:14px;">
+                <thead style="background:#eee;">
+                    <tr>
+                        <th style="padding:8px;">Friendly Name</th>
+                        <th style="padding:8px;">RADIUS Username</th>
+                        <th style="padding:8px;">Status</th>
+                        <th style="padding:8px;">Duration</th>
+                        <th style="padding:8px;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+
+            <div style="margin-top:12px; text-align:center;">
+                <button onclick="dashboardController.togglePanel()" style="padding:6px 12px;">Close</button>
+            </div>
         `;
     }
 
     update() {
-        if (this.panel) this.render();
+        this.render();
     }
 
-    updateMinimize() {
-        if (this.minimizeBar) {
-            this.minimizeBar.style.display = this.controller.minimized ? 'block' : 'none';
-        }
+    toggleMinimize() {
+        this.controller.toggleMinimize();
     }
 
-    updateVisibility() {
+    toggle() {
         if (this.panel) {
-            this.panel.style.display = this.controller.panelVisible ? 'block' : 'none';
+            const isVisible = this.panel.style.display !== 'none';
+            if (isVisible) {
+                this.panel.style.display = 'none';
+                this.minimizeBar.style.display = 'block';
+            } else {
+                this.panel.style.display = 'block';
+                this.minimizeBar.style.display = 'none';
+            }
         }
-        this.updateMinimize();
     }
 
     show() {
-        if (!this.panel) {
-            this.createElements();  // Ensure panel exists
-        }
-        if (this.panel) {
-            console.log('show() - displaying panel');
-            this.panel.style.display = 'block';
-        }
-        this.updateMinimize();
+        if (this.panel) this.panel.style.display = 'block';
+        if (this.minimizeBar) this.minimizeBar.style.display = 'none';
     }
-    
+
     hide() {
-        if (this.panel) {
-            console.log('hide() - hiding panel');
-            this.panel.style.display = 'none';
-        }
-        this.updateMinimize();
+        if (this.panel) this.panel.style.display = 'none';
+        if (this.minimizeBar) this.minimizeBar.style.display = 'block';
     }
-    
-    createElements() {
-        console.log('createElements() running');
-        // The panel and minimize bar creation code here (copy from toggle() if needed)
-        // For now, if you want to keep toggle() as-is, just call this from toggle() when creating.
-    }
-    
 }
