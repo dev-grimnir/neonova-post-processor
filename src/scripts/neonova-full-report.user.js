@@ -29,7 +29,6 @@
 
     // Only run in the main content frame (named "MAIN")
     if (window.name !== 'MAIN') {
-        console.log('[Script] Skipping execution in frame:', window.name);
         return;
     }
 
