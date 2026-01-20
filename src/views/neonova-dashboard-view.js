@@ -17,7 +17,7 @@ class NeonovaDashboardView {
             cursor: pointer; z-index: 9999; font-family: Arial; display: none;
         `;
         this.minimizeBar.textContent = 'Dashboard (click to show)';
-        this.minimizeBar.onclick = () => this.controller.togglePanel();
+        this.minimizeBar.addEventListener('click', () => this.controller.togglePanel());
         document.body.appendChild(this.minimizeBar);
 
         // Main panel
