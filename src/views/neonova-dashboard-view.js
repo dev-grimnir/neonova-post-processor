@@ -38,7 +38,7 @@ class NeonovaDashboardView {
         let rows = '';
         this.controller.customers.forEach(c => {
             const color = c.status === 'Connected' ? '#006400' : c.status === 'Not Connected' ? '#c00' : '#666';
-            const durationStyle = (c.status === 'Not Connected' && c.durationSec > 1800) ? 'color:red;' : '';  // optional red for long down
+            const durationStyle = (c.status === 'Not Connected' && c.durationSec > 1800) ? 'color:red;' : '';
             rows += `
                 <tr>
                     <td>${c.friendlyName}</td>
@@ -83,14 +83,12 @@ class NeonovaDashboardView {
             </div>
         `;
     
-        // Attach listeners (all in script scope)
-        const addBtn = this.panel.querySelector('.add-btn');
-        addBtn.addEventListener('click', () => {
+        // Wire up buttons with event listeners (no globals needed)
+        this.panel.querySelector('.add-btn').addEventListener('click', () => {
             const id = this.panel.querySelector('#radiusId').value.trim();
             const name = this.panel.querySelector('#friendlyName').value.trim();
             if (id) {
                 this.controller.addCustomer(id, name);
-                // Clear inputs
                 this.panel.querySelector('#radiusId').value = '';
                 this.panel.querySelector('#friendlyName').value = '';
             } else {
@@ -106,7 +104,6 @@ class NeonovaDashboardView {
             this.controller.toggleMinimize();
         });
     
-        // Refresh button
         this.panel.querySelector('.refresh-btn').addEventListener('click', () => {
             this.controller.poll();
         });
