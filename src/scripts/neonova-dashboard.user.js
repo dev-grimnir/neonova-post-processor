@@ -24,22 +24,23 @@
 
     // Instantiate the controller (it creates its own view internally)
     const dashboardController = new NeonovaDashboardController();
-    console.log('DashboardController created');
-    console.log('View instance attached?', !!dashboardController.view);
-    console.log('View has toggle method?', typeof dashboardController.view?.toggle === 'function');
 
-    // Create persistent open button (bottom left of MAIN frame)
     const openBtn = document.createElement('button');
     openBtn.textContent = 'Dashboard';
     openBtn.style.cssText = `
-        position: fixed; bottom: 10px; left: 10px; z-index: 9999;
-        padding: 10px 20px; background: #1e40af; color: white; border: none;
-        border-radius: 6px; cursor: pointer; font-family: Arial; font-size: 16px;
-    `;
+    position: fixed; bottom: 10px; left: 10px; z-index: 9999;
+    padding: 10px 20px; background: #1e40af; color: white; border: none;
+    border-radius: 6px; cursor: pointer; font-family: Arial; font-size: 16px;
+`;
     openBtn.onclick = () => {
-        alert('Button was clicked!');
-        dashboardController.togglePanel();
-};
+        console.log('Button clicked - handler starting');
+        try {
+            dashboardController.togglePanel();
+            console.log('togglePanel completed without throw');
+        } catch (err) {
+            console.error('togglePanel threw:', err);
+        }
+    };
     document.body.appendChild(openBtn);
-
 })();
+
