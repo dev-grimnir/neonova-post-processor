@@ -255,7 +255,7 @@ class NeonovaReportView {
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            if (${this.longDisconnects.length > 5}) {
+            if (${this.longDisconnects.length > 50}) {
                 const container = document.getElementById('longDisconnectsContainer');
                 if (container) container.style.display = 'none';
                 const header = document.getElementById('longDisconnectsHeader');
