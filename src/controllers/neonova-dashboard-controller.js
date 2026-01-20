@@ -54,19 +54,19 @@ constructor() {
         if (this.view) this.view.updateMinimize();
     }
 
-togglePanel() {
-    console.log('togglePanel called - before:', this.panelVisible);
-    this.panelVisible = !this.panelVisible;
-    console.log('togglePanel called - after:', this.panelVisible);
-
-    this.view.toggle();  // <-- Call the existing toggle() in view
-
-    if (this.panelVisible) {
-        this.startPolling();
-    } else {
-        this.stopPolling();
+    togglePanel() {
+        console.log('togglePanel called - before:', this.panelVisible);
+        this.panelVisible = !this.panelVisible;
+        console.log('togglePanel called - after:', this.panelVisible);
+    
+        this.view.toggle();  // <-- Call the existing toggle() in view
+    
+        if (this.panelVisible) {
+            this.startPolling();
+        } else {
+            this.stopPolling();
+        }
     }
-}
 
     startPolling() {
         if (this.pollInterval) return;
