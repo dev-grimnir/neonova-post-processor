@@ -1,41 +1,50 @@
 class NeonovaDashboardController {
     constructor() {
-    this.customers = this.load();
-    this.panelVisible = false;
-    this.minimized = false;
-    this.pollInterval = null;
-    this.pollIntervalMs = 60000;
-    this.view = null;  // delay creation
-    console.log('Controller constructor finished - view delayed');
-}
-
-togglePanel() {
-    console.log('togglePanel - view exists?', !!this.view);
-    if (!this.view) {
-        if (typeof NeonovaDashboardView === 'undefined') {
-            console.error('View class still missing');
-            return;
-        }
         try {
+            console.log('Constructor body start');
+            this.customers = this.load();
+            this.panelVisible = false;
+            this.minimized = false;
+            this.pollInterval = null;
+            this.pollIntervalMs = 60000;
+    
+            console.log('Before creating view - NeonovaDashboardView exists?', typeof NeonovaDashboardView !== 'undefined');
+    
             this.view = new NeonovaDashboardView(this);
-            console.log('View created on first toggle');
+    
+            console.log('After view creation - this.view:', !!this.view);
         } catch (err) {
-            console.error('View creation failed:', err);
-            return;
+            console.error('Entire constructor failed:', err);
         }
     }
-            console.log('togglePanel called - before:', this.panelVisible);
-        this.panelVisible = !this.panelVisible;
-        console.log('togglePanel called - after:', this.panelVisible);
-    
-        this.view.toggle();  // <-- Call the existing toggle() in view
-    
-        if (this.panelVisible) {
-            this.startPolling();
-        } else {
-            this.stopPolling();
+
+    togglePanel() {
+        console.log('togglePanel - view exists?', !!this.view);
+        if (!this.view) {
+            if (typeof NeonovaDashboardView === 'undefined') {
+                console.error('View class still missing');
+                return;
+            }
+            try {
+                this.view = new NeonovaDashboardView(this);
+                console.log('View created on first toggle');
+            } catch (err) {
+                console.error('View creation failed:', err);
+                return;
+            }
         }
-}
+                console.log('togglePanel called - before:', this.panelVisible);
+            this.panelVisible = !this.panelVisible;
+            console.log('togglePanel called - after:', this.panelVisible);
+        
+            this.view.toggle();  // <-- Call the existing toggle() in view
+        
+            if (this.panelVisible) {
+                this.startPolling();
+            } else {
+                this.stopPolling();
+            }
+    }
 
     load() {
         const data = localStorage.getItem('novaDashboardCustomers');
