@@ -1,19 +1,41 @@
 class NeonovaDashboardController {
     constructor() {
-        this.customers = this.load();
-        this.panelVisible = false;
-        this.minimized = false;
-        this.pollInterval = null;
-        this.pollIntervalMs = 60000;
-        console.log('Controller constructor started - view class exists?', typeof NeonovaDashboardView !== 'undefined');
+    this.customers = this.load();
+    this.panelVisible = false;
+    this.minimized = false;
+    this.pollInterval = null;
+    this.pollIntervalMs = 60000;
+    this.view = null;  // delay creation
+    console.log('Controller constructor finished - view delayed');
+}
+
+togglePanel() {
+    console.log('togglePanel - view exists?', !!this.view);
+    if (!this.view) {
+        if (typeof NeonovaDashboardView === 'undefined') {
+            console.error('View class still missing');
+            return;
+        }
         try {
             this.view = new NeonovaDashboardView(this);
-            console.log('View instantiated successfully:', !!this.view);
+            console.log('View created on first toggle');
         } catch (err) {
-            console.error('View instantiation failed:', err);
-            this.view = null; // explicit null to avoid undefined confusion
+            console.error('View creation failed:', err);
+            return;
         }
     }
+            console.log('togglePanel called - before:', this.panelVisible);
+        this.panelVisible = !this.panelVisible;
+        console.log('togglePanel called - after:', this.panelVisible);
+    
+        this.view.toggle();  // <-- Call the existing toggle() in view
+    
+        if (this.panelVisible) {
+            this.startPolling();
+        } else {
+            this.stopPolling();
+        }
+}
 
     load() {
         const data = localStorage.getItem('novaDashboardCustomers');
@@ -54,19 +76,6 @@ class NeonovaDashboardController {
         if (this.view) this.view.updateMinimize();
     }
 
-    togglePanel() {
-        console.log('togglePanel called - before:', this.panelVisible);
-        this.panelVisible = !this.panelVisible;
-        console.log('togglePanel called - after:', this.panelVisible);
-    
-        this.view.toggle();  // <-- Call the existing toggle() in view
-    
-        if (this.panelVisible) {
-            this.startPolling();
-        } else {
-            this.stopPolling();
-        }
-    }
 
     startPolling() {
         if (this.pollInterval) return;
