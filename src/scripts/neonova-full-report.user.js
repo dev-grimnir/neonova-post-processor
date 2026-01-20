@@ -33,9 +33,7 @@
         return;
     }
 
-    console.log('[Entry] Script started in MAIN frame');
     const controller = new NeonovaReportController();
-    console.log('[Entry] Controller instantiated');
     controller.run();
-    console.log('[Entry] run() called');
+    
 })();
