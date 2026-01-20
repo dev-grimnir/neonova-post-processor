@@ -1,3 +1,7 @@
+/**
+ * @file src/controllers/neonova-dashboard-controller.js
+ * Core analysis logic: state machine, sessions, reconnects, metrics
+ */
 class NeonovaDashboardController {
     constructor() {
         this.customers = this.load();
