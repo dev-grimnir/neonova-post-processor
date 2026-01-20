@@ -104,12 +104,24 @@ class NeonovaDashboardView {
     }
 
     show() {
-        if (this.panel) this.panel.style.display = 'block';
-        if (this.minimizeBar) this.minimizeBar.style.display = 'none';
+    console.log('view.show() called - panel exists?', !!this.panel);
+    if (this.panel) {
+        console.log('Setting display to block');
+        this.panel.style.display = 'block';
+        console.log('Panel display now:', this.panel.style.display);
+    } else {
+        console.log('Panel not created yet');
+    }
+    this.updateMinimize();
     }
 
     hide() {
-        if (this.panel) this.panel.style.display = 'none';
-        if (this.minimizeBar) this.minimizeBar.style.display = 'block';
+        console.log('view.hide() called - panel exists?', !!this.panel);
+        if (this.panel) {
+            console.log('Setting display to none');
+            this.panel.style.display = 'none';
+            console.log('Panel display now:', this.panel.style.display);
+        }
+        this.updateMinimize();
     }
 }
