@@ -1,8 +1,6 @@
-// src/core/paginate-logs-headless.js
-// Headless pagination - fetches pages, parses rows, follows hrefs
-// Returns all entries (report uses full, dashboard uses [0] for latest)
+// src/core/paginate-report-logs.js
 
-async function paginateLogs(baseUrl, onProgress = null) {
+async function paginateReportLogs(baseUrl, onProgress = null) {
     const entries = [];
     let url = baseUrl;
     let page = 1;
@@ -11,7 +9,7 @@ async function paginateLogs(baseUrl, onProgress = null) {
         console.log(`Fetching page ${page}: ${url}`);
         const res = await fetch(url, { credentials: 'include', cache: 'no-cache' });
         if (!res.ok) {
-            console.error(`Fetch failed: ${res.status}`);
+            console.error(`Fetch failed: HTTP ${res.status}`);
             break;
         }
 
@@ -45,19 +43,19 @@ async function paginateLogs(baseUrl, onProgress = null) {
 
         entries.push(...pageEntries);
 
-        // Progress callback (e.g., for bar update)
+        // Progress callback (for bar update)
         if (onProgress) onProgress(entries.length, page);
 
-        // Next link (exact from report builder)
+        // Next link (exact from your report builder)
         const nextLink = Array.from(doc.querySelectorAll('a'))
             .find(a => a.textContent.trim().startsWith('NEXT @') && a.href && a.href.includes('index.php'));
-        if (!nextLink) break;
+        if (!nextLink || !nextLink.href) break;
 
         url = nextLink.href;
         if (!url.startsWith('http')) url = 'https://admin.neonova.net' + url;
         page++;
     }
 
-    entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime()); // newest first
+    entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
     return entries;
 }
