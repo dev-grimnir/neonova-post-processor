@@ -6,7 +6,7 @@
 // @author       You
 // @match        https://admin.neonova.net/*
 // @grant        none
-// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/core/paginate-report-logs.js
+// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/core/paginate-logs-headless.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/models/customer.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/controllers/neonova-dashboard-controller.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/views/neonova-dashboard-view.js
