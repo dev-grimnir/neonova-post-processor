@@ -57,6 +57,10 @@ class NeonovaDashboardView {
                     ${this.controller.minimized ? 'Restore' : 'Minimize'}
                 </button>
             </div>
+
+            <div id="pollStatus" style="color:#888; font-size:12px; margin-bottom:10px;">
+                Last update: ${new Date().toLocaleTimeString()}
+            </div>
     
             <div style="margin-bottom:12px;">
                 <input id="radiusId" placeholder="RADIUS Username" style="width:220px; padding:6px; margin-right:6px;">
