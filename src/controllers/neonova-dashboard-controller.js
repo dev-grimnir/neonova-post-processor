@@ -15,8 +15,7 @@ class NeonovaDashboardController {
     }
 
     async getLatestEntry(username) {
-        const baseUrl = `https://admin.neonova.net/rat/index.php?acctsearch1=&userid=` + username;
-    
+        url = BASE_SEARCH_URL + baseUrl
         const allEntries = await paginateAndParseLogs(baseUrl);
     
         if (allEntries.length === 0) {
@@ -115,7 +114,7 @@ class NeonovaDashboardController {
     }
 
     async getStatus(username) {
-        const url = `https://admin.neonova.netrat/index.php?acctsearch=1&userid=${encodeURIComponent(username)}`;
+        const url = BASE_SEARCH_URL + username
         const res = await fetch(url, { credentials: 'include', cache: 'no-cache' });
         if (!res.ok) throw new Error('Fetch failed');
 
@@ -195,7 +194,7 @@ class NeonovaDashboardController {
             const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]; // YYYY-MM-DD
             const endDate = now.toISOString().split('T')[0];
     
-            let url = `https://admin.neonova.net/rat/index.php?acctsearch=&userid=${encodeURIComponent(username)}&fromdate=${startDate}&todate=${endDate}`;
+            let url = BASE_SEARCH_URL + username&fromdate=${startDate}&todate=${endDate}`;
     
             const entries = [];
     
@@ -280,8 +279,6 @@ class NeonovaDashboardController {
     }
 
     async fetchLatestEntry(username) {
-        //const baseUrl = `https://admin.neonova.net/rat/index.php?acctsearch=&userid=${encodeURIComponent(username)}`;
-        const BASE_SEARCH_URL = 'https://admin.neonova.net/rat/index.php?acctsearch=&userid=';
         url = BASE_SEARCH_URL + username
         const allEntries = await paginateAndParseLogs(url);
 
