@@ -4,7 +4,7 @@
  * @requires ../controllers/neonova-analyzer
  * @requires ../views/neonova-report-view
  */
-class NeonovaReportController {
+class NeonovaReportController extends BaseNeonovaController{
     constructor() {
         this.collector = new NeonovaCollector();
         this.reportButton = null;
