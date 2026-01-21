@@ -73,6 +73,7 @@ class NeonovaDashboardController {
         this.customers.push(new Customer(radiusUsername, friendlyName));
         this.save();
         if (this.view) this.view.render();
+        this.poll();  // Immediate update for the new customer
     }
 
     remove(radiusUsername) {
