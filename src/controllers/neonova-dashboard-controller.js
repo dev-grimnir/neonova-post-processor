@@ -1,7 +1,7 @@
 class NeonovaDashboardController {
-    const BASE_SEARCH_URL = 'https://admin.neonova.net/rat/index.php?acctsearch=&userid=';
     constructor() {
         try {
+            const BASE_SEARCH_URL = 'https://admin.neonova.net/rat/index.php?acctsearch=&userid=';
             this.customers = this.load();
             this.panelVisible = false;
             this.minimized = false;
