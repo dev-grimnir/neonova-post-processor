@@ -102,6 +102,7 @@ class NeonovaDashboardController {
     }
 
     async poll() {
+        this.view.panel.querySelector('#pollStatus').textContent = 'Fetching...';
         for (const c of this.customers) {
             try {
                 const { status, durationSec } = await this.getStatus(c.radiusUsername);
@@ -110,6 +111,7 @@ class NeonovaDashboardController {
                 c.update('Error', 0);
             }
         }
+        this.view.panel.querySelector('#pollStatus').textContent = 'Last update: ' + new Date().toLocaleTimeString();
         this.save();
         if (this.view) this.view.render();
     }
