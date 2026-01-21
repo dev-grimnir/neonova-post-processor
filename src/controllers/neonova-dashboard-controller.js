@@ -6,7 +6,7 @@ class NeonovaDashboardController {
             this.panelVisible = false;
             this.minimized = false;
             this.pollInterval = null;
-            this.pollIntervalMs = 60000;
+            this.pollIntervalMs = 10000;
     
             console.log('Before creating view - NeonovaDashboardView exists?', typeof NeonovaDashboardView !== 'undefined');
     
