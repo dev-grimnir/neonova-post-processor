@@ -266,14 +266,14 @@ async updateCustomerStatus(customer) {
     }
 
     async fetchLatestEntry(username) {
-    const baseUrl = `https://admin.neonova.net/rat/index.php?acctsearch=&userid=${encodeURIComponent(username)}`;
+        const baseUrl = `https://admin.neonova.net/rat/index.php?acctsearch=&userid=${encodeURIComponent(username)}`;
 
-    const allEntries = await paginateAndParseLogs(baseUrl);
+        const allEntries = await paginateAndParseLogs(baseUrl);
 
-    if (allEntries.length === 0) {
-        console.log(`No entries found for ${username}`);
-        return null;
-    }
+        if (allEntries.length === 0) {
+            console.log(`No entries found for ${username}`);
+            return null;
+        }
 
         return allEntries[0];  // newest entry (helper sorts newest first)
     }
