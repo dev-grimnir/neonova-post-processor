@@ -280,8 +280,8 @@ class NeonovaDashboardController {
     async fetchLatestEntry(username) {
         //const baseUrl = `https://admin.neonova.net/rat/index.php?acctsearch=&userid=${encodeURIComponent(username)}`;
         const BASE_SEARCH_URL = 'https://admin.neonova.net/rat/index.php?acctsearch=&userid=';
-
-        const allEntries = await paginateAndParseLogs(BASE_SEARCH_URL);
+        url = BASE_SEARCH_URL + username
+        const allEntries = await paginateAndParseLogs(url);
 
         if (allEntries.length === 0) {
             console.log(`No entries found for ${username}`);
