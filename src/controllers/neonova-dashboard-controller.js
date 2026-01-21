@@ -1,4 +1,4 @@
-class NeonovaDashboardController extends BaseNeoNovaController{
+class NeonovaDashboardController extends BaseNeonovaController{
     constructor() {
         super();
         this.baseSearchUrl = 'https://admin.neonova.net/rat/index.php?acctsearch1=&userid='
