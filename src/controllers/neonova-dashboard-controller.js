@@ -115,7 +115,7 @@ class NeonovaDashboardController {
     }
 
     async getStatus(username) {
-        const url = this.baseSearchUrl + encodeURIComponent(username)
+        url = this.baseSearchUrl + encodeURIComponent(username)
         const res = await fetch(url, { credentials: 'include', cache: 'no-cache' });
         if (!res.ok) throw new Error('Fetch failed');
 
@@ -195,7 +195,7 @@ class NeonovaDashboardController {
             const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]; // YYYY-MM-DD
             const endDate = now.toISOString().split('T')[0];
     
-            let url = this.baseSearchUrl + encodeURIComponent(username)&fromdate=${startDate}&todate=${endDate}`;
+            url = this.baseSearchUrl + encodeURIComponent(username)&fromdate=${startDate}&todate=${endDate}`;
     
             const entries = [];
     
