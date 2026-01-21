@@ -1,49 +1,32 @@
 class NeonovaDashboardController {
     constructor() {
         try {
-            console.log('Constructor body start');
             this.customers = this.load();
             this.panelVisible = false;
             this.minimized = false;
             this.pollInterval = null;
             this.pollIntervalMs = 10000;
-    
-            console.log('Before creating view - NeonovaDashboardView exists?', typeof NeonovaDashboardView !== 'undefined');
-    
             this.view = new NeonovaDashboardView(this);
-    
-            console.log('After view creation - this.view:', !!this.view);
         } catch (err) {
             console.error('Entire constructor failed:', err);
         }
     }
 
     togglePanel() {
-        console.log('togglePanel started - panelVisible before:', this.panelVisible);
         this.panelVisible = !this.panelVisible;
-        console.log('panelVisible after flip:', this.panelVisible);
-    
         if (this.panelVisible) {
-            console.log('Showing - checking view');
             if (!this.view) {
-                console.log('View missing - attempting creation');
                 try {
                     this.view = new NeonovaDashboardView(this);
-                    console.log('View created OK');
                 } catch (err) {
-                    console.error('View creation error:', err);
                     return;
                 }
             }
-            console.log('Calling view.show()');
             this.view.show();
             this.startPolling();
-            console.log('Show complete');
         } else {
-            console.log('Hiding - calling view.hide()');
             this.view?.hide();
             this.stopPolling();
-            console.log('Hide complete');
         }
     }
 
