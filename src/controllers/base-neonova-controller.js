@@ -1,6 +1,6 @@
 // src/controllers/BaseNeoNovaController.js
 
-class BaseNeoNovaController {
+class BaseNeonovaController {
     constructor() {
         // Shared configuration constants
         this.baseSearchUrl = 'https://admin.neonova.net/rat/index.php?acctsearch=1&userid=';
