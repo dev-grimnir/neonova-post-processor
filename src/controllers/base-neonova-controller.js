@@ -1,4 +1,4 @@
-// src/controllers/BaseNeoNovaController.js
+// src/controllers/BaseNeonovaController.js
 
 class BaseNeonovaController {
     constructor() {
