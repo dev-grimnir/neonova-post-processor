@@ -7,6 +7,7 @@
 // @match        https://admin.neonova.net/*
 // @grant        none
 // @run-at       document-end
+// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/config.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/core/paginate-logs.js
 // @updateURL    https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/scripts/neonova-dashboard.user.js
 // @downloadURL  https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/scripts/neonova-dashboard.user.js
