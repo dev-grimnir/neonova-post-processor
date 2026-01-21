@@ -13,7 +13,8 @@ class NeonovaDashboardController {
     }
 
     async getLatestEntry(username) {
-        const baseUrl = `https://admin.neonova.net/rat/index.php?acctsearch=&userid=${encodeURIComponent(username)}`;
+        //const baseUrl = `https://admin.neonova.net/rat/index.php?acctsearch=&userid=${encodeURIComponent(username)}`;
+        const baseUrl = `https://admin.neonova.net/rat/index.php?acctsearch=&userid=`;
     
         const allEntries = await paginateAndParseLogs(baseUrl);
     
