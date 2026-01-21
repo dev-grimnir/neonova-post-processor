@@ -235,10 +235,10 @@ class NeonovaDashboardController {
         return entries;
     }
     
-    async updateCustomerStatus(customer) {
-        try {
-            const history = await this.fetchFullAccountHistory(customer.radiusUsername);
-            if (history.length === 0) {
+        async updateCustomerStatus(customer) {
+            try {
+                const history = await this.fetchFullAccountHistory(customer.radiusUsername);
+                if (history.length === 0) {
                 customer.update('Unknown', 0);
                 return;
             }
@@ -248,6 +248,7 @@ class NeonovaDashboardController {
             const durationSec = Math.round((Date.now() - latest.dateObj.getTime()) / 1000);
     
             customer.update(status, durationSec);
+            console.log(`Updated ${customer.friendlyName}: ${status}, duration ${durationSec}s`);
         } catch (err) {
             console.error(`Status update failed for ${customer.friendlyName}:`, err);
             customer.update('Error', 0);
