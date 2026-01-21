@@ -46,28 +46,41 @@ class NeonovaReportController extends BaseNeonovaController{
         }
     }
 
-    run() {
-        this.collector.collectFromPage();
-
-        if (this.collector.analysisMode) {
-            if (!this.collector.advancePage()) {
-                this.collector.pages++;
-                localStorage.setItem('novaPages', this.collector.pages);
-
-                setTimeout(() => {
-                    const cleanedEntries = this.collector.cleanEntries();
-                    const analyzer = new NeonovaAnalyzer(cleanedEntries);
-                    const metrics = analyzer.computeMetrics();
-                    const view = new NeonovaReportView(metrics, this.collector.getPages(), analyzer.longDisconnects);
-                    const csvContent = 'Date,Status\n' + cleanedEntries.map(e => `"${e.dateObj.toLocaleString()}","${e.status}"`).join('\n');
-                    const reportHTML = view.generateReportHTML(csvContent);
-                    view.openReport(reportHTML);
-                    this.collector.endAnalysis();
-                    this.reportButton.textContent = 'Report Complete!';
-                    this.reportButton.style.backgroundColor = '#008000';
-                    this.reportButton.disabled = true;
-                }, 300);
+        async run() {
+            // Assume username is known or from UI/input
+            const username = 'kandkpepper'; // replace with real input
+    
+            const baseUrl = super.;
+    
+            // Show progress
+            this.view.showProgress('Collecting RADIUS logs...');
+    
+            const onProgress = (currentEntries, currentPage) => {
+                this.view.updateProgress(currentEntries, `Page ${currentPage}`);
+            };
+    
+            const entries = await paginateReportLogs(baseUrl, onProgress);
+    
+            // Hide progress when done
+            this.view.hideProgress();
+    
+            if (entries.length === 0) {
+                this.view.showError('No log entries found.');
+                return;
             }
-        }
+    
+            // Continue with existing report workflow
+            const cleanedEntries = this.collector.cleanEntries(entries);
+            const analyzer = new NeonovaAnalyzer(cleanedEntries);
+            const metrics = analyzer.computeMetrics();
+            const csvContent = 'Date,Status\n' + cleanedEntries.map(e => `"${e.dateObj.toLocaleString()}","${e.status}"`).join('\n');
+            const reportHTML = this.view.generateReportHTML(csvContent);
+            this.view.openReport(reportHTML);
+    
+            // Update button
+            this.reportButton.textContent = 'Report Complete!';
+            this.reportButton.style.backgroundColor = '#008000';
+            this.reportButton.disabled = true;
     }
+
 }
