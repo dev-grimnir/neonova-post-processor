@@ -13,6 +13,19 @@ class NeonovaDashboardController {
         }
     }
 
+    async getLatestEntry(username) {
+        const baseUrl = `https://admin.neonova.net/rat/index.php?acctsearch=&userid=${encodeURIComponent(username)}`;
+    
+        const allEntries = await paginateAndParseLogs(baseUrl);
+    
+        if (allEntries.length === 0) {
+            console.log(`No entries found for ${username}`);
+            return null;
+        }
+
+        return allEntries[0];  // newest entry (helper sorts newest first)
+    }
+
     togglePanel() {
         this.panelVisible = !this.panelVisible;
         if (this.panelVisible) {
@@ -132,7 +145,42 @@ class NeonovaDashboardController {
         return { status, durationSec };
     }
 
-    // Add these methods
+    async updateCustomerStatus(customer) {
+    try {
+        const latest = await this.getLatestEntry(customer.radiusUsername);
+        if (!latest) {
+            customer.update('Unknown', 0);
+            return;
+        }
+
+        let status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
+        let durationSec = 0;
+
+        const now = Date.now();
+
+        if (latest.status === 'Start') {
+            const startTime = latest.dateObj.getTime();
+            durationSec = Math.round((now - startTime) / 1000);
+        } else if (latest.sessionTime) {
+            const match = latest.sessionTime.match(/(\d+)h\s*(\d+)m\s*(\d+)s|(\d+)m\s*(\d+)s|(\d+)s/);
+            if (match) {
+                const h = parseInt(match[1] || 0);
+                const m = parseInt(match[2] || match[4] || 0);
+                const s = parseInt(match[3] || match[5] || match[6] || 0);
+                durationSec = h * 3600 + m * 60 + s;
+            }
+        } else {
+            const stopTime = latest.dateObj.getTime();
+            durationSec = Math.round((now - stopTime) / 1000);
+        }
+
+        customer.update(status, durationSec);
+        console.log(`Updated ${customer.friendlyName}: ${status}, duration ${durationSec}s`);
+    } catch (err) {
+        console.error('Status update failed:', err);
+        customer.update('Error', 0);
+    }
+}
 
     getCurrentMonthStart() {
         const now = new Date();
@@ -219,42 +267,7 @@ class NeonovaDashboardController {
         return entries;
     }
     
-async updateCustomerStatus(customer) {
-    try {
-        const latest = await this.fetchLatestEntry(customer.radiusUsername);
-        if (!latest) {
-            customer.update('Unknown', 0);
-            return;
-        }
 
-        const status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
-        let durationSec = 0;
-
-        const now = Date.now();
-
-        if (latest.status === 'Start') {
-            const startTime = latest.dateObj.getTime();
-            durationSec = Math.round((now - startTime) / 1000);
-        } else if (latest.sessionTime) {
-            // Parse session time (adjust regex if format varies)
-            const match = latest.sessionTime.match(/(\d+)h\s*(\d+)m\s*(\d+)s|(\d+)m\s*(\d+)s|(\d+)s/);
-            if (match) {
-                const h = parseInt(match[1] || 0);
-                const m = parseInt(match[2] || match[4] || 0);
-                const s = parseInt(match[3] || match[5] || match[6] || 0);
-                durationSec = h * 3600 + m * 60 + s;
-            }
-        } else {
-            const stopTime = latest.dateObj.getTime();
-            durationSec = Math.round((now - stopTime) / 1000);
-        }
-
-        customer.update(status, durationSec);
-    } catch (err) {
-        console.error('Update failed:', err);
-        customer.update('Error', 0);
-        }
-    }
     
     // Update poll to use the new method
     async poll() {
