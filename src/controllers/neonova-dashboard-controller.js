@@ -155,60 +155,83 @@ class NeonovaDashboardController {
         return new Date(now.getFullYear(), now.getMonth(), 1);
     }
     
-    async fetchFullAccountHistory(username) {
-        console.log(`Fetching full history for ${username}`);
-        const entries = [];
-        let url = `https://admin.neonova.netrat/index.php?acctsearch=1&userid=${encodeURIComponent(username)}`;
+        async fetchFullAccountHistory(username) {
+            console.log(`Fetching full history for ${username}`);
     
-        // Add date range param if needed (site may support &fromdate=YYYY-MM-DD)
-        // For now, assume it returns all; if not, we'll need to append date filters
+            const now = new Date();
+            const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]; // YYYY-MM-DD
+            const endDate = now.toISOString().split('T')[0];
     
-        while (true) {
-            const res = await fetch(url, { credentials: 'include', cache: 'no-cache' });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            let url = `https://admin.neonova.net/rat/index.php?acctsearch=&userid=${encodeURIComponent(username)}&fromdate=${startDate}&todate=${endDate}`;
+    
+            const entries = [];
+    
+        while (url) {
+            const res = await fetch(url, {
+                credentials: 'include',
+                cache: 'no-cache'
+            });
+    
+            if (!res.ok) {
+                console.error(`Fetch failed for ${url}: HTTP ${res.status}`);
+                throw new Error(`HTTP ${res.status}`);
+            }
     
             const html = await res.text();
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
     
             const table = doc.querySelector('table[cellspacing="2"][cellpadding="2"]');
-            if (!table || table.rows.length < 2) break; // no more data
+            if (!table || table.rows.length <= 1) {
+                console.log('No more data or no table found');
+                break;
+            }
     
-            // Parse rows (skip header)
+            // Parse data rows (skip header row 0)
             for (let i = 1; i < table.rows.length; i++) {
                 const cells = table.rows[i].cells;
                 if (cells.length < 5) continue;
     
                 const timestamp = cells[0].textContent.trim();
-                const status = cells[4].textContent.trim().toLowerCase();
+                const statusText = cells[4].textContent.trim().toLowerCase();
     
                 let dateObj;
                 try {
-                    // Assume format like "2026-01-15 14:30:00"
+                    // Convert "YYYY-MM-DD HH:MM:SS" to Date (replace space with T for ISO)
                     dateObj = new Date(timestamp.replace(' ', 'T'));
                     if (isNaN(dateObj.getTime())) continue;
-                } catch {
+                } catch (e) {
+                    console.warn('Invalid date:', timestamp);
                     continue;
                 }
     
+                const status = statusText.includes('start') || statusText.includes('connect') ? 'Start' : 'Stop';
+    
                 entries.push({
                     date: timestamp,
-                    status: status.includes('start') || status.includes('connect') ? 'Start' : 'Stop',
+                    status,
                     dateObj
                 });
             }
     
-            // Find next page link
-            const nextLink = doc.querySelector('a[href*="acctsearch=1&userid="][href*="page="]'); // adjust selector if needed
-            if (!nextLink) break;
+            // Find "NEXT @" link for pagination (adjust selector if needed)
+            const nextLink = Array.from(doc.querySelectorAll('a'))
+                .find(a => a.textContent.includes('NEXT') || a.textContent.includes('@'));
+            if (!nextLink || !nextLink.href) {
+                console.log('No next page link found');
+                break;
+            }
     
             url = nextLink.href;
-            if (!url.startsWith('http')) url = 'https://admin.neonova.netrat/' + url;
+            if (!url.startsWith('http')) {
+                url = 'https://admin.neonova.net' + url;  // make absolute
+            }
         }
     
-        // Sort by date descending (newest first)
+        // Sort newest first
         entries.sort((a, b) => b.dateObj - a.dateObj);
     
+        console.log(`Fetched ${entries.length} entries for ${username}`);
         return entries;
     }
     
