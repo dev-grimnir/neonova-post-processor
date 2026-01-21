@@ -1,5 +1,6 @@
 class NeonovaDashboardController {
     constructor() {
+        this.baseSearchUrl = 'https://admin.neonova.net/rat/index.php?acctsearch1=&userid='
         try {
             this.customers = this.load();
             this.panelVisible = false;
@@ -13,7 +14,9 @@ class NeonovaDashboardController {
     }
 
     async getLatestEntry(username) {
-        url = window.BASE_SEARCH_URL + username
+        url = this.baseSearchUrl + encodeURIComponent(username)
+
+
         const allEntries = await paginateAndParseLogs(url);
     
         if (allEntries.length === 0) {
@@ -112,7 +115,7 @@ class NeonovaDashboardController {
     }
 
     async getStatus(username) {
-        const url = window.BASE_SEARCH_URL + username
+        const url = this.baseSearchUrl + encodeURIComponent(username)
         const res = await fetch(url, { credentials: 'include', cache: 'no-cache' });
         if (!res.ok) throw new Error('Fetch failed');
 
@@ -192,77 +195,77 @@ class NeonovaDashboardController {
             const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]; // YYYY-MM-DD
             const endDate = now.toISOString().split('T')[0];
     
-            let url = window.BASE_SEARCH_URL + username&fromdate=${startDate}&todate=${endDate}`;
+            let url = this.baseSearchUrl + encodeURIComponent(username)&fromdate=${startDate}&todate=${endDate}`;
     
             const entries = [];
     
-        while (url) {
-            const res = await fetch(url, {
-                credentials: 'include',
-                cache: 'no-cache'
-            });
-    
-            if (!res.ok) {
-                console.error(`Fetch failed for ${url}: HTTP ${res.status}`);
-                throw new Error(`HTTP ${res.status}`);
-            }
-    
-            const html = await res.text();
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-    
-            const table = doc.querySelector('table[cellspacing="2"][cellpadding="2"]');
-            if (!table || table.rows.length <= 1) {
-                console.log('No more data or no table found');
-                break;
-            }
-    
-            // Parse data rows (skip header row 0)
-            for (let i = 1; i < table.rows.length; i++) {
-                const cells = table.rows[i].cells;
-                if (cells.length < 5) continue;
-    
-                const timestamp = cells[0].textContent.trim();
-                const statusText = cells[4].textContent.trim().toLowerCase();
-    
-                let dateObj;
-                try {
-                    // Convert "YYYY-MM-DD HH:MM:SS" to Date (replace space with T for ISO)
-                    dateObj = new Date(timestamp.replace(' ', 'T'));
-                    if (isNaN(dateObj.getTime())) continue;
-                } catch (e) {
-                    console.warn('Invalid date:', timestamp);
-                    continue;
-                }
-    
-                const status = statusText.includes('start') || statusText.includes('connect') ? 'Start' : 'Stop';
-    
-                entries.push({
-                    date: timestamp,
-                    status,
-                    dateObj
+            while (url) {
+                const res = await fetch(url, {
+                    credentials: 'include',
+                    cache: 'no-cache'
                 });
+        
+                if (!res.ok) {
+                    console.error(`Fetch failed for ${url}: HTTP ${res.status}`);
+                    throw new Error(`HTTP ${res.status}`);
+                }
+        
+                const html = await res.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+        
+                const table = doc.querySelector('table[cellspacing="2"][cellpadding="2"]');
+                if (!table || table.rows.length <= 1) {
+                    console.log('No more data or no table found');
+                    break;
+                }
+        
+                // Parse data rows (skip header row 0)
+                for (let i = 1; i < table.rows.length; i++) {
+                    const cells = table.rows[i].cells;
+                    if (cells.length < 5) continue;
+        
+                    const timestamp = cells[0].textContent.trim();
+                    const statusText = cells[4].textContent.trim().toLowerCase();
+        
+                    let dateObj;
+                    try {
+                        // Convert "YYYY-MM-DD HH:MM:SS" to Date (replace space with T for ISO)
+                        dateObj = new Date(timestamp.replace(' ', 'T'));
+                        if (isNaN(dateObj.getTime())) continue;
+                    } catch (e) {
+                        console.warn('Invalid date:', timestamp);
+                        continue;
+                    }
+        
+                    const status = statusText.includes('start') || statusText.includes('connect') ? 'Start' : 'Stop';
+        
+                    entries.push({
+                        date: timestamp,
+                        status,
+                        dateObj
+                    });
+                }
+        
+                // Find "NEXT @" link for pagination (adjust selector if needed)
+                const nextLink = Array.from(doc.querySelectorAll('a'))
+                    .find(a => a.textContent.includes('NEXT') || a.textContent.includes('@'));
+                if (!nextLink || !nextLink.href) {
+                    console.log('No next page link found');
+                    break;
+                }
+        
+                url = nextLink.href;
+                if (!url.startsWith('http')) {
+                    url = 'https://admin.neonova.net' + url;  // make absolute
+                }
             }
     
-            // Find "NEXT @" link for pagination (adjust selector if needed)
-            const nextLink = Array.from(doc.querySelectorAll('a'))
-                .find(a => a.textContent.includes('NEXT') || a.textContent.includes('@'));
-            if (!nextLink || !nextLink.href) {
-                console.log('No next page link found');
-                break;
-            }
-    
-            url = nextLink.href;
-            if (!url.startsWith('http')) {
-                url = 'https://admin.neonova.net' + url;  // make absolute
-            }
-        }
-    
-        // Sort newest first
-        entries.sort((a, b) => b.dateObj - a.dateObj);
-    
-        console.log(`Fetched ${entries.length} entries for ${username}`);
-        return entries;
+            // Sort newest first
+            entries.sort((a, b) => b.dateObj - a.dateObj);
+        
+            console.log(`Fetched ${entries.length} entries for ${username}`);
+            return entries;
     }
     
 
@@ -277,7 +280,7 @@ class NeonovaDashboardController {
     }
 
     async fetchLatestEntry(username) {
-        url = window.BASE_SEARCH_URL + username
+        url = this.baseSearchUrl + encodeURIComponent(username)
         const allEntries = await paginateAndParseLogs(url);
 
         if (allEntries.length === 0) {
