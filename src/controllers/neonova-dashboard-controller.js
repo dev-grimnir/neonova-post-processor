@@ -1,3 +1,5 @@
+import { BASE_SEARCH_URL } from '../config.js';
+
 class NeonovaDashboardController {
     constructor() {
         try {
