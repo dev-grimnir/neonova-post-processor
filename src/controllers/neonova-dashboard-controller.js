@@ -218,25 +218,42 @@ class NeonovaDashboardController {
         return entries;
     }
     
-        async updateCustomerStatus(customer) {
-            try {
-                const history = await this.fetchFullAccountHistory(customer.radiusUsername);
-                if (history.length === 0) {
-                customer.update('Unknown', 0);
-                return;
-            }
-    
-            const latest = history[0];
-            let status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
-            const durationSec = Math.round((Date.now() - latest.dateObj.getTime()) / 1000);
-    
-            customer.update(status, durationSec);
-            console.log(`Updated ${customer.friendlyName}: ${status}, duration ${durationSec}s`);
-        } catch (err) {
-            console.error(`Status update failed for ${customer.friendlyName}:`, err);
-            customer.update('Error', 0);
+async updateCustomerStatus(customer) {
+    try {
+        const latest = await this.fetchLatestEntry(customer.radiusUsername);
+        if (!latest) {
+            customer.update('Unknown', 0);
+            return;
         }
+
+        const status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
+        let durationSec = 0;
+
+        const now = Date.now();
+
+        if (latest.status === 'Start') {
+            const startTime = latest.dateObj.getTime();
+            durationSec = Math.round((now - startTime) / 1000);
+        } else if (latest.sessionTime) {
+            // Parse session time (adjust regex if format varies)
+            const match = latest.sessionTime.match(/(\d+)h\s*(\d+)m\s*(\d+)s|(\d+)m\s*(\d+)s|(\d+)s/);
+            if (match) {
+                const h = parseInt(match[1] || 0);
+                const m = parseInt(match[2] || match[4] || 0);
+                const s = parseInt(match[3] || match[5] || match[6] || 0);
+                durationSec = h * 3600 + m * 60 + s;
+            }
+        } else {
+            const stopTime = latest.dateObj.getTime();
+            durationSec = Math.round((now - stopTime) / 1000);
+        }
+
+        customer.update(status, durationSec);
+    } catch (err) {
+        console.error('Update failed:', err);
+        customer.update('Error', 0);
     }
+}
     
     // Update poll to use the new method
     async poll() {
