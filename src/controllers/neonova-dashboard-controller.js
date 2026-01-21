@@ -252,8 +252,8 @@ async updateCustomerStatus(customer) {
     } catch (err) {
         console.error('Update failed:', err);
         customer.update('Error', 0);
+        }
     }
-}
     
     // Update poll to use the new method
     async poll() {
@@ -262,6 +262,19 @@ async updateCustomerStatus(customer) {
         }
         this.save();
         this.view.render();
+    }
+
+    async fetchLatestEntry(username) {
+    const baseUrl = `https://admin.neonova.net/rat/index.php?acctsearch=&userid=${encodeURIComponent(username)}`;
+
+    const allEntries = await paginateAndParseLogs(baseUrl);
+
+    if (allEntries.length === 0) {
+        console.log(`No entries found for ${username}`);
+        return null;
+    }
+
+        return allEntries[0];  // newest entry (helper sorts newest first)
     }
     
 }
