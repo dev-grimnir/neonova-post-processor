@@ -6,6 +6,7 @@
  */
 class NeonovaReportController extends BaseNeonovaController{
     constructor() {
+        super();
         this.collector = new NeonovaCollector();
         this.reportButton = null;
         this.initUI();
