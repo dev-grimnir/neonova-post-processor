@@ -70,7 +70,9 @@ class NeonovaReportController extends BaseNeonovaController{
             this.progressView.error('No entries found');
             return;
         }
-    
+
+        this.progressView.complete();
+                
             // Continue with existing report workflow
             const cleanedEntries = this.collector.cleanEntries(entries);
             const analyzer = new NeonovaAnalyzer(cleanedEntries);
