@@ -50,25 +50,26 @@ class NeonovaReportController extends BaseNeonovaController{
         async run() {
             // Assume username is known or from UI/input
             const username = 'kandkpepper'; // replace with real input
-    
+            
             const baseUrl = super.getSearchUrl(username);
     
             // Show progress
             this.view.showProgress('Collecting RADIUS logs...');
     
             const onProgress = (currentEntries, currentPage) => {
-                this.view.updateProgress(currentEntries, `Page ${currentPage}`);
+
+            this.progressView.show('Collecting logs...');
+
+            const onProgress = (currentEntries, page) => {
+            this.progressView.update(currentEntries, `Page ${page}`);
             };
-    
+
             const entries = await paginateReportLogs(baseUrl, onProgress);
-    
-            // Hide progress when done
-            this.view.hideProgress();
-    
-            if (entries.length === 0) {
-                this.view.showError('No log entries found.');
-                return;
-            }
+
+        if (entries.length === 0) {
+            this.progressView.error('No entries found');
+            return;
+        }
     
             // Continue with existing report workflow
             const cleanedEntries = this.collector.cleanEntries(entries);
