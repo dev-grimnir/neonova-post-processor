@@ -1,4 +1,3 @@
-const BASE_SEARCH_URL = 'https://admin.neonova.net/rat/index.php?acctsearch=&userid=';
 class NeonovaDashboardController {
     constructor() {
         try {
@@ -279,9 +278,10 @@ class NeonovaDashboardController {
     }
 
     async fetchLatestEntry(username) {
-        const baseUrl = `https://admin.neonova.net/rat/index.php?acctsearch=&userid=${encodeURIComponent(username)}`;
+        //const baseUrl = `https://admin.neonova.net/rat/index.php?acctsearch=&userid=${encodeURIComponent(username)}`;
+        const BASE_SEARCH_URL = 'https://admin.neonova.net/rat/index.php?acctsearch=&userid=';
 
-        const allEntries = await paginateAndParseLogs(baseUrl);
+        const allEntries = await paginateAndParseLogs(BASE_SEARCH_URL);
 
         if (allEntries.length === 0) {
             console.log(`No entries found for ${username}`);
