@@ -50,7 +50,7 @@ class NeonovaReportController extends BaseNeonovaController{
             // Assume username is known or from UI/input
             const username = 'kandkpepper'; // replace with real input
     
-            const baseUrl = super.;
+            const baseUrl = super.getSearchUrl(username);
     
             // Show progress
             this.view.showProgress('Collecting RADIUS logs...');
