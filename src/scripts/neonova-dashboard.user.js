@@ -12,6 +12,7 @@
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/models/customer.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/controllers/neonova-dashboard-controller.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/views/neonova-dashboard-view.js
+// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/core/paginate-logs.js
 // ==/UserScript==
 
 (function() {
