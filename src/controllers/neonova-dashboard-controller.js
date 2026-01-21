@@ -1,5 +1,6 @@
 class NeonovaDashboardController extends BaseNeoNovaController{
     constructor() {
+        super();
         this.baseSearchUrl = 'https://admin.neonova.net/rat/index.php?acctsearch1=&userid='
         try {
             this.customers = this.load();
