@@ -13,20 +13,6 @@ class NeonovaDashboardController extends BaseNeonovaController{
         }
     }
 
-    async getLatestEntry(username) {
-        let url = super.getSearchUrl('kandkpepper')
-
-
-        const allEntries = await paginateReportLogs(url);
-    
-        if (allEntries.length === 0) {
-            console.log(`No entries found for ${username}`);
-            return null;
-        }
-
-        return allEntries[0];  // newest entry (helper sorts newest first)
-    }
-
     togglePanel() {
         this.panelVisible = !this.panelVisible;
         if (this.panelVisible) {
@@ -82,7 +68,7 @@ class NeonovaDashboardController extends BaseNeonovaController{
 
     toggleMinimize() {
         this.minimized = !this.minimized;
-        if (this.view) this.view.updateMinimize();
+        //if (this.view) this.view.updateMinimize();
     }
 
 
