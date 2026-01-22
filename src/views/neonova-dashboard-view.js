@@ -38,14 +38,16 @@ class NeonovaDashboardView {
             const color = c.status === 'Connected' ? '#006400' : c.status === 'Not Connected' ? '#c00' : '#666';
             const durationStyle = (c.status === 'Not Connected' && c.durationSec > 1800) ? 'color:red;' : '';
             rows += `
-                           <tr>
-                               <td>${c.friendlyName}</td>
-                               <td>${c.radiusUsername}</td>
-                               <td style="color:${color}; font-weight:bold;">${c.status}</td>
-                               <td style="${durationStyle}">${c.getDurationStr()}</td>
-                               <td><button class="remove-btn" data-username="${c.radiusUsername}">Remove</button></td>
-                           </tr>
-                       `;
+                <tr>
+                    <td class="friendly-name" data-username="${c.radiusUsername}" style="cursor: pointer;">
+                        ${c.friendlyName || c.radiusUsername}
+                    </td>
+                    <td>${c.radiusUsername}</td>
+                    <td style="color:${color}; font-weight:bold;">${c.status}</td>
+                    <td style="${durationStyle}">${c.getDurationStr()}</td>
+                    <td><button class="remove-btn" data-username="${c.radiusUsername}">Remove</button></td>
+                </tr>
+            `;
         });
         
         this.panel.innerHTML = `
@@ -117,6 +119,57 @@ class NeonovaDashboardView {
                 this.controller.remove(username);
             });
         });
+
+        // --- CLICK-TO-EDIT FRIENDLY NAME (safe add-on) ---
+    this.panel.querySelectorAll('.friendly-name').forEach(cell => {
+    if (cell.dataset.editable === 'true') return;
+    cell.dataset.editable = 'true';
+
+    cell.style.cursor = 'pointer';
+    cell.title = 'Click to edit friendly name (blank to reset to username)';
+
+    cell.addEventListener('click', () => {
+        if (cell.querySelector('input')) return;
+
+        const username = cell.dataset.username;
+        const currentDisplay = cell.textContent.trim();
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = currentDisplay;
+        input.style.width = '100%';
+        input.style.boxSizing = 'border-box';
+        input.style.padding = '2px 4px';
+        input.style.fontSize = 'inherit';
+
+        cell.innerHTML = '';
+        cell.appendChild(input);
+        input.focus();
+        input.select();
+
+        const save = () => {
+            const newName = input.value.trim();
+            const customer = this.controller.customers.find(c => c.radiusUsername === username);
+            if (customer) {
+                customer.friendlyName = newName || null;
+                cell.textContent = customer.friendlyName || customer.radiusUsername;
+                console.log(`Friendly name updated for ${username}: ${customer.friendlyName || '(default)'}`);
+            }
+        };
+
+        input.addEventListener('blur', save);
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                save();
+            } else if (e.key === 'Escape') {
+                cell.textContent = currentDisplay;
+            }
+        });
+    });
+});
+// --- END ADD-ON ---
+        
     }
     
     update() {
