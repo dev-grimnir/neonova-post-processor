@@ -2,7 +2,7 @@
 
 class BaseNeonovaController {
     constructor() {
-        this.baseSearchUrl = 'https://admin.neonova.net/rat/index.php?acctsearch1=&userid=';
+        this.baseSearchUrl = 'https://admin.neonova.net/rat/index.php';
         // You can add defaults for form fields here if they rarely change
         this.defaultFormData = {
             ip: '',
@@ -128,14 +128,38 @@ class BaseNeonovaController {
             .find(a => a.textContent.trim().startsWith('NEXT @') && a.href && a.href.includes('index.php'));
     }
 
-    getSearchUrl(username) {
-        let url = this.baseSearchUrl;
-        if (!url.endsWith('?')) url += '?';
-        url += 'acctsearch=2&sd=fairpoint.net&iuserid=' + encodeURIComponent(username);
-        // Add other default params from your cURL (date range, order, hits, etc.)
-        url += '&ip=&session=&nasip=&statusview=both&syear=2026&smonth=01&sday=01&shour=00&smin=00&eyear=&emonth=&eday=&ehour=&emin=&order=date&hits=50&location=0&direction=1&dump=';
-        return url;
-    }
+getSearchUrl(username) {
+    const now = new Date();
+    const currentYear = now.getFullYear().toString();
+    const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');  // 01–12
+
+    const params = new URLSearchParams({
+        acctsearch: '2',
+        sd: 'fairpoint.net',
+        iuserid: username,
+        ip: '',
+        session: '',
+        nasip: '',
+        statusview: 'both',
+        syear: currentYear,
+        smonth: currentMonth,
+        sday: '01',  // fixed to start of month
+        shour: '00',
+        smin: '00',
+        emonth: '',  // empty end = up to today
+        eday: '',
+        eyear: '',
+        ehour: '',
+        emin: '',
+        hits: '50',
+        order: 'date',
+        location: '0',
+        direction: '1',
+        dump: ''
+    });
+
+    return `${this.baseSearchUrl}?${params.toString()}`;
+}
     
     /**
      * Full pagination - collects all entries (used by report).
