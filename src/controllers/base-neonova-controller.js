@@ -115,42 +115,54 @@ class BaseNeonovaController {
      * @param {Function} [onProgress] optional callback (currentEntries, page)
      * @returns {Promise<Array<Object>>}
      */
+
     async paginateReportLogs(username, onProgress = null) {
-        const entries = [];
-        let url = this.baseSearchUrl;  // initial form submit happens in submitSearch
-        let page = 1;
+    const entries = [];
+    let url = this.getSearchUrl(username);  // initial URL from inherited method
+    let page = 1;
+    const seenUrls = new Set();
+    const maxPages = 50;  // safety cap to avoid spamming
 
-        // First page: submit the search form
-        const initialDoc = await this.submitSearch(username);
-        let pageEntries = this.parsePageRows(initialDoc);
-        entries.push(...pageEntries);
-        if (onProgress) onProgress(entries.length, page);
-
-        while (true) {
-            const nextLink = this.findNextPageLink(initialDoc);  // use the current doc for link
-            if (!nextLink || !nextLink.href) break;
-
-            url = nextLink.href;
-            if (!url.startsWith('http')) url = 'https://admin.neonova.net' + url;
-
-            console.log(`Fetching page ${page + 1}: ${url}`);
-            const res = await fetch(url, { credentials: 'include', cache: 'no-cache' });
+        while (url && page <= maxPages) {
+            if (seenUrls.has(url)) {
+                console.warn('Loop detected - same URL repeated. Stopping.');
+                break;
+            }
+            seenUrls.add(url);
+    
+            console.log(`Fetching page ${page}: ${url}`);
+            const res = await this.safeFetch(url);  // inherited fetch with signal
             if (!res.ok) break;
-
+    
             const html = await res.text();
             const doc = new DOMParser().parseFromString(html, 'text/html');
-
-            pageEntries = this.parsePageRows(doc);
+    
+            const pageEntries = this.parsePageRows(doc);
             entries.push(...pageEntries);
+    
+            if (onProgress) onProgress(entries.length, page);
+    
+            const nextLink = this.findNextPageLink(doc);
+            if (!nextLink || !nextLink.href) {
+                console.log('No next page link found - ending.');
+                break;
+            }
 
-            if (onProgress) onProgress(entries.length, page + 1);
+        const nextUrl = nextLink.href.startsWith('http') ? nextLink.href : 'https://admin.neonova.net' + nextLink.href;
 
-            page++;
+        if (nextUrl === url) {
+            console.warn('Next link points to current page - stopping.');
+            break;
         }
 
-        entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
-        return entries;
+        url = nextUrl;
+        page++;
     }
+
+    entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+    console.log(`Collected ${entries.length} entries from ${page - 1} pages`);
+    return entries;
+}
 
     /**
      * Dashboard convenience method - gets only the most recent entry.
