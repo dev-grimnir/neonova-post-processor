@@ -1,6 +1,6 @@
 // src/controllers/BaseNeonovaController.js
 
-class BaseNeoNovaController {
+class BaseNeonovaController {
     constructor() {
         this.baseSearchUrl = 'https://admin.neonova.net/rat/index.php';
         // You can add defaults for form fields here if they rarely change
