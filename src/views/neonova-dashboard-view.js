@@ -1,11 +1,9 @@
 class NeonovaDashboardView {
     constructor(controller) {
-        console.log('View constructor called - controller passed:', !!controller);
         this.controller = controller;
         this.panel = null;
         this.minimizeBar = null;
         this.createElements();
-        console.log('View constructor finished - panel created?', !!this.panel);
     }
 
     createElements() {
