@@ -17,7 +17,7 @@ class NeonovaDashboardController extends BaseNeonovaController{
         let url = super.getSearchUrl('kandkpepper')
 
 
-        const allEntries = await paginateAndParseLogs(url);
+        const allEntries = await paginateReportLogs(url);
     
         if (allEntries.length === 0) {
             console.log(`No entries found for ${username}`);
