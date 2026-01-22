@@ -1,7 +1,6 @@
 class NeonovaDashboardController extends BaseNeonovaController{
     constructor() {
         super();
-        this.baseSearchUrl = 'https://admin.neonova.net/rat/index.php?acctsearch1=&userid='
         try {
             this.customers = this.load();
             this.panelVisible = false;
@@ -15,7 +14,7 @@ class NeonovaDashboardController extends BaseNeonovaController{
     }
 
     async getLatestEntry(username) {
-        let url = `${this.baseSearchUrl}${encodeURIComponent(username)}`;
+        let url = super.getSearchUrl('kandkpepper')
 
 
         const allEntries = await paginateAndParseLogs(url);
@@ -116,7 +115,7 @@ class NeonovaDashboardController extends BaseNeonovaController{
     }
 
     async getStatus(username) {
-        let url = `${this.baseSearchUrl}${encodeURIComponent(username)}`;
+        let url = super.getSearchUrl('kandkpepper')
         const res = await fetch(url, { credentials: 'include', cache: 'no-cache' });
         if (!res.ok) throw new Error('Fetch failed');
 
@@ -196,7 +195,7 @@ class NeonovaDashboardController extends BaseNeonovaController{
             const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]; // YYYY-MM-DD
             const endDate = now.toISOString().split('T')[0];
     
-            let url = `${this.baseSearchUrl}${encodeURIComponent(username)}&fromdate=${startDate}&todate=${endDate}`;
+            let url = super.getSearchUrl('kandkpepper')
     
             const entries = [];
     
@@ -281,7 +280,7 @@ class NeonovaDashboardController extends BaseNeonovaController{
     }
 
     async fetchLatestEntry(username) {
-        let url = this.baseSearchUrl + encodeURIComponent(username)
+        let url = super.getSearchUrl('kandkpepper')
         const allEntries = await paginateAndParseLogs(url);
 
         if (allEntries.length === 0) {
