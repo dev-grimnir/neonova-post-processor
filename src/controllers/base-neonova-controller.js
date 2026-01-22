@@ -128,38 +128,38 @@ class BaseNeonovaController {
             .find(a => a.textContent.trim().startsWith('NEXT @') && a.href && a.href.includes('index.php'));
     }
 
-getSearchUrl(username) {
-    const now = new Date();
-    const currentYear = now.getFullYear().toString();
-    const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');  // 01–12
-
-    const params = new URLSearchParams({
-        acctsearch: '2',
-        sd: 'fairpoint.net',
-        iuserid: username,
-        ip: '',
-        session: '',
-        nasip: '',
-        statusview: 'both',
-        syear: currentYear,
-        smonth: currentMonth,
-        sday: '01',  // fixed to start of month
-        shour: '00',
-        smin: '00',
-        emonth: '',  // empty end = up to today
-        eday: '',
-        eyear: '',
-        ehour: '',
-        emin: '',
-        hits: '50',
-        order: 'date',
-        location: '0',
-        direction: '1',
-        dump: ''
-    });
-
-    return `${this.baseSearchUrl}?${params.toString()}`;
-}
+    getSearchUrl(username) {
+        const now = new Date();
+        const currentYear = now.getFullYear().toString();
+        const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');  // 01–12
+    
+        const params = new URLSearchParams({
+            acctsearch: '2',
+            sd: 'fairpoint.net',
+            iuserid: username,
+            ip: '',
+            session: '',
+            nasip: '',
+            statusview: 'both',
+            syear: currentYear,
+            smonth: currentMonth,
+            sday: '01',  // fixed to start of month
+            shour: '00',
+            smin: '00',
+            emonth: '',  // empty end = up to today
+            eday: '',
+            eyear: '',
+            ehour: '',
+            emin: '',
+            hits: '50',
+            order: 'date',
+            location: '0',
+            direction: '1',
+            dump: ''
+        });
+    
+        return `${this.baseSearchUrl}?${params.toString()}`;
+    }
     
     /**
      * Full pagination - collects all entries (used by report).
@@ -167,51 +167,102 @@ getSearchUrl(username) {
      * @param {Function} [onProgress] optional callback (currentEntries, page)
      * @returns {Promise<Array<Object>>}
      */
-    async paginateReportLogs(username, onProgress = null) {
+    /**
+ * Headless pagination for NeoNova RADIUS logs.
+ * Submits the search form (POST), parses the first page, then follows "NEXT @" links.
+ * Stops when no valid next link is found or safety limits are hit.
+ * Returns sorted array of entries (newest first).
+ * 
+ * @param {string} username - The RADIUS username to search
+ * @param {Function} [onProgress] - Optional callback (currentEntries, page)
+ * @returns {Promise<Array<{timestamp: string, status: string, sessionTime: string, dateObj: Date}>>}
+ */
+async paginateReportLogs(username, onProgress = null) {
     const entries = [];
-    let url = this.getSearchUrl(username);  // initial URL from inherited method
     let page = 1;
-    const seenUrls = new Set();
-    const maxPages = 50;  // safety cap to avoid spamming
+    const seenUrls = new Set();           // Prevent infinite loops on same URL
+    const maxPages = 50;                   // Hard cap to avoid spamming server
 
-        while (url && page <= maxPages) {
-            if (seenUrls.has(url)) {
-                console.warn('Loop detected - same URL repeated. Stopping.');
-                break;
-            }
-            seenUrls.add(url);
-    
-            console.log(`Fetching page ${page}: ${url}`);
-            const res = await this.safeFetch(url);  // inherited fetch with signal
-            if (!res.ok) break;
-    
-            const html = await res.text();
-            const doc = new DOMParser().parseFromString(html, 'text/html');
-    
-            const pageEntries = this.parsePageRows(doc);
-            entries.push(...pageEntries);
-    
-            if (onProgress) onProgress(entries.length, page);
-    
-            const nextLink = this.findNextPageLink(doc);
-            if (!nextLink || !nextLink.href) {
-                console.log('No next page link found - ending.');
-                break;
-            }
+    // Step 1: Submit the initial search form (POST)
+    const initialDoc = await this.submitSearch(username);
+    let currentDoc = initialDoc;
 
-        const nextUrl = nextLink.href.startsWith('http') ? nextLink.href : 'https://admin.neonova.net' + nextLink.href;
+    // Parse first page
+    let pageEntries = this.parsePageRows(currentDoc);
+    entries.push(...pageEntries);
 
-        if (nextUrl === url) {
-            console.warn('Next link points to current page - stopping.');
+    if (onProgress) onProgress(entries.length, page);
+
+    console.log(`Page ${page}: ${pageEntries.length} entries parsed`);
+
+    while (true) {
+        // Safety: stop if we've seen this URL before
+        const currentUrl = currentDoc.location?.href || 'unknown';
+        if (seenUrls.has(currentUrl)) {
+            console.warn(`Loop detected - same URL repeated (${currentUrl}). Stopping.`);
+            break;
+        }
+        seenUrls.add(currentUrl);
+
+        // Safety: max pages reached
+        if (page >= maxPages) {
+            console.warn(`Reached max pages (${maxPages}). Stopping to prevent spam.`);
             break;
         }
 
-        url = nextUrl;
+        // Find next page link using your exact report-builder logic
+        const nextLink = Array.from(currentDoc.querySelectorAll('a'))
+            .find(a => a.textContent.trim().startsWith('NEXT @') && a.href && a.href.includes('index.php'));
+
+        if (!nextLink || !nextLink.href) {
+            console.log(`No valid NEXT @ link found on page ${page}. Ending pagination.`);
+            break;
+        }
+
+        // Resolve relative href to absolute
+        let nextUrl = nextLink.href;
+        if (!nextUrl.startsWith('http')) {
+            nextUrl = 'https://admin.neonova.net' + nextUrl;
+        }
+
+        // Extra safety: don't follow if it's the same page
+        if (nextUrl === currentUrl) {
+            console.warn(`Next link points to current page (${nextUrl}). Stopping.`);
+            break;
+        }
+
+        console.log(`Following next link to page ${page + 1}: ${nextUrl}`);
+
+        // Fetch the next page
+        const res = await fetch(nextUrl, {
+            credentials: 'include',
+            cache: 'no-cache'
+        });
+
+        if (!res.ok) {
+            console.error(`Fetch failed for page ${page + 1}: HTTP ${res.status}`);
+            break;
+        }
+
+        const html = await res.text();
+        currentDoc = new DOMParser().parseFromString(html, 'text/html');
+
+        // Parse this page
+        pageEntries = this.parsePageRows(currentDoc);
+        entries.push(...pageEntries);
+
+        if (onProgress) onProgress(entries.length, page + 1);
+
+        console.log(`Page ${page + 1}: ${pageEntries.length} entries parsed`);
+
         page++;
     }
 
+    // Sort newest first
     entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
-    console.log(`Collected ${entries.length} entries from ${page - 1} pages`);
+
+    console.log(`Total collected: ${entries.length} entries over ${page} pages`);
+
     return entries;
 }
 
