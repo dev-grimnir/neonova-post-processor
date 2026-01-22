@@ -132,47 +132,62 @@ async updateCustomerStatus(customer) {
     try {
         const latest = await this.getLatestEntry(customer.radiusUsername);
         if (!latest) {
+            console.log('No latest entry found for', customer.radiusUsername);
             customer.update('Unknown', '00:00:00:00');
             return;
         }
 
+        console.log('Latest entry raw:', latest); // ← log the whole object
+
         let durationSeconds = 0;
 
-        // Prefer sessionTime if available
+        // SessionTime branch
         if (latest.sessionTime && latest.sessionTime.trim()) {
+            console.log('Parsing sessionTime:', latest.sessionTime);
             const parts = latest.sessionTime.match(/(\d+)h?\s*(\d+)m?\s*(\d*)s?/i);
             if (parts) {
                 const h = parseInt(parts[1] || 0);
                 const m = parseInt(parts[2] || 0);
                 const s = parseInt(parts[3] || 0);
                 durationSeconds = h * 3600 + m * 60 + s;
+                console.log('Parsed sessionTime to seconds:', durationSeconds);
             } else {
-                console.log('Could not parse sessionTime:', latest.sessionTime);
+                console.log('sessionTime regex failed:', latest.sessionTime);
             }
         }
 
-        // Fallback: time since the event timestamp
+        // Timestamp fallback
         if (durationSeconds === 0 && latest.dateObj) {
-            durationSeconds = Math.floor((Date.now() - latest.dateObj.getTime()) / 1000);
+            const timeSince = Date.now() - latest.dateObj.getTime();
+            console.log('Raw time since timestamp (ms):', timeSince);
+            if (!isNaN(timeSince) && timeSince > 0) {
+                durationSeconds = Math.floor(timeSince / 1000);
+                console.log('Converted to seconds:', durationSeconds);
+            } else {
+                console.log('Invalid or negative timeSince:', timeSince);
+            }
         }
 
-        // If last event was Stop, no current session → duration 0
         if (latest.status === 'Stop') {
+            console.log('Last event was Stop → forcing duration to 0');
             durationSeconds = 0;
         }
 
-        // Format as DD:HH:MM:SS
+        console.log('Final durationSeconds before formatting:', durationSeconds);
+
+        // Format
         const days = Math.floor(durationSeconds / 86400);
         const hours = Math.floor((durationSeconds % 86400) / 3600);
         const minutes = Math.floor((durationSeconds % 3600) / 60);
         const seconds = durationSeconds % 60;
 
-        const formattedDuration = `${days.toString().padStart(2, '0')}:${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        const formatted = `${days.toString().padStart(2, '0')}:${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+        console.log('Formatted duration:', formatted);
 
         const status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
 
-        customer.update(status, formattedDuration);
-        console.log(`Updated ${customer.radiusUsername}: ${status}, duration ${formattedDuration}`);
+        customer.update(status, formatted);
     } catch (err) {
         console.error('Status update failed:', err);
         customer.update('Error', '00:00:00:00');
