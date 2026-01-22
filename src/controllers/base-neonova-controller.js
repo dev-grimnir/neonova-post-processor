@@ -109,13 +109,16 @@ class BaseNeonovaController {
             .find(a => a.textContent.trim().startsWith('NEXT @') && a.href && a.href.includes('index.php'));
     }
 
+    getSearchUrl(username) {
+        return this.baseSearchUrl + encodeURIComponent(username);
+    }
+    
     /**
      * Full pagination - collects all entries (used by report).
      * @param {string} username 
      * @param {Function} [onProgress] optional callback (currentEntries, page)
      * @returns {Promise<Array<Object>>}
      */
-
     async paginateReportLogs(username, onProgress = null) {
     const entries = [];
     let url = this.getSearchUrl(username);  // initial URL from inherited method
