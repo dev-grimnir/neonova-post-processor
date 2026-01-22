@@ -84,35 +84,35 @@ class BaseNeonovaController {
         return new DOMParser().parseFromString(html, 'text/html');
     }
 
-
     /**
-     * Parses table rows from a parsed document into entry objects.
-     * Includes logging for diagnostics.
-     * @param {Document} doc - Parsed DOM document
-     * @returns {Array<{timestamp: string, status: string, sessionTime: string, dateObj: Date}>}
-     */
-    parsePageRows(doc) {
+ * Parses the RADIUS log table from a parsed document.
+ * Skips header row, extracts timestamp, status, session time.
+ * Returns array of entry objects.
+ * 
+ * @param {Document} doc
+ * @returns {Array<{timestamp: string, status: string, sessionTime: string, dateObj: Date}>}
+ */
+parsePageRows(doc) {
     const entries = [];
 
-    // Prefer the wide data table (from your HTML)
-    let table = doc.querySelector('table[width="500"]') ||
-                doc.querySelector('table[cellspacing="2"][cellpadding="2"]') ||
-                doc.querySelector('table');
+    // Find the data table (prefer width=500 as seen in HTML)
+    const table = doc.querySelector('table[width="500"]') ||
+                  doc.querySelector('table[cellspacing="2"][cellpadding="2"]') ||
+                  doc.querySelector('table');
 
     if (!table) {
-        console.log('No data table found on page');
+        console.log('No data table found on this page');
         return entries;
     }
 
-    console.log('Table found - total rows:', table.rows.length);
-    console.log('Table width/attrs:', table.getAttribute('width'), table.getAttribute('cellspacing'));
+    console.log(`Table found - total rows: ${table.rows.length}, width/attrs: ${table.getAttribute('width') || 'unknown'} ${table.getAttribute('cellspacing') || 'unknown'}`);
 
-    // Skip header row (usually row 0)
+    // Skip header (row 0)
     for (let i = 1; i < table.rows.length; i++) {
         const row = table.rows[i];
         const cells = row.cells;
 
-        if (cells.length < 6) {
+        if (cells.length < 7) {
             console.log(`Skipping row ${i} - too few cells (${cells.length})`);
             continue;
         }
@@ -123,15 +123,26 @@ class BaseNeonovaController {
 
         let dateObj;
         try {
-            dateObj = new Date(timestamp.replace(' ', 'T'));
-            if (isNaN(dateObj.getTime())) continue;
-        } catch {
+            // Normalize timestamp format
+            const normalized = timestamp.replace(/\s+/g, 'T');
+            dateObj = new Date(normalized);
+            if (isNaN(dateObj.getTime())) {
+                console.log(`Invalid date on row ${i}: "${timestamp}"`);
+                continue;
+            }
+        } catch (err) {
+            console.log(`Date parse error on row ${i}:`, err.message);
             continue;
         }
 
-        const status = statusText.includes('Start') ? 'Start' : 'Stop';
+        const status = statusText.toLowerCase().includes('start') ? 'Start' : 'Stop';
 
-        entries.push({ timestamp, status, sessionTime, dateObj });
+        entries.push({
+            timestamp,
+            status,
+            sessionTime,
+            dateObj
+        });
     }
 
     console.log(`Parsed ${entries.length} valid entries from page`);
@@ -188,12 +199,22 @@ class BaseNeonovaController {
         return `https://admin.neonova.net/rat/index.php?${params.toString()}`;
     }
     
+/**
+ * Fetches all available RADIUS log pages for a user using predictable offset pagination.
+ * Uses location=0,50,100,... with direction=0 (forward).
+ * Stops when last page has < hitsPerPage rows.
+ * Returns all entries sorted newest-first.
+ * 
+ * @param {string} username
+ * @param {Function} [onProgress] - Optional callback (totalEntries, currentPage)
+ * @returns {Promise<Array<{timestamp: string, status: string, sessionTime: string, dateObj: Date}>>}
+ */
 async paginateReportLogs(username, onProgress = null) {
     const entries = [];
     let page = 1;
-    let offset = 0;  // location param
+    let offset = 0;
     const hitsPerPage = 50;
-    const maxPages = 50;
+    const maxPages = 50; // safety cap
 
     while (page <= maxPages) {
         const params = new URLSearchParams({
@@ -217,7 +238,7 @@ async paginateReportLogs(username, onProgress = null) {
             order: 'date',
             hits: hitsPerPage.toString(),
             location: offset.toString(),
-            direction: '0',  // forward/next
+            direction: '0', // forward/next
             dump: ''
         });
 
@@ -228,7 +249,7 @@ async paginateReportLogs(username, onProgress = null) {
             credentials: 'include',
             cache: 'no-cache',
             headers: {
-                'Referer': url,  // self-referer
+                'Referer': url,
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 'Accept-Language': 'en-US,en;q=0.5',
                 'Sec-Fetch-Dest': 'document',
@@ -239,7 +260,7 @@ async paginateReportLogs(username, onProgress = null) {
         });
 
         if (!res.ok) {
-            console.error(`Page ${page} failed: HTTP ${res.status}`);
+            console.error(`Page ${page} fetch failed: HTTP ${res.status}`);
             break;
         }
 
@@ -250,9 +271,9 @@ async paginateReportLogs(username, onProgress = null) {
         entries.push(...pageEntries);
 
         if (onProgress) onProgress(entries.length, page);
-        console.log(`Page ${page}: ${pageEntries.length} entries parsed`);
+        console.log(`Page ${page}: Table has ${doc.querySelector('table[width="500"]')?.rows?.length || 'unknown'} rows, parsed ${pageEntries.length} valid entries`);
 
-        // If we got fewer than hitsPerPage, this is the last page
+        // Stop when fewer than full page (last page)
         if (pageEntries.length < hitsPerPage) {
             console.log(`Last page detected (${pageEntries.length} < ${hitsPerPage}). Ending.`);
             break;
@@ -262,20 +283,41 @@ async paginateReportLogs(username, onProgress = null) {
         page++;
     }
 
+    // Sort newest first (important for status)
     entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+
     console.log(`Total collected: ${entries.length} entries over ${page} pages`);
+    if (entries.length > 0) {
+        console.log('Newest entry (for status):', entries[0]);
+    }
 
     return entries;
 }
 
     
-    /**
-     * Dashboard convenience method - gets only the most recent entry.
-     * @param {string} username 
-     * @returns {Promise<Object|null>}
-     */
-    async getLatestEntry(username) {
+/**
+ * Gets the most recent RADIUS log entry for the user.
+ * Fetches all pages and returns the newest (most recent timestamp).
+ * 
+ * @param {string} username
+ * @returns {Promise<Object|null>} Newest entry or null
+ */
+async getLatestEntry(username) {
+    try {
         const entries = await this.paginateReportLogs(username);
-        return entries[0] || null;
+        if (entries.length === 0) {
+            console.log('No entries found for user');
+            return null;
+        }
+
+        // Already sorted newest-first in paginateReportLogs
+        const newest = entries[0];
+        console.log('Newest entry for status update:', newest);
+
+        return newest;
+    } catch (err) {
+        console.error('getLatestEntry failed:', err);
+        return null;
     }
+}
 }
