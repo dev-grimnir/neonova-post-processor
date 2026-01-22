@@ -23,6 +23,25 @@ class BaseNeonovaController {
         };
     }
 
+    async getLatestEntry(username) {
+        const url = this.baseSearchUrl + encodeURIComponent(username); // missing separator? Add & if needed
+        const entries = await this.paginateReportLogs(username); // or pass url
+        return entries[0] || null;
+    }
+    
+    async safeFetch(url, options = {}) {
+        const defaultOptions = {
+            credentials: 'include',
+            cache: 'no-cache',
+            // add signal if needed for abort
+        };
+        const res = await fetch(url, { ...defaultOptions, ...options });
+        if (!res.ok) {
+            throw new Error(`Fetch failed: HTTP ${res.status}`);
+        }
+        return res;
+    }
+    
     /**
      * Submits the search form and returns the parsed DOM document of the results page.
      * @param {string} username 
