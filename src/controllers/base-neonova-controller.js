@@ -188,97 +188,76 @@ class BaseNeonovaController {
         return `https://admin.neonova.net/rat/index.php?${params.toString()}`;
     }
     
-             /**
-         * Headless pagination for NeoNova RADIUS logs.
-         * Uses POST for initial search, GET for subsequent pages.
-         * Includes safety checks to prevent infinite loops.
-         * @param {string} username
-         * @param {Function} [onProgress] - (currentEntries, page)
-         * @returns {Promise<Array>}
-         */
-        async paginateReportLogs(username, onProgress = null) {
-        const entries = [];
-        let page = 1;
-        const seenUrls = new Set();
-        const maxPages = 50; // safety cap
-    
-        // Start with POST for the first page
-        let currentDoc = await this.submitSearch(username);
-        let currentUrl = currentDoc.location?.href || 'post-submit';
-    
-        seenUrls.add(currentUrl);
-    
-        // Parse page 1
-        let pageEntries = this.parsePageRows(currentDoc);
+async paginateReportLogs(username, onProgress = null) {
+    const entries = [];
+    let page = 1;
+    const maxPages = 50;
+
+    // Initial POST to start session and get page 1
+    let currentDoc = await this.submitSearch(username);
+    let currentUrl = 'https://admin.neonova.net/rat/index.php'; // base URL - same every time
+
+    // Parse page 1
+    let pageEntries = this.parsePageRows(currentDoc);
+    entries.push(...pageEntries);
+
+    if (onProgress) onProgress(entries.length, page);
+    console.log(`Page ${page}: ${pageEntries.length} entries`);
+
+    while (page < maxPages) {
+        // Look for ANY "NEXT" link (even "NEXT @1", "NEXT @2", etc.)
+        const nextLink = Array.from(currentDoc.querySelectorAll('a'))
+            .find(a => a.textContent.trim().includes('NEXT @'));
+
+        if (!nextLink) {
+            console.log(`No NEXT link found on page ${page}. Ending.`);
+            break;
+        }
+
+        console.log(`Found NEXT link on page ${page}: "${nextLink.textContent.trim()}"`);
+
+        // Fetch the SAME URL again (session will advance)
+        const res = await fetch(currentUrl, {
+            method: 'GET',
+            credentials: 'include',
+            cache: 'no-cache',
+            headers: {
+                'Referer': currentUrl,  // mimic browser referrer
+                'Sec-Fetch-Dest': 'frame',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'same-origin',
+                'Upgrade-Insecure-Requests': '1'
+            }
+        });
+
+        if (!res.ok) {
+            console.error(`Page ${page + 1} fetch failed: ${res.status}`);
+            break;
+        }
+
+        const html = await res.text();
+        currentDoc = new DOMParser().parseFromString(html, 'text/html');
+
+        pageEntries = this.parsePageRows(currentDoc);
         entries.push(...pageEntries);
-    
-        if (onProgress) onProgress(entries.length, page);
-        console.log(`Page ${page} parsed: ${pageEntries.length} entries`);
-    
-        while (true) {
-            if (page >= maxPages) {
-                console.warn(`Max pages reached (${maxPages}). Stopping.`);
-                break;
-            }
-    
-            const nextLink = Array.from(currentDoc.querySelectorAll('a'))
-                .find(a => {
-                    const text = a.textContent.trim();
-                    return text.startsWith('NEXT @') && a.href && a.href.includes('index.php');
-                });
-    
-            if (!nextLink) {
-                console.log(`No NEXT @ link found on page ${page}. Ending pagination.`);
-                break;
-            }
-    
-            let nextUrl = nextLink.href;
-            if (!nextUrl.startsWith('http')) {
-                nextUrl = 'https://admin.neonova.net' + nextUrl;
-            }
-    
-            if (nextUrl === currentUrl || seenUrls.has(nextUrl)) {
-                console.warn(`Next link does not advance (${nextUrl} same as current or seen). Stopping.`);
-                break;
-            }
-    
-            console.log(`Following NEXT link to page ${page + 1}: ${nextUrl}`);
-    
-            const res = await fetch(nextUrl, {
-                credentials: 'include',
-                cache: 'no-cache'
-            });
-    
-            if (!res.ok) {
-                console.error(`Fetch failed for page ${page + 1}: HTTP ${res.status}`);
-                break;
-            }
-    
-            const html = await res.text();
-            currentDoc = new DOMParser().parseFromString(html, 'text/html');
-            currentUrl = res.url || nextUrl;
-    
-            seenUrls.add(currentUrl);
-    
-            pageEntries = this.parsePageRows(currentDoc);
-            entries.push(...pageEntries);
-    
-            if (onProgress) onProgress(entries.length, page + 1);
-            console.log(`Page ${page + 1} parsed: ${pageEntries.length} entries`);
-    
-            page++;
+
+        if (onProgress) onProgress(entries.length, page + 1);
+        console.log(`Page ${page + 1}: ${pageEntries.length} entries`);
+
+        // Safety: stop if no new entries (server didn't advance)
+        if (pageEntries.length === 0) {
+            console.log('No new entries on page ${page + 1}. Stopping.');
+            break;
         }
-    
-        // Sort newest first (though page 1 is newest)
-        entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
-    
-        console.log(`Total collected: ${entries.length} entries over ${page} pages`);
-        if (entries.length > 0) {
-            console.log('Newest entry (for status):', entries[0]);
-        }
-    
-        return entries;
+
+        page++;
     }
+
+    entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+    console.log(`Total: ${entries.length} entries over ${page} pages`);
+
+    return entries;
+}
 
     
     /**
