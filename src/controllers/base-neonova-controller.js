@@ -129,7 +129,12 @@ class BaseNeonovaController {
     }
 
     getSearchUrl(username) {
-        return this.baseSearchUrl + encodeURIComponent(username);
+        let url = this.baseSearchUrl;
+        if (!url.endsWith('?')) url += '?';
+        url += 'acctsearch=2&sd=fairpoint.net&iuserid=' + encodeURIComponent(username);
+        // Add other default params from your cURL (date range, order, hits, etc.)
+        url += '&ip=&session=&nasip=&statusview=both&syear=2026&smonth=01&sday=01&shour=00&smin=00&eyear=&emonth=&eday=&ehour=&emin=&order=date&hits=50&location=0&direction=1&dump=';
+        return url;
     }
     
     /**
