@@ -140,6 +140,16 @@ class NeonovaDashboardView {
         }
     }
 
+        updateMinimize() {
+        if (this.controller.minimized) {
+            this.panel.style.width = '50px';
+            this.panel.style.height = '30px';
+            this.panel.innerHTML = '<div style="cursor:pointer; text-align:center;">▼</div>';
+        } else {
+            this.render();  // re-render full panel
+        }
+    }
+
     show() {
     console.log('view.show() called - panel exists?', !!this.panel);
     if (this.panel) {
