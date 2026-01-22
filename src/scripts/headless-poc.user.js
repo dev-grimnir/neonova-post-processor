@@ -66,9 +66,7 @@
             });
 
             document.body.appendChild(openBtn);
-            console.log('Dashboard button added');
         } catch (err) {
-            console.error('Failed to initialize dashboard:', err);
         }
     }
 })();
