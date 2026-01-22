@@ -1,16 +1,12 @@
 class NeonovaDashboardController extends BaseNeonovaController{
     constructor() {
         super();
-        try {
             this.customers = this.load();
             this.panelVisible = false;
             this.minimized = false;
             this.pollInterval = null;
             this.pollIntervalMs = 10000;
             this.view = new NeonovaDashboardView(this);
-        } catch (err) {
-            console.error('Entire constructor failed:', err);
-        }
     }
 
     togglePanel() {
