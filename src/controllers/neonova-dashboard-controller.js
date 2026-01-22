@@ -141,6 +141,8 @@ async updateCustomerStatus(customer) {
         const latest = await this.getLatestEntry(customer.radiusUsername);
         if (!latest) {
             console.log(`No latest entry for ${customer.radiusUsername}`);
+            console.log('Passing to update - status:', status, 'duration (string):', formattedDuration, 'type:', typeof formattedDuration);
+            customer.update(status, formattedDuration);
             customer.update('Unknown', '00:00:00:00');
             return;
         }
