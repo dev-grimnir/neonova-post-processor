@@ -180,18 +180,5 @@ class NeonovaDashboardController extends BaseNeonovaController{
         }
         this.save();
         this.view.render();
-    }
-
-    async fetchLatestEntry(username) {
-        let url = super.getSearchUrl('kandkpepper')
-        const allEntries = await paginateAndParseLogs(url);
-
-        if (allEntries.length === 0) {
-            console.log(`No entries found for ${username}`);
-            return null;
-        }
-
-        return allEntries[0];  // newest entry (helper sorts newest first)
-    }
-    
+    }    
 }
