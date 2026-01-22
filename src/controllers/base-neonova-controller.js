@@ -92,65 +92,51 @@ class BaseNeonovaController {
      * @returns {Array<{timestamp: string, status: string, sessionTime: string, dateObj: Date}>}
      */
     parsePageRows(doc) {
-        const entries = [];
-        const table = doc.querySelector('table[cellspacing="2"][cellpadding="2"]');
-    
-        if (!table) {
-            console.log('No table found with cellspacing=2 cellpadding=2');
-            // Fallback attempt - any table with rows
-            const fallback = doc.querySelector('table');
-            if (fallback) {
-                console.log('Fallback table found - rows:', fallback.rows.length);
-            }
-            return entries;
-        }
-    
-        console.log('Table found - total rows:', table.rows.length);
-    
-        for (let i = 1; i < table.rows.length; i++) {
-            const row = table.rows[i];
-            const cells = row.cells;
-    
-            console.log(`Row ${i}: ${cells.length} cells`);
-    
-            if (cells.length < 5) {  // Lowered from 7 to be more forgiving
-                console.log(`Skipping row ${i} - too few cells`);
-                continue;
-            }
-    
-            const timestamp = cells[0]?.textContent?.trim() || '';
-            const statusText = cells[4]?.textContent?.trim() || '';
-            const sessionTime = cells[6]?.textContent?.trim() || '';
-    
-            console.log(`Row ${i} - timestamp: "${timestamp}", status: "${statusText}", sessionTime: "${sessionTime}"`);
-    
-            let dateObj;
-            try {
-                // More lenient parsing - handle various timestamp formats
-                const normalized = timestamp.replace(/\s+/g, 'T').replace(/(\d{2}):(\d{2}):(\d{2})/, '$1:$2:$3');
-                dateObj = new Date(normalized);
-                if (isNaN(dateObj.getTime())) {
-                    console.log(`Invalid date on row ${i}: "${timestamp}"`);
-                    continue;
-                }
-            } catch (err) {
-                console.log(`Date parse error on row ${i}:`, err.message);
-                continue;
-            }
-    
-            const status = statusText.toLowerCase().includes('start') ? 'Start' : 'Stop';
-    
-            entries.push({
-                timestamp,
-                status,
-                sessionTime,
-                dateObj
-            });
-        }
-    
-        console.log(`Parsed ${entries.length} valid entries from page`);
+    const entries = [];
+
+    // Prefer the wide data table (from your HTML)
+    let table = doc.querySelector('table[width="500"]') ||
+                doc.querySelector('table[cellspacing="2"][cellpadding="2"]') ||
+                doc.querySelector('table');
+
+    if (!table) {
+        console.log('No data table found on page');
         return entries;
     }
+
+    console.log('Table found - total rows:', table.rows.length);
+    console.log('Table width/attrs:', table.getAttribute('width'), table.getAttribute('cellspacing'));
+
+    // Skip header row (usually row 0)
+    for (let i = 1; i < table.rows.length; i++) {
+        const row = table.rows[i];
+        const cells = row.cells;
+
+        if (cells.length < 6) {
+            console.log(`Skipping row ${i} - too few cells (${cells.length})`);
+            continue;
+        }
+
+        const timestamp = cells[0]?.textContent?.trim() || '';
+        const statusText = cells[4]?.textContent?.trim() || '';
+        const sessionTime = cells[6]?.textContent?.trim() || '';
+
+        let dateObj;
+        try {
+            dateObj = new Date(timestamp.replace(' ', 'T'));
+            if (isNaN(dateObj.getTime())) continue;
+        } catch {
+            continue;
+        }
+
+        const status = statusText.includes('Start') ? 'Start' : 'Stop';
+
+        entries.push({ timestamp, status, sessionTime, dateObj });
+    }
+
+    console.log(`Parsed ${entries.length} valid entries from page`);
+    return entries;
+}
 
     /**
      * Finds the next page link using the exact logic from the report builder.
@@ -162,86 +148,87 @@ class BaseNeonovaController {
             .find(a => a.textContent.trim().startsWith('NEXT @') && a.href && a.href.includes('index.php'));
     }
 
-/**
- * Builds the full search URL for a given username.
- * Uses current month start as the default from-date.
- * All other params match the working cURL capture.
- * @param {string} username
- * @returns {string} Full search URL
- */
-getSearchUrl(username) {
-    const now = new Date();
-    const currentYear = now.getFullYear().toString();
-    const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0'); // 01-12
-
-    const params = new URLSearchParams({
-        acctsearch: '2',
-        sd: 'fairpoint.net',
-        iuserid: username,
-        ip: '',
-        session: '',
-        nasip: '',
-        statusview: 'both',
-        syear: currentYear,
-        smonth: currentMonth,
-        sday: '01',                     // Start of current month
-        shour: '00',
-        smin: '00',
-        emonth: '',                     // Empty end = up to present
-        eday: '',
-        eyear: '',
-        ehour: '',
-        emin: '',
-        hits: '50',
-        order: 'date',
-        location: '0',
-        direction: '1',
-        dump: ''
-    });
-
-    return `https://admin.neonova.net/rat/index.php?${params.toString()}`;
-}
-    
-         /**
-     * Headless pagination for NeoNova RADIUS logs.
-     * Uses POST for initial search, GET for subsequent pages.
-     * Includes safety checks to prevent infinite loops.
+    /**
+     * Builds the full search URL for a given username.
+     * Uses current month start as the default from-date.
+     * All other params match the working cURL capture.
      * @param {string} username
-     * @param {Function} [onProgress] - (currentEntries, page)
-     * @returns {Promise<Array>}
+     * @returns {string} Full search URL
      */
-    async paginateReportLogs(username, onProgress = null) {
+    getSearchUrl(username) {
+        const now = new Date();
+        const currentYear = now.getFullYear().toString();
+        const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0'); // 01-12
+    
+        const params = new URLSearchParams({
+            acctsearch: '2',
+            sd: 'fairpoint.net',
+            iuserid: username,
+            ip: '',
+            session: '',
+            nasip: '',
+            statusview: 'both',
+            syear: currentYear,
+            smonth: currentMonth,
+            sday: '01',                     // Start of current month
+            shour: '00',
+            smin: '00',
+            emonth: '',                     // Empty end = up to present
+            eday: '',
+            eyear: '',
+            ehour: '',
+            emin: '',
+            hits: '50',
+            order: 'date',
+            location: '0',
+            direction: '1',
+            dump: ''
+        });
+    
+        return `https://admin.neonova.net/rat/index.php?${params.toString()}`;
+    }
+    
+             /**
+         * Headless pagination for NeoNova RADIUS logs.
+         * Uses POST for initial search, GET for subsequent pages.
+         * Includes safety checks to prevent infinite loops.
+         * @param {string} username
+         * @param {Function} [onProgress] - (currentEntries, page)
+         * @returns {Promise<Array>}
+         */
+        async paginateReportLogs(username, onProgress = null) {
         const entries = [];
         let page = 1;
         const seenUrls = new Set();
-        const maxPages = 50;  // Hard safety limit
+        const maxPages = 50; // safety cap
     
-        // Step 1: Initial POST search
+        // Start with POST for the first page
         let currentDoc = await this.submitSearch(username);
-        let currentUrl = currentDoc.location?.href || 'initial-post';
+        let currentUrl = currentDoc.location?.href || 'post-submit';
+    
+        seenUrls.add(currentUrl);
     
         // Parse page 1
         let pageEntries = this.parsePageRows(currentDoc);
         entries.push(...pageEntries);
     
         if (onProgress) onProgress(entries.length, page);
-        console.log(`Page ${page}: ${pageEntries.length} entries parsed`);
+        console.log(`Page ${page} parsed: ${pageEntries.length} entries`);
     
         while (true) {
-            if (seenUrls.has(currentUrl)) {
-                console.warn(`Loop detected - same URL repeated (${currentUrl}). Stopping.`);
-                break;
-            }
-            seenUrls.add(currentUrl);
-    
             if (page >= maxPages) {
-                console.warn(`Reached max pages (${maxPages}). Stopping.`);
+                console.warn(`Max pages reached (${maxPages}). Stopping.`);
                 break;
             }
     
-            const nextLink = this.findNextPageLink(currentDoc);
-            if (!nextLink || !nextLink.href) {
-                console.log(`No valid NEXT @ link found on page ${page}. Ending.`);
+            const nextLink = Array.from(currentDoc.querySelectorAll('a'))
+                .find(a => {
+                    const text = a.textContent.trim();
+                    return text.startsWith('NEXT @') && a.href && a.href.includes('index.php');
+                });
+    
+            if (!nextLink) {
+                console.log(`No NEXT @ link found on page ${page}. Ending pagination.`);
                 break;
             }
     
@@ -250,12 +237,12 @@ getSearchUrl(username) {
                 nextUrl = 'https://admin.neonova.net' + nextUrl;
             }
     
-            if (nextUrl === currentUrl) {
-                console.warn(`Next link points to current page (${nextUrl}). Stopping.`);
+            if (nextUrl === currentUrl || seenUrls.has(nextUrl)) {
+                console.warn(`Next link does not advance (${nextUrl} same as current or seen). Stopping.`);
                 break;
             }
     
-            console.log(`Following next link to page ${page + 1}: ${nextUrl}`);
+            console.log(`Following NEXT link to page ${page + 1}: ${nextUrl}`);
     
             const res = await fetch(nextUrl, {
                 credentials: 'include',
@@ -269,22 +256,31 @@ getSearchUrl(username) {
     
             const html = await res.text();
             currentDoc = new DOMParser().parseFromString(html, 'text/html');
-            currentUrl = res.url || nextUrl;  // Use final redirected URL
+            currentUrl = res.url || nextUrl;
+    
+            seenUrls.add(currentUrl);
     
             pageEntries = this.parsePageRows(currentDoc);
             entries.push(...pageEntries);
     
             if (onProgress) onProgress(entries.length, page + 1);
-            console.log(`Page ${page + 1}: ${pageEntries.length} entries parsed`);
+            console.log(`Page ${page + 1} parsed: ${pageEntries.length} entries`);
     
             page++;
         }
     
+        // Sort newest first (though page 1 is newest)
         entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+    
         console.log(`Total collected: ${entries.length} entries over ${page} pages`);
+        if (entries.length > 0) {
+            console.log('Newest entry (for status):', entries[0]);
+        }
     
         return entries;
     }
+
+    
     /**
      * Dashboard convenience method - gets only the most recent entry.
      * @param {string} username 
