@@ -128,40 +128,54 @@ class NeonovaDashboardController extends BaseNeonovaController{
         return { status, durationSec };
     }
 
-    async updateCustomerStatus(customer) {
+async updateCustomerStatus(customer) {
     try {
         const latest = await this.getLatestEntry(customer.radiusUsername);
         if (!latest) {
-            customer.update('Unknown', 0);
+            customer.update('Unknown', '00:00:00:00');
             return;
         }
 
-        let status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
-        let durationSec = 0;
+        let durationSeconds = 0;
 
-        const now = Date.now();
-
-        if (latest.status === 'Start') {
-            const startTime = latest.dateObj.getTime();
-            durationSec = Math.round((now - startTime) / 1000);
-        } else if (latest.sessionTime) {
-            const match = latest.sessionTime.match(/(\d+)h\s*(\d+)m\s*(\d+)s|(\d+)m\s*(\d+)s|(\d+)s/);
-            if (match) {
-                const h = parseInt(match[1] || 0);
-                const m = parseInt(match[2] || match[4] || 0);
-                const s = parseInt(match[3] || match[5] || match[6] || 0);
-                durationSec = h * 3600 + m * 60 + s;
+        // Prefer sessionTime if available
+        if (latest.sessionTime && latest.sessionTime.trim()) {
+            const parts = latest.sessionTime.match(/(\d+)h?\s*(\d+)m?\s*(\d*)s?/i);
+            if (parts) {
+                const h = parseInt(parts[1] || 0);
+                const m = parseInt(parts[2] || 0);
+                const s = parseInt(parts[3] || 0);
+                durationSeconds = h * 3600 + m * 60 + s;
+            } else {
+                console.log('Could not parse sessionTime:', latest.sessionTime);
             }
-        } else {
-            const stopTime = latest.dateObj.getTime();
-            durationSec = Math.round((now - stopTime) / 1000);
         }
 
-        customer.update(status, durationSec);
-        console.log(`Updated ${customer.friendlyName}: ${status}, duration ${durationSec}s`);
+        // Fallback: time since the event timestamp
+        if (durationSeconds === 0 && latest.dateObj) {
+            durationSeconds = Math.floor((Date.now() - latest.dateObj.getTime()) / 1000);
+        }
+
+        // If last event was Stop, no current session → duration 0
+        if (latest.status === 'Stop') {
+            durationSeconds = 0;
+        }
+
+        // Format as DD:HH:MM:SS
+        const days = Math.floor(durationSeconds / 86400);
+        const hours = Math.floor((durationSeconds % 86400) / 3600);
+        const minutes = Math.floor((durationSeconds % 3600) / 60);
+        const seconds = durationSeconds % 60;
+
+        const formattedDuration = `${days.toString().padStart(2, '0')}:${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+        const status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
+
+        customer.update(status, formattedDuration);
+        console.log(`Updated ${customer.radiusUsername}: ${status}, duration ${formattedDuration}`);
     } catch (err) {
         console.error('Status update failed:', err);
-        customer.update('Error', 0);
+        customer.update('Error', '00:00:00:00');
     }
 }
 
