@@ -2,7 +2,7 @@
 
 class BaseNeonovaController {
     constructor() {
-        this.baseSearchUrl = 'https://admin.neonova.net/rat/index.php';
+        this.baseSearchUrl = 'https://admin.neonova.net/rat/index.php?acctsearch1=&userid=';
         // You can add defaults for form fields here if they rarely change
         this.defaultFormData = {
             ip: '',
