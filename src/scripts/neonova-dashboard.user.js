@@ -37,9 +37,7 @@
         console.log('Button clicked - handler starting');
         try {
             dashboardController.togglePanel();
-            console.log('togglePanel completed without throw');
         } catch (err) {
-            console.error('togglePanel threw:', err);
         }
     };
     document.body.appendChild(openBtn);
