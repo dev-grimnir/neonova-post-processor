@@ -128,68 +128,86 @@ class NeonovaDashboardController extends BaseNeonovaController{
         return { status, durationSec };
     }
 
+/**
+ * Updates the customer's status and duration on the dashboard.
+ * Uses the most recent log entry to determine current state.
+ * Duration formatted as DD:HH:MM:SS, resets to 00:00:00:00 on Stop.
+ * Includes extensive logging to catch NaN sources.
+ * 
+ * @param {Customer} customer
+ */
 async updateCustomerStatus(customer) {
     try {
         const latest = await this.getLatestEntry(customer.radiusUsername);
         if (!latest) {
-            console.log('No latest entry found for', customer.radiusUsername);
+            console.log(`No latest entry for ${customer.radiusUsername}`);
             customer.update('Unknown', '00:00:00:00');
             return;
         }
 
-        console.log('Latest entry raw:', latest); // ← log the whole object
+        console.log(`Latest entry raw for ${customer.radiusUsername}:`, latest);
 
         let durationSeconds = 0;
 
-        // SessionTime branch
-        if (latest.sessionTime && latest.sessionTime.trim()) {
-            console.log('Parsing sessionTime:', latest.sessionTime);
-            const parts = latest.sessionTime.match(/(\d+)h?\s*(\d+)m?\s*(\d*)s?/i);
-            if (parts) {
-                const h = parseInt(parts[1] || 0);
-                const m = parseInt(parts[2] || 0);
-                const s = parseInt(parts[3] || 0);
-                durationSeconds = h * 3600 + m * 60 + s;
-                console.log('Parsed sessionTime to seconds:', durationSeconds);
+        // 1. Try to parse sessionTime if present
+        if (latest.sessionTime && latest.sessionTime.trim() !== '') {
+            console.log('Attempting to parse sessionTime:', latest.sessionTime);
+            const match = latest.sessionTime.match(/(\d+)h?\s*(\d+)m?\s*(\d*)s?/i);
+            if (match) {
+                const hours = parseInt(match[1] || '0', 10);
+                const minutes = parseInt(match[2] || '0', 10);
+                const seconds = parseInt(match[3] || '0', 10);
+                durationSeconds = (hours * 3600) + (minutes * 60) + seconds;
+                console.log('Parsed sessionTime →', durationSeconds, 'seconds');
             } else {
-                console.log('sessionTime regex failed:', latest.sessionTime);
+                console.log('sessionTime format not recognized:', latest.sessionTime);
             }
         }
 
-        // Timestamp fallback
-        if (durationSeconds === 0 && latest.dateObj) {
-            const timeSince = Date.now() - latest.dateObj.getTime();
-            console.log('Raw time since timestamp (ms):', timeSince);
-            if (!isNaN(timeSince) && timeSince > 0) {
-                durationSeconds = Math.floor(timeSince / 1000);
-                console.log('Converted to seconds:', durationSeconds);
+        // 2. Fallback: time elapsed since the timestamp (if no sessionTime or parsing failed)
+        if (durationSeconds === 0 && latest.dateObj && latest.dateObj.getTime) {
+            const now = Date.now();
+            const timeSinceMs = now - latest.dateObj.getTime();
+            console.log('Raw time since timestamp (ms):', timeSinceMs);
+
+            if (Number.isFinite(timeSinceMs) && timeSinceMs >= 0) {
+                durationSeconds = Math.floor(timeSinceMs / 1000);
+                console.log('Fallback duration (seconds):', durationSeconds);
             } else {
-                console.log('Invalid or negative timeSince:', timeSince);
+                console.warn('Invalid or negative timeSinceMs:', timeSinceMs);
             }
         }
 
+        // 3. If last event was a Stop, no active session → force duration to 0
         if (latest.status === 'Stop') {
-            console.log('Last event was Stop → forcing duration to 0');
+            console.log('Last event was Stop → resetting duration to 0');
+            durationSeconds = 0;
+        }
+
+        // 4. Final safety guard: ensure durationSeconds is a valid non-negative number
+        if (!Number.isFinite(durationSeconds) || durationSeconds < 0) {
+            console.warn(`Invalid durationSeconds detected: ${durationSeconds} — forcing to 0`);
             durationSeconds = 0;
         }
 
         console.log('Final durationSeconds before formatting:', durationSeconds);
 
-        // Format
-        const days = Math.floor(durationSeconds / 86400);
-        const hours = Math.floor((durationSeconds % 86400) / 3600);
-        const minutes = Math.floor((durationSeconds % 3600) / 60);
-        const seconds = durationSeconds % 60;
+        // 5. Format as DD:HH:MM:SS with guards against NaN
+        const days    = Math.floor(durationSeconds / 86400) || 0;
+        const hours   = Math.floor((durationSeconds % 86400) / 3600) || 0;
+        const minutes = Math.floor((durationSeconds % 3600) / 60) || 0;
+        const seconds = (durationSeconds % 60) || 0;
 
-        const formatted = `${days.toString().padStart(2, '0')}:${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        const formattedDuration = `${days.toString().padStart(2, '0')}:${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
-        console.log('Formatted duration:', formatted);
+        console.log('Formatted duration:', formattedDuration);
 
         const status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
 
-        customer.update(status, formatted);
+        customer.update(status, formattedDuration);
+        console.log(`Dashboard updated: ${customer.radiusUsername} → ${status}, ${formattedDuration}`);
     } catch (err) {
-        console.error('Status update failed:', err);
+        console.error('updateCustomerStatus failed:', err);
         customer.update('Error', '00:00:00:00');
     }
 }
