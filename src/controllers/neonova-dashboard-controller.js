@@ -136,14 +136,18 @@ class NeonovaDashboardController extends BaseNeonovaController{
  * 
  * @param {Customer} customer
  */
+/**
+ * Updates the customer's status and duration on the dashboard.
+ * Fetches the most recent log entry, determines current state,
+ * calculates duration in seconds (numeric), and passes it to customer.update.
+ * The view will handle formatting via c.getDurationStr().
+ */
 async updateCustomerStatus(customer) {
     try {
         const latest = await this.getLatestEntry(customer.radiusUsername);
         if (!latest) {
             console.log(`No latest entry for ${customer.radiusUsername}`);
-            console.log('Passing to update - status:', status, 'duration (string):', formattedDuration, 'type:', typeof formattedDuration);
-            customer.update(status, formattedDuration);
-            customer.update('Unknown', '00:00:00:00');
+            customer.update('Unknown', 0);
             return;
         }
 
@@ -151,12 +155,12 @@ async updateCustomerStatus(customer) {
 
         let durationSeconds = 0;
 
-        // 1. Try to parse sessionTime if present
+        // 1. Prefer sessionTime if available and parsable
         if (latest.sessionTime && latest.sessionTime.trim() !== '') {
             console.log('Attempting to parse sessionTime:', latest.sessionTime);
             const match = latest.sessionTime.match(/(\d+)h?\s*(\d+)m?\s*(\d*)s?/i);
             if (match) {
-                const hours = parseInt(match[1] || '0', 10);
+                const hours   = parseInt(match[1] || '0', 10);
                 const minutes = parseInt(match[2] || '0', 10);
                 const seconds = parseInt(match[3] || '0', 10);
                 durationSeconds = (hours * 3600) + (minutes * 60) + seconds;
@@ -166,7 +170,7 @@ async updateCustomerStatus(customer) {
             }
         }
 
-        // 2. Fallback: time elapsed since the timestamp (if no sessionTime or parsing failed)
+        // 2. Fallback: elapsed time since the last event timestamp
         if (durationSeconds === 0 && latest.dateObj && latest.dateObj.getTime) {
             const now = Date.now();
             const timeSinceMs = now - latest.dateObj.getTime();
@@ -180,37 +184,24 @@ async updateCustomerStatus(customer) {
             }
         }
 
-        // 3. If last event was a Stop, no active session → force duration to 0
+        // 3. If last event was Stop, no active session → force to 0
         if (latest.status === 'Stop') {
             console.log('Last event was Stop → resetting duration to 0');
             durationSeconds = 0;
         }
 
-        // 4. Final safety guard: ensure durationSeconds is a valid non-negative number
-        if (!Number.isFinite(durationSeconds) || durationSeconds < 0) {
-            console.warn(`Invalid durationSeconds detected: ${durationSeconds} — forcing to 0`);
-            durationSeconds = 0;
-        }
-
-        console.log('Final durationSeconds before formatting:', durationSeconds);
-
-        // 5. Format as DD:HH:MM:SS with guards against NaN
-        const days    = Math.floor(durationSeconds / 86400) || 0;
-        const hours   = Math.floor((durationSeconds % 86400) / 3600) || 0;
-        const minutes = Math.floor((durationSeconds % 3600) / 60) || 0;
-        const seconds = (durationSeconds % 60) || 0;
-
-        const formattedDuration = `${days.toString().padStart(2, '0')}:${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-
-        console.log('Formatted duration:', formattedDuration);
+        // 4. Final guard: ensure it's a valid non-negative number
+        durationSeconds = Number.isFinite(durationSeconds) && durationSeconds >= 0 ? durationSeconds : 0;
+        console.log('Final safe durationSeconds:', durationSeconds);
 
         const status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
 
-        customer.update(status, formattedDuration);
-        console.log(`Dashboard updated: ${customer.radiusUsername} → ${status}, ${formattedDuration}`);
+        // Pass numeric seconds (what Customer model and view expect)
+        customer.update(status, durationSeconds);
+        console.log(`Dashboard updated: ${customer.radiusUsername} → ${status}, ${durationSeconds}s (raw seconds)`);
     } catch (err) {
         console.error('updateCustomerStatus failed:', err);
-        customer.update('Error', '00:00:00:00');
+        customer.update('Error', 0);
     }
 }
 
