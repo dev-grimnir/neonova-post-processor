@@ -191,39 +191,47 @@ class BaseNeonovaController {
 async paginateReportLogs(username, onProgress = null) {
     const entries = [];
     let page = 1;
+    let offset = 0;  // location param
+    const hitsPerPage = 50;
     const maxPages = 50;
 
-    // Initial POST to start session and get page 1
-    let currentDoc = await this.submitSearch(username);
-    let currentUrl = 'https://admin.neonova.net/rat/index.php'; // base URL - same every time
+    while (page <= maxPages) {
+        const params = new URLSearchParams({
+            acctsearch: '2',
+            sd: 'fairpoint.net',
+            iuserid: username,
+            ip: '',
+            session: '',
+            nasip: '',
+            statusview: 'both',
+            syear: new Date().getFullYear().toString(),
+            smonth: (new Date().getMonth() + 1).toString().padStart(2, '0'),
+            sday: '01',
+            shour: '00',
+            smin: '00',
+            emonth: '',
+            eday: '',
+            eyear: '',
+            ehour: '',
+            emin: '',
+            order: 'date',
+            hits: hitsPerPage.toString(),
+            location: offset.toString(),
+            direction: '0',  // forward/next
+            dump: ''
+        });
 
-    // Parse page 1
-    let pageEntries = this.parsePageRows(currentDoc);
-    entries.push(...pageEntries);
+        const url = `https://admin.neonova.net/rat/index.php?${params.toString()}`;
+        console.log(`Fetching page ${page} (offset ${offset}): ${url}`);
 
-    if (onProgress) onProgress(entries.length, page);
-    console.log(`Page ${page}: ${pageEntries.length} entries`);
-
-    while (page < maxPages) {
-        // Look for ANY "NEXT" link (even "NEXT @1", "NEXT @2", etc.)
-        const nextLink = Array.from(currentDoc.querySelectorAll('a'))
-            .find(a => a.textContent.trim().includes('NEXT @'));
-
-        if (!nextLink) {
-            console.log(`No NEXT link found on page ${page}. Ending.`);
-            break;
-        }
-
-        console.log(`Found NEXT link on page ${page}: "${nextLink.textContent.trim()}"`);
-
-        // Fetch the SAME URL again (session will advance)
-        const res = await fetch(currentUrl, {
-            method: 'GET',
+        const res = await fetch(url, {
             credentials: 'include',
             cache: 'no-cache',
             headers: {
-                'Referer': currentUrl,  // mimic browser referrer
-                'Sec-Fetch-Dest': 'frame',
+                'Referer': url,  // self-referer
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Sec-Fetch-Dest': 'document',
                 'Sec-Fetch-Mode': 'navigate',
                 'Sec-Fetch-Site': 'same-origin',
                 'Upgrade-Insecure-Requests': '1'
@@ -231,30 +239,31 @@ async paginateReportLogs(username, onProgress = null) {
         });
 
         if (!res.ok) {
-            console.error(`Page ${page + 1} fetch failed: ${res.status}`);
+            console.error(`Page ${page} failed: HTTP ${res.status}`);
             break;
         }
 
         const html = await res.text();
-        currentDoc = new DOMParser().parseFromString(html, 'text/html');
+        const doc = new DOMParser().parseFromString(html, 'text/html');
 
-        pageEntries = this.parsePageRows(currentDoc);
+        const pageEntries = this.parsePageRows(doc);
         entries.push(...pageEntries);
 
-        if (onProgress) onProgress(entries.length, page + 1);
-        console.log(`Page ${page + 1}: ${pageEntries.length} entries`);
+        if (onProgress) onProgress(entries.length, page);
+        console.log(`Page ${page}: ${pageEntries.length} entries parsed`);
 
-        // Safety: stop if no new entries (server didn't advance)
-        if (pageEntries.length === 0) {
-            console.log('No new entries on page ${page + 1}. Stopping.');
+        // If we got fewer than hitsPerPage, this is the last page
+        if (pageEntries.length < hitsPerPage) {
+            console.log(`Last page detected (${pageEntries.length} < ${hitsPerPage}). Ending.`);
             break;
         }
 
+        offset += hitsPerPage;
         page++;
     }
 
     entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
-    console.log(`Total: ${entries.length} entries over ${page} pages`);
+    console.log(`Total collected: ${entries.length} entries over ${page} pages`);
 
     return entries;
 }
