@@ -84,37 +84,71 @@ class BaseNeonovaController {
         return new DOMParser().parseFromString(html, 'text/html');
     }
 
+
     /**
-     * Parses a single page's table rows into entry objects.
-     * @param {Document} doc 
-     * @returns {Array<Object>} entries
+     * Parses table rows from a parsed document into entry objects.
+     * Includes logging for diagnostics.
+     * @param {Document} doc - Parsed DOM document
+     * @returns {Array<{timestamp: string, status: string, sessionTime: string, dateObj: Date}>}
      */
     parsePageRows(doc) {
         const entries = [];
         const table = doc.querySelector('table[cellspacing="2"][cellpadding="2"]');
-        if (!table || table.rows.length <= 1) return entries;
-
+    
+        if (!table) {
+            console.log('No table found with cellspacing=2 cellpadding=2');
+            // Fallback attempt - any table with rows
+            const fallback = doc.querySelector('table');
+            if (fallback) {
+                console.log('Fallback table found - rows:', fallback.rows.length);
+            }
+            return entries;
+        }
+    
+        console.log('Table found - total rows:', table.rows.length);
+    
         for (let i = 1; i < table.rows.length; i++) {
-            const cells = table.rows[i].cells;
-            if (cells.length < 7) continue;
-
-            const timestamp = cells[0].textContent.trim();
-            const statusText = cells[4].textContent.trim();
-            const sessionTime = cells[6].textContent.trim();
-
-            let dateObj;
-            try {
-                dateObj = new Date(timestamp.replace(' ', 'T'));
-                if (isNaN(dateObj.getTime())) continue;
-            } catch {
+            const row = table.rows[i];
+            const cells = row.cells;
+    
+            console.log(`Row ${i}: ${cells.length} cells`);
+    
+            if (cells.length < 5) {  // Lowered from 7 to be more forgiving
+                console.log(`Skipping row ${i} - too few cells`);
                 continue;
             }
-
-            const status = statusText.includes('Start') ? 'Start' : 'Stop';
-
-            entries.push({ timestamp, status, sessionTime, dateObj });
+    
+            const timestamp = cells[0]?.textContent?.trim() || '';
+            const statusText = cells[4]?.textContent?.trim() || '';
+            const sessionTime = cells[6]?.textContent?.trim() || '';
+    
+            console.log(`Row ${i} - timestamp: "${timestamp}", status: "${statusText}", sessionTime: "${sessionTime}"`);
+    
+            let dateObj;
+            try {
+                // More lenient parsing - handle various timestamp formats
+                const normalized = timestamp.replace(/\s+/g, 'T').replace(/(\d{2}):(\d{2}):(\d{2})/, '$1:$2:$3');
+                dateObj = new Date(normalized);
+                if (isNaN(dateObj.getTime())) {
+                    console.log(`Invalid date on row ${i}: "${timestamp}"`);
+                    continue;
+                }
+            } catch (err) {
+                console.log(`Date parse error on row ${i}:`, err.message);
+                continue;
+            }
+    
+            const status = statusText.toLowerCase().includes('start') ? 'Start' : 'Stop';
+    
+            entries.push({
+                timestamp,
+                status,
+                sessionTime,
+                dateObj
+            });
         }
-
+    
+        console.log(`Parsed ${entries.length} valid entries from page`);
         return entries;
     }
 
@@ -128,144 +162,129 @@ class BaseNeonovaController {
             .find(a => a.textContent.trim().startsWith('NEXT @') && a.href && a.href.includes('index.php'));
     }
 
-    getSearchUrl(username) {
-        const now = new Date();
-        const currentYear = now.getFullYear().toString();
-        const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');  // 01–12
-    
-        const params = new URLSearchParams({
-            acctsearch: '2',
-            sd: 'fairpoint.net',
-            iuserid: username,
-            ip: '',
-            session: '',
-            nasip: '',
-            statusview: 'both',
-            syear: currentYear,
-            smonth: currentMonth,
-            sday: '01',  // fixed to start of month
-            shour: '00',
-            smin: '00',
-            emonth: '',  // empty end = up to today
-            eday: '',
-            eyear: '',
-            ehour: '',
-            emin: '',
-            hits: '50',
-            order: 'date',
-            location: '0',
-            direction: '1',
-            dump: ''
-        });
-    
-        return `${this.baseSearchUrl}?${params.toString()}`;
-    }
-    
-    /**
-     * Full pagination - collects all entries (used by report).
-     * @param {string} username 
-     * @param {Function} [onProgress] optional callback (currentEntries, page)
-     * @returns {Promise<Array<Object>>}
-     */
-    /**
- * Headless pagination for NeoNova RADIUS logs.
- * Submits the search form (POST), parses the first page, then follows "NEXT @" links.
- * Stops when no valid next link is found or safety limits are hit.
- * Returns sorted array of entries (newest first).
- * 
- * @param {string} username - The RADIUS username to search
- * @param {Function} [onProgress] - Optional callback (currentEntries, page)
- * @returns {Promise<Array<{timestamp: string, status: string, sessionTime: string, dateObj: Date}>>}
+/**
+ * Builds the full search URL for a given username.
+ * Uses current month start as the default from-date.
+ * All other params match the working cURL capture.
+ * @param {string} username
+ * @returns {string} Full search URL
  */
-async paginateReportLogs(username, onProgress = null) {
-    const entries = [];
-    let page = 1;
-    const seenUrls = new Set();           // Prevent infinite loops on same URL
-    const maxPages = 50;                   // Hard cap to avoid spamming server
+getSearchUrl(username) {
+    const now = new Date();
+    const currentYear = now.getFullYear().toString();
+    const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0'); // 01-12
 
-    // Step 1: Submit the initial search form (POST)
-    const initialDoc = await this.submitSearch(username);
-    let currentDoc = initialDoc;
+    const params = new URLSearchParams({
+        acctsearch: '2',
+        sd: 'fairpoint.net',
+        iuserid: username,
+        ip: '',
+        session: '',
+        nasip: '',
+        statusview: 'both',
+        syear: currentYear,
+        smonth: currentMonth,
+        sday: '01',                     // Start of current month
+        shour: '00',
+        smin: '00',
+        emonth: '',                     // Empty end = up to present
+        eday: '',
+        eyear: '',
+        ehour: '',
+        emin: '',
+        hits: '50',
+        order: 'date',
+        location: '0',
+        direction: '1',
+        dump: ''
+    });
 
-    // Parse first page
-    let pageEntries = this.parsePageRows(currentDoc);
-    entries.push(...pageEntries);
-
-    if (onProgress) onProgress(entries.length, page);
-
-    console.log(`Page ${page}: ${pageEntries.length} entries parsed`);
-
-    while (true) {
-        // Safety: stop if we've seen this URL before
-        const currentUrl = currentDoc.location?.href || 'unknown';
-        if (seenUrls.has(currentUrl)) {
-            console.warn(`Loop detected - same URL repeated (${currentUrl}). Stopping.`);
-            break;
-        }
-        seenUrls.add(currentUrl);
-
-        // Safety: max pages reached
-        if (page >= maxPages) {
-            console.warn(`Reached max pages (${maxPages}). Stopping to prevent spam.`);
-            break;
-        }
-
-        // Find next page link using your exact report-builder logic
-        const nextLink = Array.from(currentDoc.querySelectorAll('a'))
-            .find(a => a.textContent.trim().startsWith('NEXT @') && a.href && a.href.includes('index.php'));
-
-        if (!nextLink || !nextLink.href) {
-            console.log(`No valid NEXT @ link found on page ${page}. Ending pagination.`);
-            break;
-        }
-
-        // Resolve relative href to absolute
-        let nextUrl = nextLink.href;
-        if (!nextUrl.startsWith('http')) {
-            nextUrl = 'https://admin.neonova.net' + nextUrl;
-        }
-
-        // Extra safety: don't follow if it's the same page
-        if (nextUrl === currentUrl) {
-            console.warn(`Next link points to current page (${nextUrl}). Stopping.`);
-            break;
-        }
-
-        console.log(`Following next link to page ${page + 1}: ${nextUrl}`);
-
-        // Fetch the next page
-        const res = await fetch(nextUrl, {
-            credentials: 'include',
-            cache: 'no-cache'
-        });
-
-        if (!res.ok) {
-            console.error(`Fetch failed for page ${page + 1}: HTTP ${res.status}`);
-            break;
-        }
-
-        const html = await res.text();
-        currentDoc = new DOMParser().parseFromString(html, 'text/html');
-
-        // Parse this page
-        pageEntries = this.parsePageRows(currentDoc);
-        entries.push(...pageEntries);
-
-        if (onProgress) onProgress(entries.length, page + 1);
-
-        console.log(`Page ${page + 1}: ${pageEntries.length} entries parsed`);
-
-        page++;
-    }
-
-    // Sort newest first
-    entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
-
-    console.log(`Total collected: ${entries.length} entries over ${page} pages`);
-
-    return entries;
+    return `https://admin.neonova.net/rat/index.php?${params.toString()}`;
 }
-
+    
+         /**
+     * Headless pagination for NeoNova RADIUS logs.
+     * Uses POST for initial search, GET for subsequent pages.
+     * Includes safety checks to prevent infinite loops.
+     * @param {string} username
+     * @param {Function} [onProgress] - (currentEntries, page)
+     * @returns {Promise<Array>}
+     */
+    async paginateReportLogs(username, onProgress = null) {
+        const entries = [];
+        let page = 1;
+        const seenUrls = new Set();
+        const maxPages = 50;  // Hard safety limit
+    
+        // Step 1: Initial POST search
+        let currentDoc = await this.submitSearch(username);
+        let currentUrl = currentDoc.location?.href || 'initial-post';
+    
+        // Parse page 1
+        let pageEntries = this.parsePageRows(currentDoc);
+        entries.push(...pageEntries);
+    
+        if (onProgress) onProgress(entries.length, page);
+        console.log(`Page ${page}: ${pageEntries.length} entries parsed`);
+    
+        while (true) {
+            if (seenUrls.has(currentUrl)) {
+                console.warn(`Loop detected - same URL repeated (${currentUrl}). Stopping.`);
+                break;
+            }
+            seenUrls.add(currentUrl);
+    
+            if (page >= maxPages) {
+                console.warn(`Reached max pages (${maxPages}). Stopping.`);
+                break;
+            }
+    
+            const nextLink = this.findNextPageLink(currentDoc);
+            if (!nextLink || !nextLink.href) {
+                console.log(`No valid NEXT @ link found on page ${page}. Ending.`);
+                break;
+            }
+    
+            let nextUrl = nextLink.href;
+            if (!nextUrl.startsWith('http')) {
+                nextUrl = 'https://admin.neonova.net' + nextUrl;
+            }
+    
+            if (nextUrl === currentUrl) {
+                console.warn(`Next link points to current page (${nextUrl}). Stopping.`);
+                break;
+            }
+    
+            console.log(`Following next link to page ${page + 1}: ${nextUrl}`);
+    
+            const res = await fetch(nextUrl, {
+                credentials: 'include',
+                cache: 'no-cache'
+            });
+    
+            if (!res.ok) {
+                console.error(`Fetch failed for page ${page + 1}: HTTP ${res.status}`);
+                break;
+            }
+    
+            const html = await res.text();
+            currentDoc = new DOMParser().parseFromString(html, 'text/html');
+            currentUrl = res.url || nextUrl;  // Use final redirected URL
+    
+            pageEntries = this.parsePageRows(currentDoc);
+            entries.push(...pageEntries);
+    
+            if (onProgress) onProgress(entries.length, page + 1);
+            console.log(`Page ${page + 1}: ${pageEntries.length} entries parsed`);
+    
+            page++;
+        }
+    
+        entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+        console.log(`Total collected: ${entries.length} entries over ${page} pages`);
+    
+        return entries;
+    }
     /**
      * Dashboard convenience method - gets only the most recent entry.
      * @param {string} username 
