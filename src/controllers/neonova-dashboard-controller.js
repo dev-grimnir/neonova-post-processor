@@ -154,27 +154,44 @@ async updateCustomerStatus(customer) {
         console.log(`Latest entry raw for ${customer.radiusUsername}:`, latest);
 
         let durationSeconds = 0;
-
-        // 1. Prefer sessionTime if available and parsable
-        if (latest.sessionTime && latest.sessionTime.trim() !== '') {
-            console.log('Attempting to parse sessionTime:', latest.sessionTime);
-            const match = latest.sessionTime.match(/(\d+)h?\s*(\d+)m?\s*(\d*)s?/i);
-            if (match) {
-                const hours   = parseInt(match[1] || '0', 10);
-                const minutes = parseInt(match[2] || '0', 10);
-                const seconds = parseInt(match[3] || '0', 10);
-                durationSeconds = (hours * 3600) + (minutes * 60) + seconds;
-                console.log('Parsed sessionTime →', durationSeconds, 'seconds');
-            } else {
-                console.log('sessionTime format not recognized:', latest.sessionTime);
+        const now = Date.now();console.log(Processing latest entry for ${customer.radiusUsername}: status=${latest.status}, dateObj=${latest.dateObj?.toISOString()}, sessionTime="${latest.sessionTime || ''}");if (latest.status === 'Start') {
+            // Connected: prefer precise sessionTime if available, else fallback to time since Start
+            if (latest.sessionTime && latest.sessionTime.trim() !== '') {
+                console.log('Parsing sessionTime for connected session');
+                const match = latest.sessionTime.match(/(\d+)h?\s*(\d+)m?\s*(\d*)s?/i);
+                if (match) {
+                    const h = parseInt(match[1] || '0', 10);
+                    const m = parseInt(match[2] || '0', 10);
+                    const s = parseInt(match[3] || '0', 10);
+                    durationSeconds = h * 3600 + m * 60 + s;
+                    console.log(Parsed sessionTime → ${durationSeconds}s);
+                }
+            }// Fallback if sessionTime missing or parse failed
+        if (durationSeconds === 0 && latest.dateObj?.getTime) {
+            const ms = now - latest.dateObj.getTime();
+            if (Number.isFinite(ms) && ms >= 0) {
+                durationSeconds = Math.floor(ms / 1000);
+                console.log(`Fallback time-since for connected: ${durationSeconds}s`);
             }
-        }
-
-        // 2. Fallback: elapsed time since the last event timestamp
-        if (durationSeconds === 0 && latest.dateObj && latest.dateObj.getTime) {
-            const now = Date.now();
-            const timeSinceMs = now - latest.dateObj.getTime();
-            console.log('Raw time since timestamp (ms):', timeSinceMs);
+        }} else if (latest.status === 'Stop') {
+            // Disconnected: offline duration = time since the Stop timestamp ([Date] column)
+            if (latest.dateObj?.getTime) {
+                const ms = now - latest.dateObj.getTime();
+                if (Number.isFinite(ms) && ms >= 0) {
+                    durationSeconds = Math.floor(ms / 1000);
+                    console.log(Offline duration from Stop timestamp: ${durationSeconds}s);
+                } else {
+                    console.warn(Invalid/negative ms for offline calc: ${ms});
+                }
+            } else {
+                console.warn('No valid dateObj on Stop entry');
+            }
+        } else {
+            console.warn(Unexpected status: ${latest.status});
+        }// Final guard - keep as-is
+        durationSeconds = Number.isFinite(durationSeconds) && durationSeconds >= 0 ? durationSeconds : 0;
+        console.log(Final durationSeconds: ${durationSeconds});const status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
+        customer.update(status, durationSeconds);
 
             if (Number.isFinite(timeSinceMs) && timeSinceMs >= 0) {
                 durationSeconds = Math.floor(timeSinceMs / 1000);
