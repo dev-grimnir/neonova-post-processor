@@ -39,13 +39,18 @@ class NeonovaDashboardView {
             const durationStyle = (c.status === 'Not Connected' && c.durationSec > 1800) ? 'color:red;' : '';
             rows += `
                 <tr>
-                <td class="friendly-name" data-username="${c.radiusUsername}" style="cursor: pointer;">
-                ${c.friendlyName || c.radiusUsername}
-                </td>
-                <td>${c.radiusUsername}</td>
-                <td style="color:${color}; font-weight:bold;">${c.status}</td>
-                <td style="${durationStyle}">${c.getDurationStr()}</td>
-                <td><button class="remove-btn" data-username="${c.radiusUsername}">Remove</button></td>
+                    <td class="friendly-name" data-username="${c.radiusUsername}" style="cursor: pointer;">
+                        ${c.friendlyName || c.radiusUsername}
+                    </td>
+                    <td>${c.radiusUsername}</td>
+                    <td style="color:${color}; font-weight:bold;">${c.status}</td>
+                    <td style="${durationStyle}">${c.getDurationStr()}</td>
+                    <td>
+                        <button class="report-btn" data-username="${c.radiusUsername}">
+                            Generate Report
+                        </button>
+                    </td>
+                    <td><button class="remove-btn" data-username="${c.radiusUsername}">Remove</button></td>
                 </tr>
             `;
         });
@@ -167,6 +172,110 @@ class NeonovaDashboardView {
                 });
             });
         });
+
+        // Report generation button
+        this.panel.querySelectorAll('.report-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const username = btn.dataset.username;
+                const customer = this.controller.customers.find(c => c.radiusUsername === username);
+                if (!customer) return;
+        
+                // Open new tab with report interface
+                const reportTab = window.open('', '_blank');
+                if (!reportTab) {
+                    alert('Popup blocked. Please allow popups for this site.');
+                    return;
+                }
+        
+                // Build simple report UI in the new tab
+                reportTab.document.write(`
+                    <html>
+                    <head>
+                        <title>Report for ${customer.friendlyName || username}</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
+                            h1 { margin-bottom: 10px; }
+                            .form-group { margin: 15px 0; }
+                            select, button { padding: 8px 12px; font-size: 16px; }
+                            #progress { margin-top: 20px; height: 20px; background: #eee; display: none; }
+                            #progress-bar { height: 100%; width: 0%; background: #4CAF50; transition: width 0.3s; }
+                            #status { margin-top: 10px; font-weight: bold; }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>Report for ${customer.friendlyName || username} (${username})</h1>
+        
+                        <div class="form-group">
+                            <label>Month:</label>
+                            <select id="month">
+                                ${Array.from({length: 12}, (_, i) => {
+                                    const m = (i + 1).toString().padStart(2, '0');
+                                    const selected = m === new Date().toISOString().slice(5,7) ? 'selected' : '';
+                                    return `<option value="${m}" ${selected}>${new Date(2000, i, 1).toLocaleString('default', { month: 'long' })}</option>`;
+                                }).join('')}
+                            </select>
+                        </div>
+        
+                        <div class="form-group">
+                            <label>Day:</label>
+                            <select id="day">
+                                ${Array.from({length: 31}, (_, i) => {
+                                    const d = (i + 1).toString().padStart(2, '0');
+                                    const selected = d === new Date().toISOString().slice(8,10) ? 'selected' : '';
+                                    return `<option value="${d}" ${selected}>${d}</option>`;
+                                }).join('')}
+                            </select>
+                        </div>
+        
+                        <button id="generate">Generate Report</button>
+        
+                        <div id="progress"><div id="progress-bar"></div></div>
+                        <div id="status"></div>
+        
+                        <script>
+                            const generateBtn = document.getElementById('generate');
+                            const progressBar = document.getElementById('progress-bar');
+                            const statusDiv = document.getElementById('status');
+                            const progressDiv = document.getElementById('progress');
+        
+                            generateBtn.addEventListener('click', () => {
+                                const month = document.getElementById('month').value;
+                                const day = document.getElementById('day').value;
+        
+                                statusDiv.textContent = 'Starting report generation...';
+                                progressDiv.style.display = 'block';
+                                progressBar.style.width = '0%';
+        
+                                // Simulate progress (real progress would come from background script)
+                                let pct = 0;
+                                const interval = setInterval(() => {
+                                    pct += Math.random() * 15;
+                                    if (pct > 100) pct = 100;
+                                    progressBar.style.width = pct + '%';
+                                    if (pct === 100) {
+                                        clearInterval(interval);
+                                        statusDiv.textContent = 'Report ready! Opening...';
+                                        // In real version, open the actual report here
+                                        setTimeout(() => {
+                                            window.open('about:blank', '_self'); // placeholder
+                                        }, 1000);
+                                    }
+                                }, 300);
+                            });
+                        </script>
+                    </body>
+                    </html>
+                `);
+                reportTab.document.close();
+        
+                // Real implementation would be more involved:
+                // - Send message to background script
+                // - Background script runs headless pagination for the date range
+                // - Builds HTML report
+                // - Opens/sends it back to tab
+            });
+        });
+        
     }
 
     update() {
