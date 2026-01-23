@@ -36,7 +36,7 @@ class NeonovaDashboardView {
         let rows = '';
         this.controller.customers.forEach(c => {
             const color = c.status === 'Connected' ? '#006400' : c.status === 'Not Connected' ? '#c00' : '#666';
-            const durationStyle = (c.status === 'Not Connected' && c.durationSec > 1800) ? 'color:red;' : '';
+            const durationText = customer.status === 'Connected' ? `Connected for ${formatDuration(durationSeconds)}` : `Offline for ${formatDuration(durationSeconds)}`;
             rows += `
                 <tr>
                     <td class="friendly-name" data-username="${c.radiusUsername}" style="cursor: pointer;">
