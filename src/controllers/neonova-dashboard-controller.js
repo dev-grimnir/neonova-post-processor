@@ -170,10 +170,6 @@ class NeonovaDashboardController extends BaseNeonovaController{
                     }
                 }
     
-                if (latest.status === 'Stop') {
-                    durationSeconds = 0;
-                }
-    
                 durationSeconds = Number.isFinite(durationSeconds) && durationSeconds >= 0 ? durationSeconds : 0;
     
                 const status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
