@@ -128,99 +128,62 @@ class NeonovaDashboardController extends BaseNeonovaController{
         return { status, durationSec };
     }
 
-/**
- * Updates the customer's status and duration on the dashboard.
- * Uses the most recent log entry to determine current state.
- * Duration formatted as DD:HH:MM:SS, resets to 00:00:00:00 on Stop.
- * Includes extensive logging to catch NaN sources.
- * 
- * @param {Customer} customer
- */
-/**
- * Updates the customer's status and duration on the dashboard.
- * Fetches the most recent log entry, determines current state,
- * calculates duration in seconds (numeric), and passes it to customer.update.
- * The view will handle formatting via c.getDurationStr().
- */
-async updateCustomerStatus(customer) {
-    try {
-        const latest = await this.getLatestEntry(customer.radiusUsername);
-        if (!latest) {
-            console.log(`No latest entry for ${customer.radiusUsername}`);
-            customer.update('Unknown', 0);
-            return;
-        }
-
-        console.log(`Latest entry raw for ${customer.radiusUsername}:`, latest);
-
-        let durationSeconds = 0;
-        const now = Date.now();console.log(Processing latest entry for ${customer.radiusUsername}: status=${latest.status}, dateObj=${latest.dateObj?.toISOString()}, sessionTime="${latest.sessionTime || ''}");if (latest.status === 'Start') {
-            // Connected: prefer precise sessionTime if available, else fallback to time since Start
-            if (latest.sessionTime && latest.sessionTime.trim() !== '') {
-                console.log('Parsing sessionTime for connected session');
-                const match = latest.sessionTime.match(/(\d+)h?\s*(\d+)m?\s*(\d*)s?/i);
-                if (match) {
-                    const h = parseInt(match[1] || '0', 10);
-                    const m = parseInt(match[2] || '0', 10);
-                    const s = parseInt(match[3] || '0', 10);
-                    durationSeconds = h * 3600 + m * 60 + s;
-                    console.log(Parsed sessionTime → ${durationSeconds}s);
+    /**
+     * Updates the customer's status and duration on the dashboard.
+     * Uses the most recent log entry to determine current state.
+     * Duration formatted as DD:HH:MM:SS, resets to 00:00:00:00 on Stop.
+     * Includes extensive logging to catch NaN sources.
+     * 
+     * @param {Customer} customer
+     */
+    /**
+     * Updates the customer's status and duration on the dashboard.
+     * Fetches the most recent log entry, determines current state,
+     * calculates duration in seconds (numeric), and passes it to customer.update.
+     * The view will handle formatting via c.getDurationStr().
+     */
+        async updateCustomerStatus(customer) {
+            try {
+                const latest = await this.getLatestEntry(customer.radiusUsername);
+                if (!latest) {
+                    customer.update('Unknown', 0);
+                    return;
                 }
-            }// Fallback if sessionTime missing or parse failed
-        if (durationSeconds === 0 && latest.dateObj?.getTime) {
-            const ms = now - latest.dateObj.getTime();
-            if (Number.isFinite(ms) && ms >= 0) {
-                durationSeconds = Math.floor(ms / 1000);
-                console.log(`Fallback time-since for connected: ${durationSeconds}s`);
-            }
-        }} else if (latest.status === 'Stop') {
-            // Disconnected: offline duration = time since the Stop timestamp ([Date] column)
-            if (latest.dateObj?.getTime) {
-                const ms = now - latest.dateObj.getTime();
-                if (Number.isFinite(ms) && ms >= 0) {
-                    durationSeconds = Math.floor(ms / 1000);
-                    console.log(Offline duration from Stop timestamp: ${durationSeconds}s);
-                } else {
-                    console.warn(Invalid/negative ms for offline calc: ${ms});
+    
+                let durationSeconds = 0;
+    
+                if (latest.sessionTime && latest.sessionTime.trim() !== '') {
+                    const match = latest.sessionTime.match(/(\d+)h?\s*(\d+)m?\s*(\d*)s?/i);
+                    if (match) {
+                        const hours   = parseInt(match[1] || '0', 10);
+                        const minutes = parseInt(match[2] || '0', 10);
+                        const seconds = parseInt(match[3] || '0', 10);
+                        durationSeconds = (hours * 3600) + (minutes * 60) + seconds;
+                    }
                 }
-            } else {
-                console.warn('No valid dateObj on Stop entry');
-            }
-        } else {
-            console.warn(Unexpected status: ${latest.status});
-        }// Final guard - keep as-is
-        durationSeconds = Number.isFinite(durationSeconds) && durationSeconds >= 0 ? durationSeconds : 0;
-        console.log(Final durationSeconds: ${durationSeconds});const status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
-        customer.update(status, durationSeconds);
-
-            if (Number.isFinite(timeSinceMs) && timeSinceMs >= 0) {
-                durationSeconds = Math.floor(timeSinceMs / 1000);
-                console.log('Fallback duration (seconds):', durationSeconds);
-            } else {
-                console.warn('Invalid or negative timeSinceMs:', timeSinceMs);
+    
+                if (durationSeconds === 0 && latest.dateObj && latest.dateObj.getTime) {
+                    const now = Date.now();
+                    const timeSinceMs = now - latest.dateObj.getTime();
+                    if (Number.isFinite(timeSinceMs) && timeSinceMs >= 0) {
+                        durationSeconds = Math.floor(timeSinceMs / 1000);
+                    }
+                }
+    
+                if (latest.status === 'Stop') {
+                    durationSeconds = 0;
+                }
+    
+                durationSeconds = Number.isFinite(durationSeconds) && durationSeconds >= 0 ? durationSeconds : 0;
+    
+                const status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
+                customer.update(status, durationSeconds);
+            } catch (err) {
+                console.error('updateCustomerStatus failed:', err);
+                customer.update('Error', 0);
             }
         }
 
-        // 3. If last event was Stop, no active session → force to 0
-        if (latest.status === 'Stop') {
-            console.log('Last event was Stop → resetting duration to 0');
-            durationSeconds = 0;
-        }
-
-        // 4. Final guard: ensure it's a valid non-negative number
-        durationSeconds = Number.isFinite(durationSeconds) && durationSeconds >= 0 ? durationSeconds : 0;
-        console.log('Final safe durationSeconds:', durationSeconds);
-
-        const status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
-
-        // Pass numeric seconds (what Customer model and view expect)
-        customer.update(status, durationSeconds);
-        console.log(`Dashboard updated: ${customer.radiusUsername} → ${status}, ${durationSeconds}s (raw seconds)`);
-    } catch (err) {
-        console.error('updateCustomerStatus failed:', err);
-        customer.update('Error', 0);
-    }
-}
 
     getCurrentMonthStart() {
         const now = new Date();
