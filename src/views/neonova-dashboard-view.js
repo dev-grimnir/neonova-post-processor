@@ -36,11 +36,9 @@ render() {
     let rows = '';
     this.controller.customers.forEach(c => {
         const isConnected = c.status === 'Connected';
-        const color = isConnected ? '#006400' : c.status === 'Not Connected' ? '#c00' : '#666';
+        const color = isConnected ? '#006400' : c.status === 'Offline' ? '#c00' : '#666';
 
-        const durationText = isConnected 
-            ? `Connected for ${c.getDurationStr()}`
-            : `Offline for ${c.getDurationStr()}`;
+        const durationText = c.getDurationStr();
 
         rows += `
             <tr>
