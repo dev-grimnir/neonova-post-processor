@@ -151,26 +151,18 @@ class NeonovaDashboardController extends BaseNeonovaController{
                 }
     
                 let durationSeconds = 0;
-    
-                if (latest.sessionTime && latest.sessionTime.trim() !== '') {
-                    const match = latest.sessionTime.match(/(\d+)h?\s*(\d+)m?\s*(\d*)s?/i);
-                    if (match) {
-                        const hours   = parseInt(match[1] || '0', 10);
-                        const minutes = parseInt(match[2] || '0', 10);
-                        const seconds = parseInt(match[3] || '0', 10);
-                        durationSeconds = (hours * 3600) + (minutes * 60) + seconds;
-                    }
-                }
-    
-                if (durationSeconds === 0 && latest.dateObj && latest.dateObj.getTime) {
+
+                if (latest.dateObj && latest.dateObj.getTime) {
                     const now = Date.now();
-                    const timeSinceMs = now - latest.dateObj.getTime();
-                    if (Number.isFinite(timeSinceMs) && timeSinceMs >= 0) {
-                        durationSeconds = Math.floor(timeSinceMs / 1000);
+                    const ms = now - latest.dateObj.getTime();
+                
+                    if (Number.isFinite(ms) && ms >= 0) {
+                        durationSeconds = Math.floor(ms / 1000);
                     }
                 }
-    
-                durationSeconds = Number.isFinite(durationSeconds) && durationSeconds >= 0 ? durationSeconds : 0;
+
+// Guard (should almost never trigger, but safe)
+durationSeconds = Number.isFinite(durationSeconds) && durationSeconds >= 0 ? durationSeconds : 0;
     
                 const status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
                 customer.update(status, durationSeconds);
