@@ -101,11 +101,8 @@ parsePageRows(doc) {
                   doc.querySelector('table');
 
     if (!table) {
-        console.log('No data table found on this page');
         return entries;
     }
-
-    console.log(`Table found - total rows: ${table.rows.length}, width/attrs: ${table.getAttribute('width') || 'unknown'} ${table.getAttribute('cellspacing') || 'unknown'}`);
 
     // Skip header (row 0)
     for (let i = 1; i < table.rows.length; i++) {
@@ -113,7 +110,6 @@ parsePageRows(doc) {
         const cells = row.cells;
 
         if (cells.length < 7) {
-            console.log(`Skipping row ${i} - too few cells (${cells.length})`);
             continue;
         }
 
@@ -127,11 +123,9 @@ parsePageRows(doc) {
             const normalized = timestamp.replace(/\s+/g, 'T');
             dateObj = new Date(normalized);
             if (isNaN(dateObj.getTime())) {
-                console.log(`Invalid date on row ${i}: "${timestamp}"`);
                 continue;
             }
         } catch (err) {
-            console.log(`Date parse error on row ${i}:`, err.message);
             continue;
         }
 
@@ -145,7 +139,6 @@ parsePageRows(doc) {
         });
     }
 
-    console.log(`Parsed ${entries.length} valid entries from page`);
     return entries;
 }
 
@@ -243,8 +236,6 @@ async paginateReportLogs(username, onProgress = null) {
         });
 
         const url = `https://admin.neonova.net/rat/index.php?${params.toString()}`;
-        console.log(`Fetching page ${page} (offset ${offset}): ${url}`);
-
         const res = await fetch(url, {
             credentials: 'include',
             cache: 'no-cache',
@@ -260,7 +251,6 @@ async paginateReportLogs(username, onProgress = null) {
         });
 
         if (!res.ok) {
-            console.error(`Page ${page} fetch failed: HTTP ${res.status}`);
             break;
         }
 
@@ -271,11 +261,9 @@ async paginateReportLogs(username, onProgress = null) {
         entries.push(...pageEntries);
 
         if (onProgress) onProgress(entries.length, page);
-        console.log(`Page ${page}: Table has ${doc.querySelector('table[width="500"]')?.rows?.length || 'unknown'} rows, parsed ${pageEntries.length} valid entries`);
 
         // Stop when fewer than full page (last page)
         if (pageEntries.length < hitsPerPage) {
-            console.log(`Last page detected (${pageEntries.length} < ${hitsPerPage}). Ending.`);
             break;
         }
 
@@ -285,10 +273,7 @@ async paginateReportLogs(username, onProgress = null) {
 
     // Sort newest first (important for status)
     entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
-
-    console.log(`Total collected: ${entries.length} entries over ${page} pages`);
     if (entries.length > 0) {
-        console.log('Newest entry (for status):', entries[0]);
     }
 
     return entries;
@@ -306,17 +291,14 @@ async getLatestEntry(username) {
     try {
         const entries = await this.paginateReportLogs(username);
         if (entries.length === 0) {
-            console.log('No entries found for user');
             return null;
         }
 
         // Already sorted newest-first in paginateReportLogs
         const newest = entries[0];
-        console.log('Newest entry for status update:', newest);
 
         return newest;
     } catch (err) {
-        console.error('getLatestEntry failed:', err);
         return null;
     }
 }
