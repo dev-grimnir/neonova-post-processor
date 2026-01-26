@@ -36,9 +36,10 @@ render() {
     let rows = '';
     this.controller.customers.forEach(c => {
         const isConnected = c.status === 'Connected';
-        const color = isConnected ? '#006400' : c.status === 'Offline' ? '#c00' : '#666';
-
+        //const color = isConnected ? '#006400' : c.status === 'Offline' ? '#c00' : '#666';
+        const color = c.status === 'Connected' ? '#006400' : '#c00';  // green for Connected, red for everything else
         const durationText = c.getDurationStr();
+        const durationColor = isConnected ? '#006400' : '#c00';
 
         rows += `
             <tr>
@@ -46,8 +47,9 @@ render() {
                     ${c.friendlyName || c.radiusUsername}
                 </td>
                 <td>${c.radiusUsername}</td>
-                <td style="color:${color}; font-weight:bold;">${c.status}</td>
-                <td>${durationText}</td>
+                //<td style="color:${color}; font-weight:bold;">${c.status}</td>
+                //<td>${durationText}</td>
+                <td style="color:${durationColor};">${durationText}</td>
                 <td>
                     <button class="report-btn" data-username="${c.radiusUsername}">
                         Generate Report
@@ -96,8 +98,18 @@ render() {
         </div>
     `;
 
-    // All your event listeners (add-btn, close, minimize, refresh, remove, friendly-name edit, report-btn) remain the same
-    // They already use correct scoping (arrow functions or dataset.username lookup)
+        this.panel.querySelector('.add-btn').addEventListener('click', () => {
+        const id = this.panel.querySelector('#radiusId').value.trim();
+        const name = this.panel.querySelector('#friendlyName').value.trim();
+        if (id) {
+            this.controller.add(id, name);
+            this.panel.querySelector('#radiusId').value = '';
+            this.panel.querySelector('#friendlyName').value = '';
+        } else {
+            alert('RADIUS username required');
+        }
+    });
+
 }
 
     update() {
