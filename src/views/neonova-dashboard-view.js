@@ -185,20 +185,42 @@ class NeonovaDashboardView {
         });
     
         
-    this.panel.querySelectorAll('.report-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-        const username = btn.dataset.username;
-        const customer = this.controller.customers.find(c => c.radiusUsername === username);
-        if (!customer) return;
-
-        const reportOrderView = new NeonovaReportOrderView(username, customer.friendlyName);
-        reportOrderView.open();
-
-        // Later, when real generation is ready, call:
-        // reportOrderView.showReport(fullReportHTML);
-        // reportOrderView.updateProgress(50, 'Analyzing logs...');
+        this.panel.querySelectorAll('.report-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const username = btn.dataset.username;
+                const customer = this.controller.customers.find(c => c.radiusUsername === username);
+                if (!customer) return;
+        
+                const reportOrderView = new NeonovaReportOrderView(username, customer.friendlyName);
+                reportOrderView.open();
+        
+                // Wire real generation flow in the new tab
+                reportOrderView.onGenerateRequested = async (startDate) => {
+                    reportOrderView.showProgress();
+        
+                    // Real generation (headless pagination + analysis)
+                    try {
+                        reportOrderView.updateProgress(10, 'Fetching logs...');
+                        const entries = await this.controller.paginateReportLogs(startDate);  // assuming you have this method in controller
+        
+                        reportOrderView.updateProgress(40, 'Cleaning entries...');
+                        const cleaned = NeonovaCollector.cleanEntries(entries);
+        
+                        reportOrderView.updateProgress(70, 'Calculating metrics...');
+                        const metrics = NeonovaAnalyzer.computeMetrics(cleaned);
+        
+                        reportOrderView.updateProgress(90, 'Building report...');
+                        const reportHTML = new NeonovaReportView().generateReportHTML(metrics);
+        
+                        reportOrderView.updateProgress(100, 'Complete!');
+                        reportOrderView.showReport(reportHTML);
+                    } catch (err) {
+                        reportOrderView.updateProgress(0, 'Error: ' + err.message);
+                        console.error('Report generation failed:', err);
+                    }
+                };
+            });
         });
-    });
         
         this.panel.querySelector('#poll-toggle-btn').addEventListener('click', () => {
         this.controller.togglePolling();
