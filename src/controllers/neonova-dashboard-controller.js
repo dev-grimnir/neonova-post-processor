@@ -1,12 +1,25 @@
 class NeonovaDashboardController extends BaseNeonovaController{
     constructor() {
         super();
-            this.customers = this.load();
-            this.panelVisible = false;
-            this.minimized = false;
-            this.pollInterval = null;
-            this.pollIntervalMs = 10000;
-            this.view = new NeonovaDashboardView(this);
+        this.customers = this.load();
+        this.panelVisible = false;
+        this.minimized = false;
+        this.pollInterval = null;
+        this.pollIntervalMs = 10000;
+        this.view = new NeonovaDashboardView(this);
+        this.isPollingPaused = false;
+        
+    }
+
+    togglePolling() {
+    this.isPollingPaused = !this.isPollingPaused;
+    if (this.isPollingPaused) {
+        console.log("Polling paused");
+    } else {
+        this.poll(); // immediate update when resuming
+        console.log("Polling resumed");
+    }
+    if (this.view) this.view.updatePollingButton(); // optional: refresh button text
     }
 
     togglePanel() {
@@ -82,18 +95,24 @@ class NeonovaDashboardController extends BaseNeonovaController{
     }
 
     async poll() {
-        this.view.panel.querySelector('#pollStatus').textContent = 'Fetching...';
-        for (const c of this.customers) {
-            try {
-                const { status, durationSec } = await this.getStatus(c.radiusUsername);
-                c.update(status, durationSec);
-            } catch {
-                c.update('Error', 0);
-            }
+    if (this.isPollingPaused) return; // skip if paused
+
+    this.view?.panel?.querySelector('#pollStatus')?.textContent = 'Fetching...';
+    for (const customer of this.customers) {
+        try {
+            await this.updateCustomerStatus(customer);
+        } catch (err) {
+            console.error('Poll error for', customer.radiusUsername, err);
+            customer.update('Error', 0);
         }
-        this.view.panel.querySelector('#pollStatus').textContent = 'Last update: ' + new Date().toLocaleTimeString();
-        this.save();
-        if (this.view) this.view.render();
+    }
+    this.save();
+    this.view?.render();
+    this.view?.panel?.querySelector('#pollStatus')?.textContent = 'Last update: ' + new Date().toLocaleTimeString();
+    }
+
+    isPollingActive() {
+        return !this.isPollingPaused && !!this.pollInterval;
     }
 
     async getStatus(username) {
