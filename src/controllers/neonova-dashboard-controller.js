@@ -95,16 +95,14 @@ class NeonovaDashboardController extends BaseNeonovaController{
     }
 
     async poll() {
-        // Skip if polling is paused
-        if (this.isPollingPaused) return;
-    
-        // Safely update status text
-        const pollStatusEl = this.view?.panel?.querySelector('#pollStatus');
-        if (pollStatusEl) {
-            pollStatusEl.textContent = 'Fetching...';
+        if (this.isPollingPaused) {
+            console.log("Poll skipped - paused");
+            return;
         }
     
-        // Poll each customer
+        const pollStatusEl = this.view?.panel?.querySelector('#pollStatus');
+        if (pollStatusEl) pollStatusEl.textContent = 'Fetching...';
+    
         for (const customer of this.customers) {
             try {
                 await this.updateCustomerStatus(customer);
@@ -114,16 +112,9 @@ class NeonovaDashboardController extends BaseNeonovaController{
             }
         }
     
-        // Save and re-render
         this.save();
-        if (this.view) {
-            this.view.render();
-        }
-    
-        // Update last-update timestamp safely
-        if (pollStatusEl) {
-            pollStatusEl.textContent = 'Last update: ' + new Date().toLocaleTimeString();
-        }
+        if (this.view) this.view.render();
+        if (pollStatusEl) pollStatusEl.textContent = 'Last update: ' + new Date().toLocaleTimeString();
     }
 
     isPollingActive() {
