@@ -6,6 +6,20 @@ class NeonovaReportOrderView {
         this.onGenerateRequested = null;  // callback: (startDate) => {}
     }
 
+    open() {
+        this.tab = window.open('', '_blank');
+        if (!this.tab) {
+            alert('Popup blocked. Please allow popups for this site.');
+            return;
+        }
+
+        this.tab.document.write(this.generateHTML());
+        this.tab.document.close();
+
+        // Wire events after load
+        this.tab.addEventListener('load', () => this.wireEvents());
+    }
+    
     renderOrderForm() {
         this.container.innerHTML = `
             <h1>Report Request - ${this.friendlyName} (${this.username})</h1>
