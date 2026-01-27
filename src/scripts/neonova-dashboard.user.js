@@ -13,8 +13,8 @@
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/models/customer.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/controllers/neonova-dashboard-controller.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/views/neonova-dashboard-view.js
-// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/refs/heads/dev/src/views/neonova-report-order-view.js
-// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/refs/heads/dev/src/views/neonova-progress-view.js
+// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/views/neonova-report-order-view.js
+// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/views/neonova-progress-view.js
 // ==/UserScript==
 
 (function() {
