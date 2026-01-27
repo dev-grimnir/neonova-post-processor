@@ -98,7 +98,8 @@ class NeonovaDashboardView {
             </div>
         `;
     
-        // Wire up buttons with event listeners
+        // === All event listeners below ===
+    
         this.panel.querySelector('.add-btn').addEventListener('click', () => {
             const id = this.panel.querySelector('#radiusId').value.trim();
             const name = this.panel.querySelector('#friendlyName').value.trim();
