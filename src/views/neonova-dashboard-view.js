@@ -98,7 +98,7 @@ class NeonovaDashboardView {
             </div>
         `;
     
-        // === All event listeners below ===
+        // === Event listeners ===
     
         this.panel.querySelector('.add-btn').addEventListener('click', () => {
             const id = this.panel.querySelector('#radiusId').value.trim();
@@ -181,12 +181,11 @@ class NeonovaDashboardView {
             });
         });
     
-        // Report generation button (placeholder - expand later)
+        // Report generation button (placeholder)
         this.panel.querySelectorAll('.report-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const username = btn.dataset.username;
                 console.log("Generate Report clicked for", username);
-                // TODO: Call real report generation here
                 alert(`Report generation for ${username} not yet implemented`);
             });
         });
