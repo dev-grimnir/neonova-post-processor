@@ -12,14 +12,14 @@ class NeonovaDashboardController extends BaseNeonovaController{
     }
 
     togglePolling() {
-    this.isPollingPaused = !this.isPollingPaused;
-    if (this.isPollingPaused) {
-        console.log("Polling paused");
-    } else {
-        this.poll(); // immediate update when resuming
-        console.log("Polling resumed");
-    }
-    if (this.view) this.view.updatePollingButton(); // optional: refresh button text
+        this.isPollingPaused = !this.isPollingPaused;
+        if (this.isPollingPaused) {
+            console.log("Polling paused");
+        } else {
+            this.poll(); // immediate update when resuming
+            console.log("Polling resumed");
+        }
+        if (this.view) this.view.updatePollingButton(); // optional: refresh button text
     }
 
     togglePanel() {
@@ -95,20 +95,35 @@ class NeonovaDashboardController extends BaseNeonovaController{
     }
 
     async poll() {
-    if (this.isPollingPaused) return; // skip if paused
-
-    this.view?.panel?.querySelector('#pollStatus')?.textContent = 'Fetching...';
-    for (const customer of this.customers) {
-        try {
-            await this.updateCustomerStatus(customer);
-        } catch (err) {
-            console.error('Poll error for', customer.radiusUsername, err);
-            customer.update('Error', 0);
+        // Skip if polling is paused
+        if (this.isPollingPaused) return;
+    
+        // Safely update status text
+        const pollStatusEl = this.view?.panel?.querySelector('#pollStatus');
+        if (pollStatusEl) {
+            pollStatusEl.textContent = 'Fetching...';
         }
-    }
-    this.save();
-    this.view?.render();
-    this.view?.panel?.querySelector('#pollStatus')?.textContent = 'Last update: ' + new Date().toLocaleTimeString();
+    
+        // Poll each customer
+        for (const customer of this.customers) {
+            try {
+                await this.updateCustomerStatus(customer);
+            } catch (err) {
+                console.error('Poll error for', customer.radiusUsername, err);
+                customer.update('Error', 0);
+            }
+        }
+    
+        // Save and re-render
+        this.save();
+        if (this.view) {
+            this.view.render();
+        }
+    
+        // Update last-update timestamp safely
+        if (pollStatusEl) {
+            pollStatusEl.textContent = 'Last update: ' + new Date().toLocaleTimeString();
+        }
     }
 
     isPollingActive() {
