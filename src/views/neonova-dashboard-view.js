@@ -32,85 +32,164 @@ class NeonovaDashboardView {
         this.render();
     }
 
-render() {
-    let rows = '';
-    this.controller.customers.forEach(c => {
-        const isConnected = c.status === 'Connected';
-        //const color = isConnected ? '#006400' : c.status === 'Offline' ? '#c00' : '#666';
-        const color = c.status === 'Connected' ? '#006400' : '#c00';  // green for Connected, red for everything else
-        const durationText = c.getDurationStr();
-        const durationColor = isConnected ? '#006400' : '#c00';
-
-        rows += `
-            <tr>
-                <td class="friendly-name" data-username="${c.radiusUsername}" style="cursor: pointer;">
-                    ${c.friendlyName || c.radiusUsername}
-                </td>
-                <td>${c.radiusUsername}</td>
-                //<td style="color:${color}; font-weight:bold;">${c.status}</td>
-                //<td>${durationText}</td>
-                <td style="color:${durationColor};">${durationText}</td>
-                <td>
-                    <button class="report-btn" data-username="${c.radiusUsername}">
-                        Generate Report
-                    </button>
-                </td>
-                <td><button class="remove-btn" data-username="${c.radiusUsername}">Remove</button></td>
-            </tr>
-        `;
-    });
-
-    // The rest of your render() code remains unchanged (panel.innerHTML, event listeners, etc.)
-    this.panel.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <h3 style="margin:0;">Dashboard</h3>
-            <button class="minimize-btn" style="padding:4px 8px; font-size:14px;">
-                ${this.controller.minimized ? 'Restore' : 'Minimize'}
-            </button>
-        </div>
-        
-        <div id="pollStatus" style="color:#888; font-size:12px; margin-bottom:10px;">
-            Last update: ${new Date().toLocaleTimeString()}
-        </div>
-        
-        <div style="margin-bottom:12px;">
-            <input id="radiusId" placeholder="RADIUS Username" style="width:220px; padding:6px; margin-right:6px;">
-            <input id="friendlyName" placeholder="Friendly Name" style="width:220px; padding:6px; margin-right:6px;">
-            <button class="add-btn">Add</button>
-        </div>
-        
-        <table style="width:100%; border-collapse:collapse; font-size:14px;">
-            <thead style="background:#eee;">
+    render() {
+        let rows = '';
+        this.controller.customers.forEach(c => {
+            const isConnected = c.status === 'Connected';
+            const statusColor = isConnected ? '#006400' : '#c00';  // green for Connected, red for Not Connected
+            const durationColor = isConnected ? '#006400' : '#c00';  // red for offline durations
+    
+            const durationText = c.getDurationStr();
+    
+            rows += `
                 <tr>
-                    <th style="padding:8px;">Friendly Name</th>
-                    <th style="padding:8px;">RADIUS Username</th>
-                    <th style="padding:8px;">Status</th>
-                    <th style="padding:8px;">Duration</th>
-                    <th style="padding:8px;">Action</th>
+                    <td class="friendly-name" data-username="${c.radiusUsername}" style="cursor: pointer;">
+                        ${c.friendlyName || c.radiusUsername}
+                    </td>
+                    <td>${c.radiusUsername}</td>
+                    <td style="color:${statusColor}; font-weight:bold;">${c.status}</td>
+                    <td style="color:${durationColor};">${durationText}</td>
+                    <td>
+                        <button class="report-btn" data-username="${c.radiusUsername}">
+                            Generate Report
+                        </button>
+                    </td>
+                    <td>
+                        <button class="remove-btn" data-username="${c.radiusUsername}">Remove</button>
+                    </td>
                 </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-        </table>
-        
-        <div style="margin-top:12px; text-align:center;">
-            <button class="close-btn" style="padding:6px 12px;">Close</button>
-            <button class="refresh-btn" style="padding:6px 12px; margin-left:10px;">Refresh Now</button>
-        </div>
-    `;
-
+            `;
+        });
+    
+        this.panel.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="margin:0;">Dashboard</h3>
+                <button class="minimize-btn" style="padding:4px 8px; font-size:14px;">
+                    ${this.controller.minimized ? 'Restore' : 'Minimize'}
+                </button>
+            </div>
+            
+            <div id="pollStatus" style="color:#888; font-size:12px; margin-bottom:10px;">
+                Last update: ${new Date().toLocaleTimeString()}
+            </div>
+            
+            <div style="margin-bottom:12px;">
+                <input id="radiusId" placeholder="RADIUS Username" style="width:220px; padding:6px; margin-right:6px;">
+                <input id="friendlyName" placeholder="Friendly Name" style="width:220px; padding:6px; margin-right:6px;">
+                <button class="add-btn">Add</button>
+            </div>
+            
+            <table style="width:100%; border-collapse:collapse; font-size:14px;">
+                <thead style="background:#eee;">
+                    <tr>
+                        <th style="padding:8px;">Friendly Name</th>
+                        <th style="padding:8px;">RADIUS Username</th>
+                        <th style="padding:8px;">Status</th>
+                        <th style="padding:8px;">Duration</th>
+                        <th style="padding:8px;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+            
+            <div style="margin-top:12px; text-align:center;">
+                <button class="close-btn" style="padding:6px 12px;">Close</button>
+                <button class="refresh-btn" style="padding:6px 12px; margin-left:10px;">Refresh Now</button>
+            </div>
+        `;
+    
+        // Wire up buttons with event listeners
         this.panel.querySelector('.add-btn').addEventListener('click', () => {
-        const id = this.panel.querySelector('#radiusId').value.trim();
-        const name = this.panel.querySelector('#friendlyName').value.trim();
-        if (id) {
-            this.controller.add(id, name);
-            this.panel.querySelector('#radiusId').value = '';
-            this.panel.querySelector('#friendlyName').value = '';
-        } else {
-            alert('RADIUS username required');
-        }
-    });
-
-}
+            const id = this.panel.querySelector('#radiusId').value.trim();
+            const name = this.panel.querySelector('#friendlyName').value.trim();
+            if (id) {
+                this.controller.add(id, name);
+                this.panel.querySelector('#radiusId').value = '';
+                this.panel.querySelector('#friendlyName').value = '';
+            } else {
+                alert('RADIUS username required');
+            }
+        });
+    
+        this.panel.querySelector('.close-btn').addEventListener('click', () => {
+            this.controller.togglePanel();
+        });
+    
+        this.panel.querySelector('.minimize-btn').addEventListener('click', () => {
+            this.controller.toggleMinimize();
+        });
+    
+        this.panel.querySelector('.refresh-btn').addEventListener('click', () => {
+            this.controller.poll();
+        });
+    
+        // Remove buttons
+        this.panel.querySelectorAll('.remove-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const username = btn.dataset.username;
+                this.controller.remove(username);
+            });
+        });
+    
+        // Friendly name editing
+        this.panel.querySelectorAll('.friendly-name').forEach(cell => {
+            if (cell.dataset.editable === 'true') return;
+            cell.dataset.editable = 'true';
+    
+            cell.style.cursor = 'pointer';
+            cell.title = 'Click to edit friendly name (blank to reset to username)';
+    
+            cell.addEventListener('click', () => {
+                if (cell.querySelector('input')) return;
+    
+                const username = cell.dataset.username;
+                const currentDisplay = cell.textContent.trim();
+    
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = currentDisplay;
+                input.style.width = '100%';
+                input.style.boxSizing = 'border-box';
+                input.style.padding = '2px 4px';
+                input.style.fontSize = 'inherit';
+    
+                cell.innerHTML = '';
+                cell.appendChild(input);
+                input.focus();
+                input.select();
+    
+                const save = () => {
+                    const newName = input.value.trim();
+                    const customer = this.controller.customers.find(c => c.radiusUsername === username);
+                    if (customer) {
+                        customer.friendlyName = newName || null;
+                        cell.textContent = customer.friendlyName || customer.radiusUsername;
+                        console.log(`Friendly name updated for ${username}: ${customer.friendlyName || '(default)'}`);
+                    }
+                };
+    
+                input.addEventListener('blur', save);
+                input.addEventListener('keydown', e => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        save();
+                    } else if (e.key === 'Escape') {
+                        cell.textContent = currentDisplay;
+                    }
+                });
+            });
+        });
+    
+        // Report generation button (placeholder - expand later)
+        this.panel.querySelectorAll('.report-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const username = btn.dataset.username;
+                console.log("Generate Report clicked for", username);
+                // TODO: Call real report generation here
+                alert(`Report generation for ${username} not yet implemented`);
+            });
+        });
+    }
 
     update() {
         this.render();
