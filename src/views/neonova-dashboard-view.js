@@ -95,6 +95,9 @@ class NeonovaDashboardView {
             <div style="margin-top:12px; text-align:center;">
                 <button class="close-btn" style="padding:6px 12px;">Close</button>
                 <button class="refresh-btn" style="padding:6px 12px; margin-left:10px;">Refresh Now</button>
+                <button id="poll-toggle-btn" style="padding:6px 12px; margin-left:10px; background: ${this.controller.isPollingPaused ? '#c00' : '#060'}; color: white;">
+                    ${this.controller.isPollingPaused ? 'Resume Polling' : 'Pause Polling'}
+                </button>
             </div>
         `;
     
@@ -189,8 +192,22 @@ class NeonovaDashboardView {
                 alert(`Report generation for ${username} not yet implemented`);
             });
         });
+        this.panel.querySelector('#poll-toggle-btn').addEventListener('click', () => {
+        this.controller.togglePolling();
+        const btn = this.panel.querySelector('#poll-toggle-btn');
+        btn.textContent = this.controller.isPollingPaused ? 'Resume Polling' : 'Pause Polling';
+        btn.style.backgroundColor = this.controller.isPollingPaused ? '#c00' : '#060';
+        });
     }
 
+    updatePollingButton() {
+        const btn = this.panel.querySelector('#poll-toggle-btn');
+        if (btn) {
+            btn.textContent = this.controller.isPollingPaused ? 'Resume Polling' : 'Pause Polling';
+            btn.style.backgroundColor = this.controller.isPollingPaused ? '#c00' : '#060';
+        }
+    }
+    
     update() {
         this.render();
     }
