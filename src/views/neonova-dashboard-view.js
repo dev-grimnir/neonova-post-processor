@@ -184,14 +184,22 @@ class NeonovaDashboardView {
             });
         });
     
-        // Report generation button (placeholder)
-        this.panel.querySelectorAll('.report-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const username = btn.dataset.username;
-                console.log("Generate Report clicked for", username);
-                alert(`Report generation for ${username} not yet implemented`);
-            });
+        
+    this.panel.querySelectorAll('.report-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+        const username = btn.dataset.username;
+        const customer = this.controller.customers.find(c => c.radiusUsername === username);
+        if (!customer) return;
+
+        const reportOrderView = new NeonovaReportOrderView(username, customer.friendlyName);
+        reportOrderView.open();
+
+        // Later, when real generation is ready, call:
+        // reportOrderView.showReport(fullReportHTML);
+        // reportOrderView.updateProgress(50, 'Analyzing logs...');
         });
+    });
+        
         this.panel.querySelector('#poll-toggle-btn').addEventListener('click', () => {
         this.controller.togglePolling();
         const btn = this.panel.querySelector('#poll-toggle-btn');
