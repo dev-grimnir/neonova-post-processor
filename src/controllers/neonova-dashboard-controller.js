@@ -155,14 +155,6 @@ class NeonovaDashboardController extends BaseNeonovaController{
 
     /**
      * Updates the customer's status and duration on the dashboard.
-     * Uses the most recent log entry to determine current state.
-     * Duration formatted as DD:HH:MM:SS, resets to 00:00:00:00 on Stop.
-     * Includes extensive logging to catch NaN sources.
-     * 
-     * @param {Customer} customer
-     */
-    /**
-     * Updates the customer's status and duration on the dashboard.
      * Fetches the most recent log entry, determines current state,
      * calculates duration in seconds (numeric), and passes it to customer.update.
      * The view will handle formatting via c.getDurationStr().
