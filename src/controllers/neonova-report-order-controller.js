@@ -1,4 +1,4 @@
-tclass NeonovaReportOrderController extends BaseNeonovaController{
+class NeonovaReportOrderController extends BaseNeonovaController{
     constructor(username, friendlyName) {
         super();
         this.username = username;
