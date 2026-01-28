@@ -1,5 +1,6 @@
 tclass NeonovaReportOrderController extends BaseNeonovaController{
     constructor(username, friendlyName) {
+        super();
         this.username = username;
         this.friendlyName = friendlyName || username;
         this.view = null;
