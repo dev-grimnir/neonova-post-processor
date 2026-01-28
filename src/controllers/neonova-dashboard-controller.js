@@ -159,30 +159,30 @@ class NeonovaDashboardController extends BaseNeonovaController{
      * calculates duration in seconds (numeric), and passes it to customer.update.
      * The view will handle formatting via c.getDurationStr().
      */
-        async updateCustomerStatus(customer) {
-            try {
-                const latest = await this.getLatestEntry(customer.radiusUsername);
-                if (!latest) {
-                    customer.update('Unknown', 0);
-                    return;
-                }
+    async updateCustomerStatus(customer) {
+        try {
+            const latest = await this.getLatestEntry(customer.radiusUsername);
+            if (!latest) {
+                customer.update('Unknown', 0);
+                return;
+            }
     
-                let durationSeconds = 0;
+            let durationSeconds = 0;
 
-                if (latest.dateObj && latest.dateObj.getTime) {
-                    const now = Date.now();
-                    const ms = now - latest.dateObj.getTime();
+            if (latest.dateObj && latest.dateObj.getTime) {
+                const now = Date.now();
+                const ms = now - latest.dateObj.getTime();
                 
-                    if (Number.isFinite(ms) && ms >= 0) {
+                if (Number.isFinite(ms) && ms >= 0) {
                         durationSeconds = Math.floor(ms / 1000);
-                    }
                 }
+            }
 
-// Guard (should almost never trigger, but safe)
-durationSeconds = Number.isFinite(durationSeconds) && durationSeconds >= 0 ? durationSeconds : 0;
+            // Guard (should almost never trigger, but safe)
+            durationSeconds = Number.isFinite(durationSeconds) && durationSeconds >= 0 ? durationSeconds : 0;
     
-                const status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
-                customer.update(status, durationSeconds);
+            const status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
+            customer.update(status, durationSeconds);
             } catch (err) {
                 console.error('updateCustomerStatus failed:', err);
                 customer.update('Error', 0);
