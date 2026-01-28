@@ -12,6 +12,35 @@ class NeonovaReportController extends BaseNeonovaController {
         this.reportView = new NeonovaReportView();  // add this if missing
     }
 
+    /**
+     * @returns {Promise<object>} Raw report data
+     * {
+     *   username: string,
+     *   period: { start: Date, end: Date },
+     *   entries: LogEntry[],
+     *   cleanedEntries: LogEntry[],
+     *   metrics: {
+     *     uptimePercent: number,
+     *     longDisconnects: { durationSec: number, start: Date }[],
+     *     stabilityScore: number,
+     *     // ... all other computed values
+     *   }
+     * }
+     */
+    async generateReportData(username, startDate, endDate = new Date()) {
+        const entries = await this.paginateReportLogs(username, startDate, endDate);
+        const cleaned = this.collector.cleanEntries(entries);
+        const metrics = NeonovaAnalyzer.computeMetrics(cleaned);
+    
+        return {
+            username,
+            period: { start: startDate, end: endDate },
+            entries,
+            cleanedEntries: cleaned,
+            metrics
+        };
+    }
+
     async generateReportHTMLForRange(startDate, endDate) {
     this.progressView.setStatus('Fetching logs...');
     this.progressView.setProgress(10);
