@@ -4,67 +4,59 @@
  * @requires ../controllers/neonova-analyzer
  * @requires ../views/neonova-report-view
  */
-class NeonovaReportController extends BaseNeonovaController{
+class NeonovaReportController extends BaseNeonovaController {
     constructor() {
         super();
-        this.progressView = new NeonovaProgressView();
+        this.progressView = new NeonovaProgressView();  // reusable
         this.collector = new NeonovaCollector();
-        this.reportButton = null;
-        this.initUI();
+        this.reportView = new NeonovaReportView();  // add this if missing
     }
 
-    initUI() {
-        this.reportButton = document.querySelector('#novaReportButton');
-        if (!this.reportButton) {
-            this.reportButton = document.createElement('button');
-            this.reportButton.id = 'novaReportButton';
-            this.reportButton.textContent = this.collector.analysisMode ? 'Analysis Running...' : 'Run Full Report';
-            this.reportButton.style.position = 'fixed';
-            this.reportButton.style.bottom = '20px';
-            this.reportButton.style.right = '20px';
-            this.reportButton.style.zIndex = '999999';
-            this.reportButton.style.padding = '20px 30px';
-            this.reportButton.style.fontSize = '20px';
-            this.reportButton.style.fontWeight = 'bold';
-            this.reportButton.style.backgroundColor = this.collector.analysisMode ? '#ff8c00' : '#006400';
-            this.reportButton.style.color = 'white';
-            this.reportButton.style.border = 'none';
-            this.reportButton.style.borderRadius = '15px';
-            this.reportButton.style.boxShadow = '0 8px 20px rgba(0,0,0,0.6)';
-            this.reportButton.style.cursor = 'pointer';
-            this.reportButton.style.writingMode = 'vertical-rl';
-            this.reportButton.style.textOrientation = 'mixed';
+    async generateInTab(tab, startDate) {
+        const progressView = this.progressView;
+        progressView.setDocument(tab.document);  // if you add this method to progressView
+        progressView.setStatus('Fetching logs...');
+        progressView.setProgress(10);
 
-            this.reportButton.onclick = function() {
-                if (this.collector.analysisMode) return;
-                this.collector.startAnalysis();
-            }.bind(this);
+        try {
+            const entries = await this.paginateReportLogs(startDate, new Date());  // use instance method if exists
+            progressView.setProgress(40);
+            progressView.setStatus('Cleaning entries...');
 
-            document.body.appendChild(this.reportButton);
-        } else {
-            this.reportButton.textContent = this.collector.analysisMode ? 'Analysis Running...' : 'Run Full Report';
-            this.reportButton.style.backgroundColor = this.collector.analysisMode ? '#ff8c00' : '#006400';
+            const cleaned = this.collector.cleanEntries(entries);
+
+            progressView.setProgress(70);
+            progressView.setStatus('Calculating metrics...');
+
+            const metrics = NeonovaAnalyzer.computeMetrics(cleaned);
+
+            progressView.setProgress(90);
+            progressView.setStatus('Building report...');
+
+            const reportHTML = this.reportView.generateReportHTML(metrics);
+
+            progressView.setProgress(100);
+            progressView.setStatus('Complete!');
+
+            tab.document.getElementById('report-content').innerHTML = reportHTML;
+            tab.document.getElementById('progress').style.display = 'none';
+            tab.document.getElementById('status').style.display = 'none';
+        } catch (err) {
+            progressView.setStatus('Error: ' + err.message);
+            console.error('Report generation failed:', err);
         }
     }
 
-        async run() {
-            // Assume username is known or from UI/input
-            const username = 'kandkpepper'; // replace with real input
-            
-            const baseUrl = super.getSearchUrl(username);
-    
-            // Show progress
-            this.view.showProgress('Collecting RADIUS logs...');
-    
-            const onProgress = (currentEntries, currentPage) => {
+    // Cleaned up run() - optional, for backward compatibility
+    async run(username = null, startDate = null) {
+        if (!username) username = 'default-user'; // or throw error
+        const baseUrl = super.getSearchUrl(username);
 
-            this.progressView.show('Collecting logs...');
+        this.progressView.show('Collecting RADIUS logs...');
 
-            const onProgress = (currentEntries, page) => {
+        const entries = await paginateReportLogs(baseUrl, (currentEntries, page) => {
             this.progressView.update(currentEntries, `Page ${page}`);
-            };
-
-            const entries = await paginateReportLogs(baseUrl, onProgress);
+        });
 
         if (entries.length === 0) {
             this.progressView.error('No entries found');
@@ -72,19 +64,10 @@ class NeonovaReportController extends BaseNeonovaController{
         }
 
         this.progressView.complete();
-                
-            // Continue with existing report workflow
-            const cleanedEntries = this.collector.cleanEntries(entries);
-            const analyzer = new NeonovaAnalyzer(cleanedEntries);
-            const metrics = analyzer.computeMetrics();
-            const csvContent = 'Date,Status\n' + cleanedEntries.map(e => `"${e.dateObj.toLocaleString()}","${e.status}"`).join('\n');
-            const reportHTML = this.view.generateReportHTML(csvContent);
-            this.view.openReport(reportHTML);
-    
-            // Update button
-            this.reportButton.textContent = 'Report Complete!';
-            this.reportButton.style.backgroundColor = '#008000';
-            this.reportButton.disabled = true;
-    }
 
+        const cleaned = this.collector.cleanEntries(entries);
+        const metrics = NeonovaAnalyzer.computeMetrics(cleaned);
+        const reportHTML = this.reportView.generateReportHTML(metrics);
+        this.reportView.openReport(reportHTML);
+    }
 }
