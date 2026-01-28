@@ -122,7 +122,7 @@ class NeonovaDashboardController extends BaseNeonovaController{
     }
 
     async getStatus(username) {
-        let url = super.getSearchUrl('kandkpepper')
+        let url = super.getSearchUrl(username)
         const res = await fetch(url, { credentials: 'include', cache: 'no-cache' });
         if (!res.ok) throw new Error('Fetch failed');
 
