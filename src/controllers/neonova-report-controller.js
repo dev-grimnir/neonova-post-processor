@@ -75,7 +75,6 @@ class NeonovaReportController extends BaseNeonovaController {
         }
     }
 
-    // Cleaned up run() - optional, for backward compatibility
     async run(username = null, startDate = null) {
         if (!username) username = 'default-user'; // or throw error
         const baseUrl = super.getSearchUrl(username);
