@@ -192,12 +192,20 @@ class NeonovaDashboardView {
         
                 const reportTab = window.open('', '_blank');
                 if (!reportTab) return alert('Popup blocked');
-        
-                const view = new NeonovaReportOrderView(reportTab.document.body, username, customer.friendlyName);
-                const controller = new NeonovaReportOrderController(username, customer.friendlyName, view);  // pass view
+                
+                const view = new NeonovaReportOrderView(
+                    reportTab.document.body,  // <-- container first
+                    username,
+                    customer.friendlyName
+                );
+                const controller = new NeonovaReportOrderController(
+                    username,
+                    customer.friendlyName,
+                    view  // <-- pass view to controller
+                );
                 controller.start();
-        
-                // Optional: loading message while controller initializes
+                
+                // Optional loading
                 reportTab.document.body.innerHTML = '<h1>Loading report builder...</h1>';
             });
         });
