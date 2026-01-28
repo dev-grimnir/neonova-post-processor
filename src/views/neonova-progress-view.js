@@ -6,6 +6,27 @@ class NeonovaProgressView {
         this.message = 'Processing...';
     }
 
+    attachTo(container) {
+        if (this.container) this.container.remove();
+        this.container = container;
+        // move DOM creation logic here if needed
+    }
+
+    setIndeterminate() {
+        if (this.progressElement) {
+            this.progressElement.removeAttribute('value');
+            this.progressElement.removeAttribute('max');
+        }
+    }
+
+    reset() {
+        if (this.progressElement) {
+            this.progressElement.value = 0;
+            this.progressElement.max = 100;
+        }
+        this.textElement.textContent = '0%';
+    }
+
     show(message = 'Processing RADIUS logs...') {
         if (this.container) return; // already shown
 
