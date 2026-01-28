@@ -186,19 +186,19 @@ class NeonovaDashboardView {
     
         this.panel.querySelectorAll('.report-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-            const username = btn.dataset.username;
-            const customer = this.controller.customers.find(c => c.radiusUsername === username);
-            if (!customer) return;
-    
-            const reportTab = window.open('', '_blank');
-            if (!reportTab) return alert('Popup blocked');
-    
-            const view = new NeonovaReportOrderView(reportTab.document.body, username, customer.friendlyName);
-            const controller = new NeonovaReportOrderController(username, customer.friendlyName, view);  // pass view
-            controller.start();
-    
-            // Optional: loading message
-            reportTab.document.body.innerHTML = '<h1>Loading...</h1>';
+                const username = btn.dataset.username;
+                const customer = this.controller.customers.find(c => c.radiusUsername === username);
+                if (!customer) return;
+        
+                const reportTab = window.open('', '_blank');
+                if (!reportTab) return alert('Popup blocked');
+        
+                const view = new NeonovaReportOrderView(reportTab.document.body, username, customer.friendlyName);
+                const controller = new NeonovaReportOrderController(username, customer.friendlyName, view);  // pass view
+                controller.start();
+        
+                // Optional: loading message while controller initializes
+                reportTab.document.body.innerHTML = '<h1>Loading report builder...</h1>';
             });
         });
         
