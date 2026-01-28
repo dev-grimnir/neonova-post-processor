@@ -192,7 +192,7 @@ class NeonovaDashboardView {
                 if (!customer) return;
         
                 const reportOrderView = new NeonovaReportOrderView(username, customer.friendlyName);
-                reportOrderView.open();
+                reportOrderView.renderOrderForm();
         
                 // Wire real generation flow in the new tab
                 reportOrderView.onGenerateRequested = async (startDate) => {
