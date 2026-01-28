@@ -12,6 +12,34 @@ class NeonovaReportController extends BaseNeonovaController {
         this.reportView = new NeonovaReportView();  // add this if missing
     }
 
+    async generateReportHTMLForRange(startDate, endDate) {
+    this.progressView.setStatus('Fetching logs...');
+    this.progressView.setProgress(10);
+
+    const entries = await paginateReportLogs(startDate, endDate);  // add date filtering if not already
+
+    this.progressView.setProgress(40);
+    this.progressView.setStatus('Cleaning entries...');
+
+    const cleaned = this.collector.cleanEntries(entries);
+
+    this.progressView.setProgress(70);
+    this.progressView.setStatus('Calculating metrics...');
+
+    const metrics = NeonovaAnalyzer.computeMetrics(cleaned);
+
+    this.progressView.setProgress(90);
+    this.progressView.setStatus('Building report...');
+
+    const reportHTML = this.reportView.generateReportHTML(metrics);
+
+    this.progressView.setProgress(100);
+    this.progressView.setStatus('Complete!');
+
+    return reportHTML;
+    
+    }
+    
     async generateInTab(tab, startDate) {
         const progressView = this.progressView;
         progressView.setDocument(tab.document);  // if you add this method to progressView
