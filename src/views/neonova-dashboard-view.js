@@ -184,37 +184,70 @@ class NeonovaDashboardView {
             });
         });
     
+        // === UPDATED REPORT BUTTON LISTENER ===
         this.panel.querySelectorAll('.report-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const username = btn.dataset.username;
                 const customer = this.controller.customers.find(c => c.radiusUsername === username);
                 if (!customer) return;
-        
+    
                 const reportTab = window.open('', '_blank');
-                if (!reportTab) return alert('Popup blocked');
-                
-                const view = new NeonovaReportOrderView(
-                    reportTab.document.body,  // <-- container first
-                    username,
-                    customer.friendlyName
-                );
-                const controller = new NeonovaReportOrderController(
-                    username,
-                    customer.friendlyName,
-                    view  // <-- pass view to controller
-                );
-                controller.start();
-                
-                // Optional loading
-                reportTab.document.body.innerHTML = '<h1>Loading report builder...</h1>';
+                if (!reportTab) {
+                    alert('Popup blocked. Please allow popups for this site.');
+                    return;
+                }
+    
+                // Create a private MessageChannel for this tab only
+                const channel = new MessageChannel();
+                const mainPort = channel.port1;
+                mainPort.start();
+    
+                // Listen for messages from the tab
+                mainPort.addEventListener('message', (event) => {
+                    const data = event.data;
+                    if (data.type === 'generateRequested') {
+                        const startDate = new Date(data.startDate);
+                        const reportController = new NeonovaReportController();
+    
+                        mainPort.postMessage({ type: 'progress', percent: 5, text: 'Starting...' });
+    
+                        reportController.generateReport(username, startDate, new Date(), (pct, text) => {
+                            mainPort.postMessage({ type: 'progress', percent: pct, text });
+                        }).then(reportHTML => {
+                            mainPort.postMessage({ type: 'report', html: reportHTML });
+                        }).catch(err => {
+                            mainPort.postMessage({ type: 'error', message: err.message });
+                        });
+                    }
+                });
+    
+                // Pass the other port to the tab (transfer ownership)
+                reportTab.postMessage({ type: 'initChannel', port: channel.port2 }, '*', [channel.port2]);
+    
+                // Write minimal loading page (tab will render form via view)
+                reportTab.document.write(`
+                    <html>
+                    <head>
+                        <title>Report Request - ${customer.friendlyName || username}</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; padding: 30px; text-align: center; background: #f9f9f9; }
+                            h1 { margin-top: 100px; color: #555; }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>Loading report builder...</h1>
+                    </body>
+                    </html>
+                `);
+                reportTab.document.close();
             });
         });
-        
+    
         this.panel.querySelector('#poll-toggle-btn').addEventListener('click', () => {
-        this.controller.togglePolling();
-        const btn = this.panel.querySelector('#poll-toggle-btn');
-        btn.textContent = this.controller.isPollingPaused ? 'Resume Polling' : 'Pause Polling';
-        btn.style.backgroundColor = this.controller.isPollingPaused ? '#c00' : '#060';
+            this.controller.togglePolling();
+            const btn = this.panel.querySelector('#poll-toggle-btn');
+            btn.textContent = this.controller.isPollingPaused ? 'Resume Polling' : 'Pause Polling';
+            btn.style.backgroundColor = this.controller.isPollingPaused ? '#c00' : '#060';
         });
     }
 
