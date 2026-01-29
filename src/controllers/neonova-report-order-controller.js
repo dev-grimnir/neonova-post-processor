@@ -8,12 +8,12 @@ class NeonovaReportOrderController extends BaseNeonovaController{
     }
 
     start() {
-        console.log('Controller start() called - this.view exists?', !!this.view);
+        console.log('Controller start() - view exists?', !!this.view);
         if (this.view) {
-            console.log('Calling renderOrderForm on view');
+            console.log('Calling renderOrderForm');
             this.view.renderOrderForm();
         } else {
-            console.log('No view instance in controller');
+            console.log('No view in controller!');
         }
     }
 
