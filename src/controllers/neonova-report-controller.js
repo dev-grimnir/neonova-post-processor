@@ -27,8 +27,8 @@ class NeonovaReportController extends BaseNeonovaController {
      *   }
      * }
      */
-    async generateReportData(username, startDate, endDate = new Date()) {
-        const entries = await this.paginateReportLogs(username, startDate, endDate);
+    async generateReportData(username, startDate, endDate = new Date(), onProgress = null) {
+        const entries = await this.paginateReportLogs(username, startDate, endDate, onProgress);
         const cleaned = this.collector.cleanEntries(entries);
         const metrics = NeonovaAnalyzer.computeMetrics(cleaned);
     
