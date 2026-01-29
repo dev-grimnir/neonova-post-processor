@@ -7,10 +7,10 @@
 class NeonovaReportController extends BaseNeonovaController {
     constructor() {
         super();
-        this.progressView = new NeonovaProgressView();  // reusable
+        this.progressView = new NeonovaProgressView();
         this.collector = new NeonovaCollector();
-        this.reportView = new NeonovaReportView();  // add this if missing
-        this.analyzer = new NeonovaAnalyzer();
+        this.reportView = null  
+        this.analyzer = null
     }
 
     /**
@@ -31,7 +31,7 @@ class NeonovaReportController extends BaseNeonovaController {
     async generateReportData(username, startDate, endDate = new Date(), onProgress = null) {
         const entries = await this.paginateReportLogs(username, startDate, endDate, onProgress);
         const cleaned = this.collector.cleanEntries(entries);
-        const metrics = analyzer.computeMetrics(cleaned);
+        const metrics = analyzer = new NeonovaAnalyzer(cleaned);
     
         return {
             username,
