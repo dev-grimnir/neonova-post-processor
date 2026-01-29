@@ -160,6 +160,8 @@ class NeonovaReportView {
             },
             options: { scales: { y: { beginAtZero: true } } }
         });
+</script>
+
     // Inside the <script> tag content (after Chart.js CDN and before </script>)
     console.log('Chart data before render:', {
     hourlyData: ${JSON.stringify(this.metrics.hourlyDisconnects || [])},
@@ -167,7 +169,7 @@ class NeonovaReportView {
     rollingData: ${JSON.stringify(this.metrics.rolling7Day || [])}
     });
     });
-</script>
+
 <body>
     <div style="font-family: Arial, sans-serif; max-width: 1200px; margin: 40px auto; padding: 30px; background: #f0fff0; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
         <h1 style="text-align:center; color:#006400; font-size:44px; margin-bottom:10px;">Session Report Complete</h1>
