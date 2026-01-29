@@ -1,9 +1,12 @@
 class NeonovaReportOrderView {
     constructor(container, username, friendlyName) {
-        this.container = container;  // tab's document.body or div
+        console.log('NeonovaReportOrderView constructor called - container type:', typeof container, container?.nodeName || 'no node');
+        console.log('username:', username);
+        console.log('friendlyName:', friendlyName);
+        this.container = container;
         this.username = username;
         this.friendlyName = friendlyName || username;
-        this.onGenerateRequested = null;  // callback: (startDate) => {}
+        this.onGenerateRequested = null;
     }
 
     renderOrderForm() {
