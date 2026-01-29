@@ -49,24 +49,32 @@ class NeonovaCollector {
     }
 
     cleanEntries() {
+        // Map to standardized format (as before)
         this.allEntries = this.allEntries.map(entry => {
             const timestamp = Number(entry.timestamp);
             const fixedDate = new Date(timestamp);
             return { date: timestamp, status: entry.status, dateObj: fixedDate };
         });
+    
+        // Sort ascending by date (oldest to newest)
         this.allEntries.sort((a, b) => a.date - b.date);
-
+    
+        // De-dupe: Keep unique by timestamp + status (use a Set for seen keys)
+        const seen = new Set();
         const cleaned = [];
-        let lastStatus = null;
         this.allEntries.forEach(entry => {
-            if (lastStatus === null || entry.status !== lastStatus) {
+            const key = `${entry.date}_${entry.status}`;
+            if (!seen.has(key)) {
+                seen.add(key);
                 cleaned.push(entry);
-                lastStatus = entry.status;
             }
         });
+    
         console.log('[Collector] cleanEntries finished');
         console.log('  - Raw entries before clean:', this.allEntries.length);
         console.log('  - Cleaned entries after:', cleaned.length);
+        console.log('  - Sample cleaned:', cleaned.slice(0, 3));  // Add this for debug
+    
         return cleaned;
     }
 
