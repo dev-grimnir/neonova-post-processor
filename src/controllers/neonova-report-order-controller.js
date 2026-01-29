@@ -1,22 +1,22 @@
 class NeonovaReportOrderController extends BaseNeonovaController{
     constructor(username, friendlyName, view) {
-    super();
-    this.username = username;
-    this.friendlyName = friendlyName || username;
-    this.view = view;
-    this.view.onGenerateRequested = (startDate) => this.generateReport(startDate);
+        super();
+        this.username = username;
+        this.friendlyName = friendlyName || username;
+        this.view = view;
+        this.view.onGenerateRequested = (startDate) => this.generateReport(startDate);
     }
 
     start() {
-    console.log('Controller start() - view instance:', this.view);
-    console.log('View constructor params check - container exists?', !!this.view?.container);
-    console.log('Calling renderOrderForm on view instance');
-    try {
-        this.view.renderOrderForm();
-        console.log('renderOrderForm completed without error');
-    } catch (err) {
-        console.error('renderOrderForm threw error:', err);
-        }
+        console.log('Controller start() - view instance:', this.view);
+        console.log('View constructor params check - container exists?', !!this.view?.container);
+        console.log('Calling renderOrderForm on view instance');
+        try {
+            this.view.renderOrderForm();
+            console.log('renderOrderForm completed without error');
+        } catch (err) {
+            console.error('renderOrderForm threw error:', err);
+            }
     }
 
     handleGenerate(startDate) {
