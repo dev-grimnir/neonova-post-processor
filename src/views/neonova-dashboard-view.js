@@ -190,41 +190,13 @@ class NeonovaDashboardView {
                 const username = btn.dataset.username;
                 const customer = this.controller.customers.find(c => c.radiusUsername === username);
                 if (!customer) return;
-    
+        
                 const reportTab = window.open('', '_blank');
                 if (!reportTab) {
                     alert('Popup blocked. Please allow popups for this site.');
                     return;
                 }
-    
-                // Create a private MessageChannel for this tab only
-                const channel = new MessageChannel();
-                const mainPort = channel.port1;
-                mainPort.start();
-    
-                // Listen for messages from the tab
-                mainPort.addEventListener('message', (event) => {
-                    const data = event.data;
-                    if (data.type === 'generateRequested') {
-                        const startDate = new Date(data.startDate);
-                        const reportController = new NeonovaReportController();
-    
-                        mainPort.postMessage({ type: 'progress', percent: 5, text: 'Starting...' });
-    
-                        reportController.generateReport(username, startDate, new Date(), (pct, text) => {
-                            mainPort.postMessage({ type: 'progress', percent: pct, text });
-                        }).then(reportHTML => {
-                            mainPort.postMessage({ type: 'report', html: reportHTML });
-                        }).catch(err => {
-                            mainPort.postMessage({ type: 'error', message: err.message });
-                        });
-                    }
-                });
-    
-                // Pass the other port to the tab (transfer ownership)
-                reportTab.postMessage({ type: 'initChannel', port: channel.port2 }, '*', [channel.port2]);
-    
-                // Write minimal loading page (tab will render form via view)
+        
                 reportTab.document.write(`
                     <html>
                     <head>
@@ -240,6 +212,33 @@ class NeonovaDashboardView {
                     </html>
                 `);
                 reportTab.document.close();
+        
+                // Instantiate and render the view (replaces loading with form)
+                const friendlyName = customer.friendlyName || username;
+                const view = new NeonovaReportOrderView(reportTab.document.body, username, friendlyName);
+                view.renderOrderForm();
+        
+                // Set up message listener for generate requests from the tab
+                const handleMessage = (event) => {
+                    if (event.source !== reportTab) return;
+                    const data = event.data;
+                    if (data.type === 'generateRequested') {
+                        const startDate = new Date(data.startDate);
+                        const reportController = new NeonovaReportController();
+        
+                        reportTab.postMessage({ type: 'progress', percent: 5, text: 'Starting...' }, '*');
+        
+                        // Assuming generateReport is the method (adjust if it's run() or generateReportHTMLForRange() based on your NeonovaReportController impl)
+                        reportController.generateReport(username, startDate, new Date(), (pct, text) => {
+                            reportTab.postMessage({ type: 'progress', percent: pct, text }, '*');
+                        }).then(reportHTML => {
+                            reportTab.postMessage({ type: 'report', html: reportHTML }, '*');
+                        }).catch(err => {
+                            reportTab.postMessage({ type: 'error', message: err.message }, '*');
+                        });
+                    }
+                };
+                window.addEventListener('message', handleMessage);
             });
         });
     
