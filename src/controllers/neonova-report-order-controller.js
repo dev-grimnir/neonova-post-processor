@@ -8,7 +8,7 @@ class NeonovaReportOrderController extends BaseNeonovaController{
     }
 
     start() {
-        this.view = new NeonovaReportOrderView(this.username, this.friendlyName);
+        //this.view = new NeonovaReportOrderView(this.username, this.friendlyName);
         this.view.onGenerateRequested = (startDate) => this.handleGenerate(startDate);
         this.view.renderOrderForm();
     }
