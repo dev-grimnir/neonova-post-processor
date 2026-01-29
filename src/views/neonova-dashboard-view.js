@@ -326,24 +326,31 @@ class NeonovaDashboardView {
                 const channel = new BroadcastChannel(channelName);
         
                 // Listen for generate request from tab
-                channel.addEventListener('message', (event) => {
+                channel.addEventListener('message', async (event) => {
                     const data = event.data;
                     if (data.type === 'generateRequested') {
                         const startDate = new Date(data.startDate);
                         const reportController = new NeonovaReportController();
-        
-                        channel.postMessage({ type: 'progress', percent: 5, text: 'Starting...' });
-        
-                        // Use your controller's method (adjust if needed, e.g., run() or generateReportHTMLForRange())
-                        reportController.generateReportHTMLForRange(startDate, new Date())
-                            .then(reportHTML => {
-                                channel.postMessage({ type: 'report', html: reportHTML });
-                                channel.close(); // Clean up
-                            })
-                            .catch(err => {
-                                channel.postMessage({ type: 'error', message: err.message });
-                                channel.close();
-                            });
+                
+                        channel.postMessage({ type: 'progress', percent: 5, text: 'Fetching logs...' });
+                
+                        try {
+                            // Fetch and process data
+                            const reportData = await reportController.generateReportData(username, startDate, new Date());
+                
+                            channel.postMessage({ type: 'progress', percent: 50, text: 'Analyzing data...' });
+                
+                            // Generate HTML using the report view (adjust args if needed; pages from collector, longDisconnects from metrics)
+                            const reportView = new NeonovaReportView(reportData.metrics, reportController.collector.getPages(), reportData.metrics.longDisconnects || []);
+                            const reportHTML = reportView.generateReportHTML('');  // Empty CSV if not used
+                
+                            channel.postMessage({ type: 'progress', percent: 100, text: 'Rendering report...' });
+                            channel.postMessage({ type: 'report', html: reportHTML });
+                            channel.close();
+                        } catch (err) {
+                            channel.postMessage({ type: 'error', message: err.message });
+                            channel.close();
+                        }
                     }
                 });
         
