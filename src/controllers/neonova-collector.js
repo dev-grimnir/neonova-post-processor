@@ -48,35 +48,37 @@ class NeonovaCollector {
         return false;
     }
 
-    cleanEntries() {
-        // Map to standardized format (as before)
-        this.allEntries = this.allEntries.map(entry => {
-            const timestamp = Number(entry.timestamp);
-            const fixedDate = new Date(timestamp);
-            return { date: timestamp, status: entry.status, dateObj: fixedDate };
-        });
-    
-        // Sort ascending by date (oldest to newest)
-        this.allEntries.sort((a, b) => a.date - b.date);
-    
-        // De-dupe: Keep unique by timestamp + status (use a Set for seen keys)
-        const seen = new Set();
-        const cleaned = [];
-        this.allEntries.forEach(entry => {
-            const key = `${entry.date}_${entry.status}`;
-            if (!seen.has(key)) {
-                seen.add(key);
-                cleaned.push(entry);
-            }
-        });
-    
-        console.log('[Collector] cleanEntries finished');
-        console.log('  - Raw entries before clean:', this.allEntries.length);
-        console.log('  - Cleaned entries after:', cleaned.length);
-        console.log('  - Sample cleaned:', cleaned.slice(0, 3));  // Add this for debug
-    
-        return cleaned;
-    }
+    cleanEntries(entries) {
+    // Map to standardized format
+    let allEntries = entries.map(entry => {
+        const timestamp = Number(entry.timestamp);
+        const fixedDate = new Date(timestamp);
+        return { date: timestamp, status: entry.status, dateObj: fixedDate };
+    });
+
+    // Sort ascending by date (oldest to newest)
+    allEntries.sort((a, b) => a.date - b.date);
+
+    // De-dupe: Keep unique by timestamp + status (use a Set for seen keys)
+    const seen = new Set();
+    const cleaned = [];
+    allEntries.forEach(entry => {
+        const key = `${entry.date}_${entry.status}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            cleaned.push(entry);
+        } else {
+            console.log('Skipped duplicate entry:', entry);  // Log any actual dups for debug
+        }
+    });
+
+    console.log('[Collector] cleanEntries finished');
+    console.log('  - Raw entries before clean:', allEntries.length);
+    console.log('  - Cleaned entries after:', cleaned.length);
+    console.log('  - Sample cleaned:', cleaned.slice(0, 3));
+
+    return cleaned;
+}
 
     getPages() {
         return this.pages;
