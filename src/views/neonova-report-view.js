@@ -49,6 +49,7 @@ class NeonovaReportView {
     }
 
     generateReportHTML(csvContent) {
+        console.log('Rendering report with metrics:', this.metrics);
         const { meanStabilityScore, medianStabilityScore } = this.metrics;
 
         const meanClass = meanStabilityScore >= 80 ? 'score-good' : meanStabilityScore >= 50 ? 'score-fair' : 'score-poor';
