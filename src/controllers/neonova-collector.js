@@ -48,23 +48,26 @@ class NeonovaCollector {
         return false;
     }
 
-    cleanEntries(entries) {
+cleanEntries(entries) {
     if (!entries || entries.length === 0) {
         console.log('[Collector] No entries provided to clean.');
         return [];
     }
 
-    // Map to standardized format
+    // Map to standardized format (use getTime() for numeric date)
     let allEntries = entries.map(entry => {
-        const timestamp = Number(entry.timestamp);
-        const fixedDate = new Date(timestamp);
-        return { date: timestamp, status: entry.status, dateObj: fixedDate };
-    });
+        const date = entry.dateObj.getTime();  // Unix ms (numeric, unique)
+        if (isNaN(date)) {
+            console.warn('Skipping entry with invalid dateObj:', entry);
+            return null;
+        }
+        return { date, status: entry.status, dateObj: entry.dateObj };
+    }).filter(entry => entry !== null);  // Remove invalids
 
     // Sort ascending by date (oldest to newest)
     allEntries.sort((a, b) => a.date - b.date);
 
-    // De-dupe: Keep unique by timestamp + status (use a Set for seen keys)
+    // De-dupe: Keep unique by date + status
     const seen = new Set();
     const cleaned = [];
     allEntries.forEach(entry => {
@@ -73,7 +76,7 @@ class NeonovaCollector {
             seen.add(key);
             cleaned.push(entry);
         } else {
-            console.log('Skipped duplicate entry:', entry);  // Should be rare/none per your data
+            console.log('Skipped duplicate entry:', entry);
         }
     });
 
