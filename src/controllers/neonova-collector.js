@@ -49,6 +49,11 @@ class NeonovaCollector {
     }
 
     cleanEntries(entries) {
+    if (!entries || entries.length === 0) {
+        console.log('[Collector] No entries provided to clean.');
+        return [];
+    }
+
     // Map to standardized format
     let allEntries = entries.map(entry => {
         const timestamp = Number(entry.timestamp);
@@ -68,7 +73,7 @@ class NeonovaCollector {
             seen.add(key);
             cleaned.push(entry);
         } else {
-            console.log('Skipped duplicate entry:', entry);  // Log any actual dups for debug
+            console.log('Skipped duplicate entry:', entry);  // Should be rare/none per your data
         }
     });
 
