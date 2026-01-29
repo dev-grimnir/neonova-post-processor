@@ -160,13 +160,12 @@ class NeonovaReportView {
             },
             options: { scales: { y: { beginAtZero: true } } }
         });
-    });
-
     // Inside the <script> tag content (after Chart.js CDN and before </script>)
     console.log('Chart data before render:', {
     hourlyData: ${JSON.stringify(this.metrics.hourlyDisconnects || [])},
     dailyData: ${JSON.stringify(this.metrics.dailyDisconnects || [])},
     rollingData: ${JSON.stringify(this.metrics.rolling7Day || [])}
+    });
     });
 </script>
 <body>
