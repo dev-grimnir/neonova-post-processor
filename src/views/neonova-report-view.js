@@ -168,12 +168,12 @@ class NeonovaReportView {
             Stability Score (Mean-Based): ${meanStabilityScore}/100
             <span class="tooltip">
                 <strong>How this score is calculated (using average session length, more sensitive to frequent short sessions):</strong><br><br>
-                • Uptime component: ${this.metrics.percentConnected}% * 0.6 = ${this.metrics.uptimeComponent.toFixed(1)}<br>
-                • Session quality bonus: ${this.metrics.sessionBonusMean.toFixed(1)}<br>
-                • Fast recovery bonus (<30s, capped 18/day): ${this.metrics.totalFastBonus.toFixed(1)}<br>
-                • Flapping penalty: -${this.metrics.flappingPenalty.toFixed(1)}<br>
-                • Long outage penalty (>30min): -${this.metrics.longOutagePenalty.toFixed(1)}<br><br>
-                Raw score: ${this.metrics.rawMeanScore.toFixed(1)}<br>
+                • Uptime component: ${this.metrics.percentConnected}% * 0.6 = ${(this.metrics.uptimeComponent || 0).toFixed(1)}<br>
+                • Session quality bonus: ${(this.metrics.sessionBonusMean || 0).toFixed(1)}<br>
+                • Fast recovery bonus (<30s, capped 18/day): ${(this.metrics.totalFastBonus || 0).toFixed(1)}<br>
+                • Flapping penalty: -${(this.metrics.flappingPenalty || 0).toFixed(1)}<br>
+                • Long outage penalty (>30min): -${(this.metrics.longOutagePenalty || 0).toFixed(1)}<br><br>
+                Raw score: ${(this.metrics.rawMeanScore || 0).toFixed(1)}<br>
                 Displayed score (clamped 0–100): ${meanStabilityScore}/100<br>
                 Penalties scaled by timespan for fairness over long periods.
             </span>
@@ -182,12 +182,12 @@ class NeonovaReportView {
             Stability Score (Median-Based): ${medianStabilityScore}/100
             <span class="tooltip">
                 <strong>How this score is calculated (using median session length, more resistant to outliers):</strong><br><br>
-                • Uptime component: ${this.metrics.percentConnected}% * 0.6 = ${this.metrics.uptimeComponent.toFixed(1)}<br>
-                • Session quality bonus: ${this.metrics.sessionBonusMedian.toFixed(1)}<br>
-                • Fast recovery bonus (<30s, capped 18/day): ${this.metrics.totalFastBonus.toFixed(1)}<br>
-                • Flapping penalty: -${this.metrics.flappingPenalty.toFixed(1)}<br>
-                • Long outage penalty (>30min): -${this.metrics.longOutagePenalty.toFixed(1)}<br><br>
-                Raw score: ${this.metrics.rawMedianScore.toFixed(1)}<br>
+                • Uptime component: ${this.metrics.percentConnected}% * 0.6 = ${(this.metrics.uptimeComponent || 0).toFixed(1)}<br>
+                • Session quality bonus: ${(this.metrics.sessionBonusMedian || 0).toFixed(1)}<br>
+                • Fast recovery bonus (<30s, capped 18/day): ${(this.metrics.totalFastBonus || 0).toFixed(1)}<br>
+                • Flapping penalty: -${(this.metrics.flappingPenalty || 0).toFixed(1)}<br>
+                • Long outage penalty (>30min): -${(this.metrics.longOutagePenalty || 0).toFixed(1)}<br><br>
+                Raw score: ${(this.metrics.rawMedianScore || 0).toFixed(1)}<br>
                 Displayed score (clamped 0–100): ${medianStabilityScore}/100<br>
                 Penalties scaled by timespan for fairness over long periods.
             </span>
@@ -195,9 +195,9 @@ class NeonovaReportView {
         <h2 style="text-align:center; color:#555; font-size:22px; margin:20px 0;">
             ${this.pages} pages | ${this.metrics.allEntriesLength} raw records (${this.metrics.cleanedEntriesLength} after de-duplication)
         </h2>
-        <h3 style="text-align:center; color:#777; font-size:18px; margin-bottom:30px;">
-            Monitoring period: ${this.metrics.monitoringPeriod} (${this.metrics.daysSpanned.toFixed(1)} days spanned)
-        </h3>
+            <h3 style="text-align:center; color:#777; font-size:18px; margin-bottom:30px;">
+                Monitoring period: ${this.metrics.monitoringPeriod} (${(this.metrics.daysSpanned || 0).toFixed(1)} days spanned)
+            </h3>
 
         <div style="background:white; padding:20px; border-radius:10px; margin-bottom:40px;">
             <canvas id="hourlyChart" height="120"></canvas>
