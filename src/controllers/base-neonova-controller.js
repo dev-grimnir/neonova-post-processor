@@ -274,6 +274,7 @@ parsePageRows(doc) {
             const doc = new DOMParser().parseFromString(html, 'text/html');
     
             const pageEntries = this.parsePageRows(doc);
+            console.log(`Page ${page} entries: ${pageEntries.length}`);
             entries.push(...pageEntries);
     
             if (typeof onProgress === 'function') {
