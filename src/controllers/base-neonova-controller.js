@@ -93,52 +93,38 @@ class BaseNeonovaController {
  * @returns {Array<{timestamp: string, status: string, sessionTime: string, dateObj: Date}>}
  */
 parsePageRows(doc) {
+    const table = doc.querySelector('table[width="500"]') || doc.querySelector('table[cellspacing="2"][cellpadding="2"]');
+    if (!table) {
+        console.warn('No table found in parsed doc');
+        return [];
+    }
+
+    const rows = Array.from(table.querySelectorAll('tr'));
     const entries = [];
 
-    // Find the data table (prefer width=500 as seen in HTML)
-    const table = doc.querySelector('table[width="500"]') ||
-                  doc.querySelector('table[cellspacing="2"][cellpadding="2"]') ||
-                  doc.querySelector('table');
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length < 7) return;  // Skip headers/short rows
 
-    if (!table) {
-        return entries;
-    }
+        const timestampStr = cells[0].textContent.trim();  // e.g., "2026-01-29 22:14:00"
+        const status = cells[4].textContent.trim();  // Assuming "Start" or "Stop"
+        const sessionTime = cells[6].textContent.trim();  // Duration string
 
-    // Skip header (row 0)
-    for (let i = 1; i < table.rows.length; i++) {
-        const row = table.rows[i];
-        const cells = row.cells;
-
-        if (cells.length < 7) {
-            continue;
+        const dateObj = new Date(timestampStr);  // Parses ISO-like strings
+        if (isNaN(dateObj.getTime())) {
+            console.warn('Invalid timestamp:', timestampStr);  // Log bad parses
+            return;  // Skip invalid
         }
-
-        const timestamp = cells[0]?.textContent?.trim() || '';
-        const statusText = cells[4]?.textContent?.trim() || '';
-        const sessionTime = cells[6]?.textContent?.trim() || '';
-
-        let dateObj;
-        try {
-            // Normalize timestamp format
-            const normalized = timestamp.replace(/\s+/g, 'T');
-            dateObj = new Date(normalized);
-            if (isNaN(dateObj.getTime())) {
-                continue;
-            }
-        } catch (err) {
-            continue;
-        }
-
-        const status = statusText.toLowerCase().includes('start') ? 'Start' : 'Stop';
 
         entries.push({
-            timestamp,
+            timestamp: timestampStr,  // Keep raw for debug
             status,
             sessionTime,
-            dateObj
+            dateObj  // Valid Date
         });
-    }
+    });
 
+    console.log('Parsed page rows sample:', entries.slice(0, 3));  // Add for debug
     return entries;
 }
 
