@@ -7,6 +7,14 @@ class NeonovaReportOrderView {
     }
 
     renderOrderForm() {
+        console.log('renderOrderForm called - this.container:', this.container?.nodeName || typeof this.container);
+        if (!this.container || typeof this.container !== 'object') {
+            console.error('Invalid container in renderOrderForm');
+            return;
+        }
+        this.container.innerHTML = `... your form HTML ...`;
+        console.log('Form HTML set - container now has children?', this.container.children.length > 0);
+        
         this.container.innerHTML = `
             <h1>Report Request - ${this.friendlyName} (${this.username})</h1>
 
