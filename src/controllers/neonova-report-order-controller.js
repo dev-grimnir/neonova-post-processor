@@ -8,9 +8,13 @@ class NeonovaReportOrderController extends BaseNeonovaController{
     }
 
     start() {
-        //this.view = new NeonovaReportOrderView(this.username, this.friendlyName);
-        this.view.onGenerateRequested = (startDate) => this.handleGenerate(startDate);
-        this.view.renderOrderForm();
+        console.log('Controller start() called - this.view exists?', !!this.view);
+        if (this.view) {
+            console.log('Calling renderOrderForm on view');
+            this.view.renderOrderForm();
+        } else {
+            console.log('No view instance in controller');
+        }
     }
 
     handleGenerate(startDate) {
