@@ -192,19 +192,29 @@ parsePageRows(doc) {
         return `https://admin.neonova.net/rat/index.php?${params.toString()}`;
     }
     
-    /**
-     * Fetches all available RADIUS log pages for a user using predictable offset pagination.
-     * Uses location=0,50,100,... with direction=0 (forward).
-     * Stops when last page has < hitsPerPage rows.
-     * Returns all entries sorted newest-first.
-     * 
-     * @param {string} username
-     * @param {Date|null} startDate - Optional start date for the search range (defaults to start of current month).
-     * @param {Date|null} endDate - Optional end date for the search range (defaults to now).
-     * @param {Function|null} onProgress - Optional callback (totalEntries, currentPage)
-     * @returns {Promise<Array<{timestamp: string, status: string, sessionTime: string, dateObj: Date}>>}
-     */
-    async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
+        /**
+         * Fetches all available RADIUS log pages for a user using predictable offset pagination.
+         * Uses location=0,50,100,... with direction=0 (forward).
+         * Stops when last page has < hitsPerPage rows.
+         * Returns all entries sorted newest-first.
+         * 
+         * @param {string} username
+         * @param {Date|null} startDate - Optional start date for the search range (defaults to start of current month).
+         * @param {Date|null} endDate - Optional end date for the search range (defaults to now).
+         * @param {Function|null} onProgress - Optional callback (totalEntries, currentPage)
+         * @returns {Promise<Array<{timestamp: string, status: string, sessionTime: string, dateObj: Date}>>}
+         */
+        async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
+        // Handle legacy calls where second arg might be onProgress
+        if (typeof startDate === 'function') {
+            onProgress = startDate;
+            startDate = null;
+            endDate = null;
+        } else if (typeof endDate === 'function') {
+            onProgress = endDate;
+            endDate = null;
+        }
+    
         const entries = [];
         let page = 1;
         let offset = 0;
