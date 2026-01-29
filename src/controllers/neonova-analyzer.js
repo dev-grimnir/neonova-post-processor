@@ -182,6 +182,13 @@ class NeonovaAnalyzer {
         const rawMedianScore = uptimeComponent + sessionBonusMedian + totalFastBonus - flappingPenalty - longOutagePenalty;
         const medianStabilityScore = Math.max(0, Math.min(100, rawMedianScore)).toFixed(0);
 
+        console.log('Graph data arrays:', {
+            hourlyDisconnects: this.hourlyDisconnects,
+            dailyDisconnects: this.dailyDisconnects,
+            rolling7Day: this.rolling7Day,  // Assuming this is computed in computeRolling7Day()
+            sessionBins: this.sessionBins,  // If used in any charts
+            reconnectBins: this.reconnectBins
+        });
         return {
             peakHourStr, peakDayStr, businessDisconnects, offHoursDisconnects, timeSinceLastStr, avgDaily,
             totalConnectedSec, totalDisconnectedSec, percentConnected, numSessions, avgSessionMin,
