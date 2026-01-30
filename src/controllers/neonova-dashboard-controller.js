@@ -14,10 +14,8 @@ class NeonovaDashboardController extends BaseNeonovaController{
     togglePolling() {
         this.isPollingPaused = !this.isPollingPaused;
         if (this.isPollingPaused) {
-            console.log("Polling paused");
         } else {
             this.poll(); // immediate update when resuming
-            console.log("Polling resumed");
         }
         if (this.view) this.view.updatePollingButton(); // optional: refresh button text
     }
@@ -96,7 +94,6 @@ class NeonovaDashboardController extends BaseNeonovaController{
 
     async poll() {
         if (this.isPollingPaused) {
-            console.log("Poll skipped - paused");
             return;
         }
     
@@ -107,7 +104,6 @@ class NeonovaDashboardController extends BaseNeonovaController{
             try {
                 await this.updateCustomerStatus(customer);
             } catch (err) {
-                console.error('Poll error for', customer.radiusUsername, err);
                 customer.update('Error', 0);
             }
         }
@@ -184,7 +180,6 @@ class NeonovaDashboardController extends BaseNeonovaController{
             const status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
             customer.update(status, durationSeconds);
             } catch (err) {
-                console.error('updateCustomerStatus failed:', err);
                 customer.update('Error', 0);
             }
         }
