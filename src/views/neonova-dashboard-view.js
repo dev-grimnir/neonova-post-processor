@@ -183,184 +183,173 @@ class NeonovaDashboardView {
             });
         });
     
-        // === UPDATED REPORT BUTTON LISTENER ===
         this.panel.querySelectorAll('.report-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const username = btn.dataset.username;
-                const customer = this.controller.customers.find(c => c.radiusUsername === username);
-                if (!customer) return;
-        
-                const reportTab = window.open('', '_blank');
-                if (!reportTab) {
-                    alert('Popup blocked. Please allow popups for this site.');
-                    return;
-                }
-        
-                const friendlyName = customer.friendlyName || username;
-                const channelName = `reportChannel_${username}_${Date.now()}`; // Unique per report
-        
-                // Write basic HTML with inline script to instantiate view in tab's context
-                reportTab.document.write(`
-                    <html>
-                    <head>
-                        <title>Report Request - ${friendlyName}</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; padding: 30px; text-align: center; background: #f9f9f9; }
-                            #order-form { max-width: 600px; margin: auto; }
-                            #quick-buttons button { margin: 10px; padding: 10px 20px; }
-                            #custom-date { margin: 20px; }
-                            #progress-container { display: none; }
-                            #progress-bar { width: 100%; height: 20px; background: #ddd; }
-                            #progress-fill { height: 100%; background: #4caf50; width: 0%; }
-                            #progress-text { margin-top: 10px; }
-                            #report-content { display: none; margin-top: 20px; }
-                        </style>
-                    </head>
-                    <body>
-                        <h1>Loading report builder...</h1>
-                        <script>
-                            // Inline code for NeonovaReportOrderView logic (adapted to run here)
-                            class NeonovaReportOrderView {
-                                constructor(container, username, friendlyName, channelName) {
-                                    this.container = container;
-                                    this.username = username;
-                                    this.friendlyName = friendlyName;
-                                    this.channel = new BroadcastChannel(channelName);
-                                    this.onGenerateRequested = null; // Not needed since we use channel
-                                }
-        
-                                generateHTML() {
-                                    return \`
-                                        <div id="order-form">
-                                            <h2>Generate Report for \${this.friendlyName || this.username}</h2>
-                                            <div id="quick-buttons">
-                                                <button data-days="7">Last 7 Days</button>
-                                                <button data-days="30">Last 30 Days</button>
-                                                <button data-days="90">Last 90 Days</button>
-                                            </div>
-                                            <div id="custom-date">
-                                                <label for="start-date">Start Date:</label>
-                                                <input type="date" id="start-date">
-                                                <button id="generate-custom">Generate</button>
-                                            </div>
-                                        </div>
-                                        <div id="progress-container">
-                                            <div id="progress-bar"><div id="progress-fill"></div></div>
-                                            <p id="progress-text">Starting...</p>
-                                        </div>
-                                        <div id="report-content"></div>
-                                    \`;
-                                }
-        
-                                renderOrderForm() {
-                                    this.container.innerHTML = this.generateHTML();
-        
-                                    // Add event listeners for buttons
-                                    const quickButtons = this.container.querySelectorAll('#quick-buttons button');
-                                    quickButtons.forEach(button => {
-                                        button.addEventListener('click', () => {
-                                            const days = parseInt(button.dataset.days);
-                                            const startDate = new Date();
-                                            startDate.setDate(startDate.getDate() - days);
-                                            this.handleGenerate(startDate.toISOString().split('T')[0]);
-                                        });
-                                    });
-        
-                                    const customButton = this.container.querySelector('#generate-custom');
-                                    customButton.addEventListener('click', () => {
-                                        const startDateInput = this.container.querySelector('#start-date').value;
-                                        if (startDateInput) {
-                                            this.handleGenerate(startDateInput);
-                                        } else {
-                                            alert('Please select a start date.');
-                                        }
-                                    });
-                                }
-        
-                                handleGenerate(startDate) {
-                                    this.showProgress();
-                                    this.channel.postMessage({ type: 'generateRequested', startDate });
-                                }
-        
-                                showProgress() {
-                                    document.querySelector('#order-form').style.display = 'none';
-                                    document.querySelector('#progress-container').style.display = 'block';
-                                }
-        
-                                updateProgress(percent, text) {
-                                    document.querySelector('#progress-fill').style.width = \`\${percent}%\`;
-                                    document.querySelector('#progress-text').textContent = text;
-                                }
-        
-                                showReport(reportHTML) {
-                                    document.querySelector('#progress-container').style.display = 'none';
-                                    const reportContent = document.querySelector('#report-content');
-                                    reportContent.innerHTML = reportHTML;
-                                    reportContent.style.display = 'block';
-                                }
-                            }
-        
-                            // Instantiate in tab's context
-                            const view = new NeonovaReportOrderView(document.body, '${username}', '${friendlyName}', '${channelName}');
-                            view.renderOrderForm();
-        
-                            // Listen for messages from main (progress/report/error)
-                            view.channel.addEventListener('message', (event) => {
-                                const data = event.data;
-                                if (data.type === 'progress') {
-                                    view.updateProgress(data.percent, data.text);
-                                } else if (data.type === 'report') {
-                                    view.showReport(data.html);
-                                } else if (data.type === 'error') {
-                                    alert('Error: ' + data.message);
-                                    view.channel.close();
+    btn.addEventListener('click', () => {
+        const username = btn.dataset.username;
+        const customer = this.controller.customers.find(c => c.radiusUsername === username);
+        if (!customer) return;
+
+        const reportTab = window.open('', '_blank');
+        if (!reportTab) {
+            alert('Popup blocked. Please allow popups for this site.');
+            return;
+        }
+
+        const friendlyName = customer.friendlyName || username;
+        const channelName = `reportChannel_${username}_${Date.now()}`;
+
+        reportTab.document.write(`
+            <html>
+            <head>
+                <title>Report Request - ${friendlyName}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; padding: 30px; text-align: center; background: #f9f9f9; }
+                    #order-form { max-width: 600px; margin: auto; }
+                    #quick-buttons button { margin: 10px; padding: 10px 20px; }
+                    #custom-date { margin: 20px; }
+                    #progress-container { display: none; }
+                    #progress-bar { width: 100%; height: 20px; background: #ddd; }
+                    #progress-fill { height: 100%; background: #4caf50; width: 0%; }
+                    #progress-text { margin-top: 10px; }
+                    #report-content { display: none; margin-top: 20px; }
+                </style>
+            </head>
+            <body>
+                <h1>Loading report builder...</h1>
+                <script>
+                    class NeonovaReportOrderView {
+                        constructor(container, username, friendlyName, channelName) {
+                            this.container = container;
+                            this.username = username;
+                            this.friendlyName = friendlyName;
+                            this.channel = new BroadcastChannel(channelName);
+                        }
+
+                        generateHTML() {
+                            return \`
+                                <div id="order-form">
+                                    <h2>Generate Report for \${this.friendlyName || this.username}</h2>
+                                    <div id="quick-buttons">
+                                        <button data-days="7">Last 7 Days</button>
+                                        <button data-days="30">Last 30 Days</button>
+                                        <button data-days="90">Last 90 Days</button>
+                                    </div>
+                                    <div id="custom-date">
+                                        <label for="start-date">Start Date:</label>
+                                        <input type="date" id="start-date">
+                                        <button id="generate-custom">Generate</button>
+                                    </div>
+                                </div>
+                                <div id="progress-container">
+                                    <div id="progress-bar"><div id="progress-fill"></div></div>
+                                    <p id="progress-text">Starting...</p>
+                                </div>
+                                <div id="report-content"></div>
+                            \`;
+                        }
+
+                        renderOrderForm() {
+                            this.container.innerHTML = this.generateHTML();
+
+                            const quickButtons = this.container.querySelectorAll('#quick-buttons button');
+                            quickButtons.forEach(button => {
+                                button.addEventListener('click', () => {
+                                    const days = parseInt(button.dataset.days);
+                                    const startDate = new Date();
+                                    startDate.setDate(startDate.getDate() - days);
+                                    this.handleGenerate(startDate.toISOString().split('T')[0]);
+                                });
+                            });
+
+                            const customButton = this.container.querySelector('#generate-custom');
+                            customButton.addEventListener('click', () => {
+                                const startDateInput = this.container.querySelector('#start-date').value;
+                                if (startDateInput) {
+                                    this.handleGenerate(startDateInput);
+                                } else {
+                                    alert('Please select a start date.');
                                 }
                             });
-                        </script>
-                    </body>
-                    </html>
-                `);
-                reportTab.document.close();
-        
-                // Set up BroadcastChannel in main for communication
-                const channel = new BroadcastChannel(channelName);
-        
-                // Listen for generate request from tab
-                channel.addEventListener('message', async (event) => {
-                    const data = event.data;
-                    if (data.type === 'generateRequested') {
-                        const startDate = new Date(data.startDate);
-                        const reportController = new NeonovaReportController();
-                
-                        channel.postMessage({ type: 'progress', percent: 5, text: 'Fetching logs...' });
-                
-                        try {
-                            // Fetch and process data
-                            const reportData = await reportController.generateReportData(username, startDate, new Date());
-                
-                            channel.postMessage({ type: 'progress', percent: 50, text: 'Analyzing data...' });
-                
-                            // Generate HTML using the report view (adjust args if needed; pages from collector, longDisconnects from metrics)
-                            const reportView = new NeonovaReportView(reportData.metrics, reportController.collector.getPages(), reportData.metrics.longDisconnects || []);
-                            const reportHTML = reportView.generateReportHTML('');  // Empty CSV if not used
-                
-                            channel.postMessage({ type: 'progress', percent: 100, text: 'Rendering report...' });
-                            channel.postMessage({ type: 'report', html: reportHTML });
-                            channel.close();
-                        } catch (err) {
-                            channel.postMessage({ type: 'error', message: err.message });
-                            channel.close();
+                        }
+
+                        handleGenerate(startDate) {
+                            this.showProgress();
+                            this.channel.postMessage({ type: 'generateRequested', startDate });
+                        }
+
+                        showProgress() {
+                            document.querySelector('#order-form').style.display = 'none';
+                            document.querySelector('#progress-container').style.display = 'block';
+                        }
+
+                        updateProgress(percent, text) {
+                            document.querySelector('#progress-fill').style.width = \`\${percent}%\`;
+                            document.querySelector('#progress-text').textContent = text;
+                        }
+
+                        showReport(reportHTML) {
+                            document.querySelector('#progress-container').style.display = 'none';
+                            const reportContent = document.querySelector('#report-content');
+                            reportContent.innerHTML = reportHTML;
+                            reportContent.style.display = 'block';
                         }
                     }
-                });
-        
-                // Optional: Handle progress callbacks if your controller supports them
-                // If generateReportHTMLForRange accepts a progress callback, pass one:
-                // reportController.generateReportHTMLForRange(startDate, new Date(), (pct, text) => {
-                //     channel.postMessage({ type: 'progress', percent: pct, text });
-                // });
-            });
+
+                    const view = new NeonovaReportOrderView(document.body, '${username}', '${friendlyName}', '${channelName}');
+                    view.renderOrderForm();
+
+                    view.channel.addEventListener('message', (event) => {
+                        const data = event.data;
+                        if (data.type === 'progress') {
+                            view.updateProgress(data.percent, data.text);
+                        } else if (data.type === 'report') {
+                            view.showReport(data.html);
+                        } else if (data.type === 'error') {
+                            alert('Error: ' + data.message);
+                            view.channel.close();
+                        }
+                    });
+                </script>
+            </body>
+            </html>
+        `);
+        reportTab.document.close();
+
+        const channel = new BroadcastChannel(channelName);
+
+        channel.addEventListener('message', async (event) => {
+            const data = event.data;
+            if (data.type === 'generateRequested') {
+                const startDate = new Date(data.startDate);
+                const reportController = new NeonovaReportController();
+
+                const onProgress = (totalEntries, currentPage) => {
+                    const estimatedTotalPages = 50;
+                    const percent = Math.min(100, (currentPage / estimatedTotalPages) * 100);
+                    channel.postMessage({ type: 'progress', percent, text: `Fetching logs... (${totalEntries} entries so far)` });
+                };
+
+                channel.postMessage({ type: 'progress', percent: 0, text: 'Fetching logs...' });
+
+                try {
+                    const reportData = await reportController.generateReportData(username, startDate, new Date(), onProgress);
+
+                    channel.postMessage({ type: 'progress', percent: 50, text: 'Analyzing data...' });
+
+                    const reportView = new NeonovaReportView(reportData.metrics, reportController.collector.getPages(), reportData.metrics.longDisconnects || []);
+                    const reportHTML = reportView.generateReportHTML('');
+
+                    channel.postMessage({ type: 'progress', percent: 100, text: 'Rendering report...' });
+                    channel.postMessage({ type: 'report', html: reportHTML });
+                    channel.close();
+                } catch (err) {
+                    channel.postMessage({ type: 'error', message: err.message });
+                    channel.close();
+                }
+            }
         });
+    });
+});
         
     
         this.panel.querySelector('#poll-toggle-btn').addEventListener('click', () => {
