@@ -8,15 +8,12 @@ class NeonovaReportOrderController extends BaseNeonovaController{
     }
 
     start() {
-        console.log('Controller start() - view instance:', this.view);
-        console.log('View constructor params check - container exists?', !!this.view?.container);
-        console.log('Calling renderOrderForm on view instance');
+
         try {
             this.view.renderOrderForm();
-            console.log('renderOrderForm completed without error');
+            
         } catch (err) {
-            console.error('renderOrderForm threw error:', err);
-            }
+        }
     }
 
     handleGenerate(startDate) {
