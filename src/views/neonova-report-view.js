@@ -82,7 +82,7 @@ generateReportHTML(csvContent) {
         </head>
         <body>
             <h1>RADIUS Connection Report for ${this.metrics.username || 'Unknown'}</h1>
-            <h3>Monitoring period: ${this.metrics.monitoringPeriod || 'N/A'} (${(this.metrics.daysSpanned || 0).toFixed(1)} days spanned)</h3>
+            <h3>Monitoring period: ${this.metrics.monitoringPeriod || 'N/A'} (${Number(this.metrics.daysSpanned || 0).toFixed(1)} days spanned)</h3>
 
             <!-- Stability Scores -->
             <div class="scores-container">
@@ -92,12 +92,12 @@ generateReportHTML(csvContent) {
                     <span class="tooltip">?
                         <span class="tooltiptext">
                             <strong>How this score is calculated (using average session length):</strong><br><br>
-                            • Uptime component: ${(this.metrics.percentConnected || 0)}% * 0.6 = ${(this.metrics.uptimeComponent || 0).toFixed(1)}<br>
-                            • Session quality bonus: ${(this.metrics.sessionBonusMean || 0).toFixed(1)}<br>
-                            • Fast recovery bonus: ${(this.metrics.totalFastBonus || 0).toFixed(1)}<br>
-                            • Flapping penalty: -${(this.metrics.flappingPenalty || 0).toFixed(1)}<br>
-                            • Long outage penalty: -${(this.metrics.longOutagePenalty || 0).toFixed(1)}<br><br>
-                            Raw score: ${(this.metrics.rawMeanScore || 0).toFixed(1)}<br>
+                            • Uptime component: ${Number(this.metrics.percentConnected || 0).toFixed(1)}% * 0.6 = ${Number(this.metrics.uptimeComponent || 0).toFixed(1)}<br>
+                            • Session quality bonus: ${Number(this.metrics.sessionBonusMean || 0).toFixed(1)}<br>
+                            • Fast recovery bonus: ${Number(this.metrics.totalFastBonus || 0).toFixed(1)}<br>
+                            • Flapping penalty: -${Number(this.metrics.flappingPenalty || 0).toFixed(1)}<br>
+                            • Long outage penalty: -${Number(this.metrics.longOutagePenalty || 0).toFixed(1)}<br><br>
+                            Raw score: ${Number(this.metrics.rawMeanScore || 0).toFixed(1)}<br>
                             Displayed score: ${meanStabilityScore}/100
                         </span>
                     </span>
@@ -108,19 +108,19 @@ generateReportHTML(csvContent) {
                     <span class="tooltip">?
                         <span class="tooltiptext">
                             <strong>How this score is calculated (using median session length):</strong><br><br>
-                            • Uptime component: ${(this.metrics.percentConnected || 0)}% * 0.6 = ${(this.metrics.uptimeComponent || 0).toFixed(1)}<br>
-                            • Session quality bonus: ${(this.metrics.sessionBonusMedian || 0).toFixed(1)}<br>
-                            • Fast recovery bonus: ${(this.metrics.totalFastBonus || 0).toFixed(1)}<br>
-                            • Flapping penalty: -${(this.metrics.flappingPenalty || 0).toFixed(1)}<br>
-                            • Long outage penalty: -${(this.metrics.longOutagePenalty || 0).toFixed(1)}<br><br>
-                            Raw score: ${(this.metrics.rawMedianScore || 0).toFixed(1)}<br>
+                            • Uptime component: ${Number(this.metrics.percentConnected || 0).toFixed(1)}% * 0.6 = ${Number(this.metrics.uptimeComponent || 0).toFixed(1)}<br>
+                            • Session quality bonus: ${Number(this.metrics.sessionBonusMedian || 0).toFixed(1)}<br>
+                            • Fast recovery bonus: ${Number(this.metrics.totalFastBonus || 0).toFixed(1)}<br>
+                            • Flapping penalty: -${Number(this.metrics.flappingPenalty || 0).toFixed(1)}<br>
+                            • Long outage penalty: -${Number(this.metrics.longOutagePenalty || 0).toFixed(1)}<br><br>
+                            Raw score: ${Number(this.metrics.rawMedianScore || 0).toFixed(1)}<br>
                             Displayed score: ${medianStabilityScore}/100
                         </span>
                     </span>
                 </div>
             </div>
 
-            <!-- Stats Table -->
+            <!-- Key Statistics Table -->
             <h2>Key Statistics</h2>
             <table>
                 <thead>
@@ -133,13 +133,13 @@ generateReportHTML(csvContent) {
                     <tr><td>Total Disconnects</td><td>${this.metrics.disconnects || 0}</td></tr>
                     <tr><td>Average Session Duration</td><td>${this.metrics.avgSession || 'N/A'}</td></tr>
                     <tr><td>Average Reconnect Time</td><td>${this.metrics.avgReconnect || 'N/A'}</td></tr>
-                    <tr><td>Percent Connected</td><td>${(this.metrics.percentConnected || 0).toFixed(1)}%</td></tr>
+                    <tr><td>Percent Connected</td><td>${Number(this.metrics.percentConnected || 0).toFixed(1)}%</td></tr>
                     <tr><td>Business Hours Disconnects</td><td>${this.metrics.businessDisconnects || 0}</td></tr>
                     <tr><td>Off-Hours Disconnects</td><td>${this.metrics.offHoursDisconnects || 0}</td></tr>
                     <tr><td>Time Since Last Disconnect</td><td>${this.metrics.timeSinceLastStr || 'N/A'}</td></tr>
                     <tr><td>Peak Disconnect Hour</td><td>${this.metrics.peakHourStr || 'None'}</td></tr>
                     <tr><td>Peak Disconnect Day</td><td>${this.metrics.peakDayStr || 'None'}</td></tr>
-                    <!-- Add more rows for other metrics as needed -->
+                    <!-- Add more rows for other metrics as needed, e.g., from session/reconnect bins -->
                 </tbody>
             </table>
 
