@@ -3,112 +3,259 @@
  * Core analysis logic: state machine, sessions, reconnects, metrics
  * @requires ../core/utils
  */
+/**
+ * @file src/controllers/neonova-analyzer.js
+ * Core analysis logic: state machine, sessions, reconnects, metrics
+ * @requires ../core/utils
+ */
 class NeonovaAnalyzer {
     constructor(cleanedEntries) {
         this.cleanEntries = cleanedEntries;
-        this.disconnects = [];
-        this.sessions = [];
-        this.reconnects = [];
+        this.disconnects = 0;
         this.sessionSeconds = [];
         this.reconnectSeconds = [];
-        this.hourlyDisconnects = Array(24).fill(0);  // Fixed bins
-        this.dailyDisconnectsMap = new Map();  // Dynamic for days
-        this.businessDisconnects = 0;
-        this.offHoursDisconnects = 0;
+        this.reconnects = [];
         this.longDisconnects = [];
-        // ... other properties ...
-
+        this.firstDate = null;
+        this.lastDate = null;
+        this.lastDisconnectDate = null;
+        this.hourlyDisconnects = Array(24).fill(0);
+        this.dailyDisconnects = Array(7).fill(0);
+        this.hourlyCount = Array(24).fill(0);
+        this.dailyCount = {};
+        this.disconnectDates = []; // Force array
         this.analyze();
     }
 
     analyze() {
-        let lastEntry = null;
-        let currentStatus = null;
-        let startTime = null;
+        let currentState = null;
+        let lastTransitionTime = null;
 
         this.cleanEntries.forEach(entry => {
-            if (lastEntry) {
-                const durationSec = (entry.dateObj - lastEntry.dateObj) / 1000;
-                if (currentStatus === 'Connected' && entry.status === 'Stop') {
-                    this.sessions.push({ start: lastEntry.dateObj, end: entry.dateObj, durationSec });
-                    this.sessionSeconds.push(durationSec);
-                } else if (currentStatus === 'Disconnected' && entry.status === 'Start') {
-                    this.disconnects.push({ start: lastEntry.dateObj, end: entry.dateObj, durationSec });
-                    this.reconnects.push(durationSec);
-                    this.reconnectSeconds.push(durationSec);
+            const date = entry.dateObj;
+            const ts = date.getTime();
 
-                    // Bin disconnects
-                    const hour = entry.dateObj.getHours();  // When reconnect happens (end of disconnect)
-                    this.hourlyDisconnects[hour] += 1;
+            if (!this.firstDate) this.firstDate = date;
+            this.lastDate = date;
 
-                    const dayKey = entry.dateObj.toISOString().split('T')[0];
-                    this.dailyDisconnectsMap.set(dayKey, (this.dailyDisconnectsMap.get(dayKey) || 0) + 1);
-
-                    // Business/off-hours (assuming 9-17 business)
-                    if (hour >= 9 && hour < 17) {
-                        this.businessDisconnects += 1;
-                    } else {
-                        this.offHoursDisconnects += 1;
+            if (entry.status === "Start") {
+                if (currentState === "down" || currentState === null) {
+                    if (currentState === "down" && lastTransitionTime !== null) {
+                        const reconnectSec = (ts - lastTransitionTime) / 1000;
+                        if (reconnectSec > 0) {
+                            this.reconnectSeconds.push(reconnectSec);
+                            this.reconnects.push({dateObj: date, sec: reconnectSec});
+                            if (reconnectSec > 1800) {
+                                this.longDisconnects.push({
+                                    stopDate: new Date(lastTransitionTime),
+                                    startDate: date,
+                                    durationSec: reconnectSec
+                                });
+                            }
+                        }
                     }
-
-                    // Long disconnects
-                    if (durationSec > 1800) {  // >30min
-                        this.longDisconnects.push({ start: lastEntry.dateObj, end: entry.dateObj, duration: formatDuration(durationSec) });
+                    currentState = "up";
+                    lastTransitionTime = ts;
+                }
+            } else if (entry.status === "Stop") {
+                this.disconnects++;
+                const hour = date.getHours();
+                this.hourlyDisconnects[hour]++;
+                this.hourlyCount[hour]++;
+                const dayKey = date.toLocaleDateString();
+                this.dailyCount[dayKey] = (this.dailyCount[dayKey] || 0) + 1;
+                this.dailyDisconnects[date.getDay()]++;
+                if (currentState === "up" || currentState === null) {
+                    if (currentState === "up" && lastTransitionTime !== null) {
+                        const duration = (ts - lastTransitionTime) / 1000;
+                        if (duration > 0) this.sessionSeconds.push(duration);
                     }
+                    currentState = "down";
+                    lastTransitionTime = ts;
+                    this.lastDisconnectDate = date;
+                    this.disconnectDates.push(date);
                 }
             }
-
-            // Update state
-            currentStatus = entry.status === 'Start' ? 'Connected' : 'Disconnected';
-            lastEntry = entry;
         });
 
-        // Handle open session/disconnect at end (assume to now)
-        const now = new Date();
-        if (lastEntry && currentStatus === 'Connected') {
-            const openDuration = (now - lastEntry.dateObj) / 1000;
-            this.sessions.push({ start: lastEntry.dateObj, end: now, durationSec: openDuration });
-            this.sessionSeconds.push(openDuration);
-        } else if (lastEntry && currentStatus === 'Disconnected') {
-            const openDuration = (now - lastEntry.dateObj) / 1000;
-            this.disconnects.push({ start: lastEntry.dateObj, end: now, durationSec: openDuration });
-            this.reconnectSeconds.push(openDuration);  // Or handle as ongoing disconnect
+        if (currentState === "up" && lastTransitionTime !== null && this.lastDate) {
+            const finalDuration = (this.lastDate.getTime() - lastTransitionTime) / 1000;
+            if (finalDuration > 0) this.sessionSeconds.push(finalDuration);
         }
-
-        this.computeMetrics();
     }
 
     computeMetrics() {
-        // Averages
-        this.metrics.avgSessionSec = this.sessionSeconds.length > 0 ? this.sessionSeconds.reduce((a, b) => a + b, 0) / this.sessionSeconds.length : 0;
-        this.metrics.avgReconnectSec = this.reconnectSeconds.length > 0 ? this.reconnectSeconds.reduce((a, b) => a + b, 0) / this.reconnectSeconds.length : 0;
-        this.metrics.avgSession = formatDuration(this.metrics.avgSessionSec);
-        this.metrics.avgReconnect = formatDuration(this.metrics.avgReconnectSec);
+        const peakHourCount = Math.max(...this.hourlyCount);
+        const peakHour = this.hourlyCount.indexOf(peakHourCount);
+        const peakHourStr = peakHourCount > 0 ? `${peakHour}:00-${peakHour + 1}:00 (${peakHourCount} disconnects)` : 'None';
 
-        // Disconnects
-        this.metrics.disconnects = this.disconnects.length;
+        let peakDayStr = 'None';
+        let peakDayCount = 0;
+        for (const [day, count] of Object.entries(this.dailyCount)) {
+            if (count > peakDayCount) {
+                peakDayCount = count;
+                peakDayStr = `${day} (${count} disconnects)`;
+            }
+        }
 
-        // Percent connected (total session time / period time)
-        const totalSessionSec = this.sessionSeconds.reduce((a, b) => a + b, 0);
-        const totalPeriodSec = (this.cleanEntries[this.cleanEntries.length - 1].dateObj - this.cleanEntries[0].dateObj) / 1000 || 1;
-        this.metrics.percentConnected = (totalSessionSec / totalPeriodSec) * 100;
+        let businessDisconnects = 0;
+        let offHoursDisconnects = 0;
+        for (let h = 0; h < 24; h++) {
+            if (h >= 8 && h < 18) businessDisconnects += this.hourlyDisconnects[h];
+            else offHoursDisconnects += this.hourlyDisconnects[h];
+        }
 
-        // Peak hour/day
-        this.metrics.peakHourStr = /* calculate from hourlyDisconnects */;
-        this.metrics.peakDayStr = /* calculate from dailyDisconnectsMap */;
+        let timeSinceLastStr = 'N/A';
+        if (this.lastDisconnectDate) {
+            const sinceSec = (new Date() - this.lastDisconnectDate) / 1000;
+            timeSinceLastStr = formatDuration(sinceSec) + ' ago';
+        }
 
-        // Convert daily map to arrays
-        const dailyKeys = Array.from(this.dailyDisconnectsMap.keys()).sort();
-        this.metrics.dailyDisconnects = dailyKeys.map(key => this.dailyDisconnectsMap.get(key));
-        this.metrics.dailyLabels = dailyKeys;
+        const dailyValues = Object.values(this.dailyCount);
+        const avgDaily = dailyValues.length ? (dailyValues.reduce((a, b) => a + b, 0) / dailyValues.length).toFixed(1) : '0';
 
-        // Other calculations (uptimeComponent, bonuses, penalties, rawScores, bins, rolling7Day, etc.)
-        // ...
+        const totalConnectedSec = this.sessionSeconds.reduce((a, b) => a + b, 0);
+        const totalRangeSec = this.firstDate && this.lastDate ? (this.lastDate - this.firstDate) / 1000 : 1;
+        const totalDisconnectedSec = totalRangeSec - totalConnectedSec;
+        const percentConnected = totalRangeSec > 0 ? (totalConnectedSec / totalRangeSec * 100).toFixed(1) : 'N/A';
 
-        this.metrics.username = this.username || 'Unknown';  // Set here if not already
+        const numSessions = this.sessionSeconds.length;
+        const avgSessionMin = numSessions ? (this.sessionSeconds.reduce((a, b) => a + b, 0) / numSessions / 60).toFixed(1) : 'N/A';
+        const longestSessionMin = numSessions ? Math.max(...this.sessionSeconds) / 60 : 0;
+        const shortestSessionMin = numSessions ? Math.min(...this.sessionSeconds.filter(s => s > 0)) / 60 : 'N/A';
 
-        return this.metrics;
+        let medianReconnectMin = 'N/A';
+        let p95ReconnectMin = 'N/A';
+        if (this.reconnectSeconds.length > 0) {
+            this.reconnectSeconds.sort((a, b) => a - b);
+            const mid = Math.floor(this.reconnectSeconds.length / 2);
+            const medianSec = this.reconnectSeconds.length % 2 ? this.reconnectSeconds[mid] : (this.reconnectSeconds[mid - 1] + this.reconnectSeconds[mid]) / 2;
+            medianReconnectMin = (medianSec / 60).toFixed(1);
+
+            const p95Index = Math.floor(this.reconnectSeconds.length * 0.95);
+            const p95Sec = this.reconnectSeconds[p95Index];
+            p95ReconnectMin = (p95Sec / 60).toFixed(1);
+        }
+
+        const avgReconnectMin = this.reconnectSeconds.length ? (this.reconnectSeconds.reduce((a, b) => a + b, 0) / this.reconnectSeconds.length / 60).toFixed(1) : 'N/A';
+
+        const quickReconnects = this.reconnectSeconds.filter(s => s <= 300).length;
+
+        const daysSpanned = totalRangeSec / 86400;
+
+        const uptimeScore = parseFloat(percentConnected) || 0;
+
+        let sessionSecondsSorted = [...this.sessionSeconds].sort((a, b) => a - b);
+        let medianSessionSec = 0;
+        if (numSessions > 0) {
+            const mid = Math.floor(numSessions / 2);
+            medianSessionSec = numSessions % 2 ? sessionSecondsSorted[mid] : (sessionSecondsSorted[mid - 1] + sessionSecondsSorted[mid]) / 2;
+        }
+        const medianSessionMin = numSessions ? (medianSessionSec / 60).toFixed(1) : 'N/A';
+
+        const dailyData = {};
+        this.reconnects.forEach(reconn => {
+            const dayKey = reconn.dateObj.toLocaleDateString();
+            if (!dailyData[dayKey]) dailyData[dayKey] = { fast: 0, quick: 0 };
+            if (reconn.sec < 30) dailyData[dayKey].fast++;
+            if (reconn.sec <= 300) dailyData[dayKey].quick++;
+        });
+
+        let totalFastBonus = 0;
+        let totalFlappingPenalty = 0;
+        Object.values(dailyData).forEach(daily => {
+            const bonus = Math.min(daily.fast * 3, 18);
+            totalFastBonus += bonus;
+
+            const excessFast = Math.max(0, daily.fast - 6);
+            const nonFastQuick = daily.quick - daily.fast;
+            const dailyPenalty = (excessFast + nonFastQuick) * 5;
+            totalFlappingPenalty += dailyPenalty;
+        });
+
+        const scaleFactor = Math.max(1, daysSpanned / 30);
+        let flappingPenalty = totalFlappingPenalty / scaleFactor;
+        let longOutagePenalty = this.longDisconnects.length * 10 / scaleFactor;
+
+        const uptimeComponent = uptimeScore * 0.6;
+
+        const sessionBonusMean = getSessionBonus(avgSessionMin);
+        const rawMeanScore = uptimeComponent + sessionBonusMean + totalFastBonus - flappingPenalty - longOutagePenalty;
+        const meanStabilityScore = Math.max(0, Math.min(100, rawMeanScore)).toFixed(0);
+
+        const sessionBonusMedian = getSessionBonus(medianSessionMin);
+        const rawMedianScore = uptimeComponent + sessionBonusMedian + totalFastBonus - flappingPenalty - longOutagePenalty;
+        const medianStabilityScore = Math.max(0, Math.min(100, rawMedianScore)).toFixed(0);
+
+        return {
+            peakHourStr, peakDayStr, businessDisconnects, offHoursDisconnects, timeSinceLastStr, avgDaily,
+            totalConnectedSec, totalDisconnectedSec, percentConnected, numSessions, avgSessionMin,
+            longestSessionMin, shortestSessionMin, medianReconnectMin, p95ReconnectMin, avgReconnectMin,
+            quickReconnects, daysSpanned, uptimeComponent, sessionBonusMean, sessionBonusMedian,
+            totalFastBonus, flappingPenalty, longOutagePenalty, meanStabilityScore, medianStabilityScore,
+            rawMeanScore, rawMedianScore, monitoringPeriod: this.firstDate && this.lastDate ? `${this.firstDate.toLocaleString()} to ${this.lastDate.toLocaleString()}` : 'N/A',
+            sessionBins: this.computeSessionBins(),
+            reconnectBins: this.computeReconnectBins(),
+            rolling7Day: this.computeRolling7Day(),
+            rollingLabels: this.rollingLabels,
+            longDisconnects: this.longDisconnects,
+            disconnects: this.disconnects,
+            hourlyDisconnects: this.hourlyDisconnects, 
+            cleanedEntriesLength: this.cleanEntries.length,
+            allEntriesLength: this.cleanEntries.length,
+            dailyDisconnects: this.dailyDisconnects,
+            hourlyCount: this.hourlyCount
+        };
     }
 
-    // ... other methods like computeSessionBins, computeReconnectBins, computeRolling7Day ...
+    computeSessionBins() {
+        const bins = [0, 0, 0, 0, 0];
+        this.sessionSeconds.forEach(sec => {
+            const min = sec / 60;
+            if (min <= 5) bins[0]++;
+            else if (min <= 30) bins[1]++;
+            else if (min <= 60) bins[2]++;
+            else if (min <= 240) bins[3]++;
+            else bins[4]++;
+        });
+        return bins;
+    }
+
+    computeReconnectBins() {
+        const bins = [0, 0, 0, 0];
+        this.reconnectSeconds.forEach(sec => {
+            const min = sec / 60;
+            if (min <= 1) bins[0]++;
+            else if (min <= 5) bins[1]++;
+            else if (min <= 30) bins[2]++;
+            else bins[3]++;
+        });
+        return bins;
+    }
+
+    computeRolling7Day() {
+        // Extra guard: if undefined, set to empty array
+        if (this.disconnectDates === undefined || this.disconnectDates === null) {
+            this.disconnectDates = [];
+        }
+    
+        // Now safe to sort
+        this.disconnectDates.sort((a, b) => a - b);
+    
+        const rolling7Day = [];
+        this.rollingLabels = [];
+        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    
+        let currentDate = new Date(this.firstDate || Date.now());
+        currentDate.setHours(0,0,0,0);
+    
+        while (currentDate <= (this.lastDate || new Date())) {
+            const windowStart = new Date(currentDate - sevenDaysMs);
+            const count = this.disconnectDates.filter(d => d >= windowStart && d <= currentDate).length;
+            rolling7Day.push(count);
+            this.rollingLabels.push(currentDate.toLocaleDateString());
+            currentDate = new Date(currentDate.getTime() + 24*60*60*1000);
+        }
+        return rolling7Day;
+    }
 }
