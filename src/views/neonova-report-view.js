@@ -165,83 +165,89 @@ generateReportHTML(csvContent) {
                 </tbody>
             </table>
 
-            <!-- Charts -->
-            <div class="chart-section">
-                <h2>Disconnects by Hour of Day</h2>
-                <canvas id="hourlyChart" width="800" height="400"></canvas>
-            </div>
-            <div class="chart-section">
-                <h2>Disconnects by Day</h2>
-                <canvas id="dailyChart" width="800" height="400"></canvas>
-            </div>
-            <div class="chart-section">
-                <h2>Rolling 7-Day Disconnects</h2>
-                <canvas id="rollingChart" width="800" height="400"></canvas>
-            </div>
-
-            <!-- Long Disconnects Section -->
-            <details>
-                <summary>Long Disconnects (>30 minutes)</summary>
-                ${longDisconnSection}
-            </details>
-
-            <!-- Export Buttons -->
-            <div class="export-buttons">
-                <button onclick="exportToHTML()">Export to HTML</button>
-                <button onclick="exportToPDF()">Export to PDF</button>
-                <button onclick="exportToCSV()">Export to CSV</button>
-            </div>
+<!-- Charts -->
+<div class="chart-section">
+    <h2>Disconnects by Hour of Day</h2>
+    <canvas id="hourlyChart" width="800" height="400" style="width:800px !important; height:400px !important; display:block; background:#eee;"></canvas>
+</div>
+<div class="chart-section">
+    <h2>Disconnects by Day</h2>
+    <canvas id="dailyChart" width="800" height="400" style="width:800px !important; height:400px !important; display:block; background:#eee;"></canvas>
+</div>
+<div class="chart-section">
+    <h2>Rolling 7-Day Disconnects</h2>
+    <canvas id="rollingChart" width="800" height="400" style="width:800px !important; height:400px !important; display:block; background:#eee;"></canvas>
+</div>
 
 <script>
-    console.log('Report script started');
+    console.log('Report script executing');
 
-    // Debug data (keep this)
-    console.log('Hourly:', ${JSON.stringify(this.metrics.hourlyDisconnects || [])});
-    console.log('Daily labels:', ${JSON.stringify(this.metrics.dailyLabels || [])});
-    console.log('Daily data:', ${JSON.stringify(this.metrics.dailyDisconnects || [])});
-    console.log('Rolling labels:', ${JSON.stringify(this.metrics.rollingLabels || [])});
-    console.log('Rolling data:', ${JSON.stringify(this.metrics.rolling7Day || [])});
+    // Debug: confirm data shape
+    console.log('Hourly data length:', ${this.metrics.hourlyDisconnects ? this.metrics.hourlyDisconnects.length : 'missing'});
+    console.log('Daily labels length:', ${this.metrics.dailyLabels ? this.metrics.dailyLabels.length : 'missing'});
+    console.log('Daily data length:', ${this.metrics.dailyDisconnects ? this.metrics.dailyDisconnects.length : 'missing'});
+    console.log('Rolling labels length:', ${this.metrics.rollingLabels ? this.metrics.rollingLabels.length : 'missing'});
+    console.log('Rolling data length:', ${this.metrics.rolling7Day ? this.metrics.rolling7Day.length : 'missing'});
 
-    // Force size again (belt and suspenders)
-    var canvases = ['hourlyChart', 'dailyChart', 'rollingChart'];
-    canvases.forEach(function(id) {
-        var el = document.getElementById(id);
-        if (el) {
-            el.width = 800;
-            el.height = 400;
-            console.log('Forced canvas size: ' + id + ' ' + el.width + 'x' + el.height);
+    // Force explicit size on canvases (override any CSS)
+    ['hourlyChart', 'dailyChart', 'rollingChart'].forEach(function(id) {
+        var canvas = document.getElementById(id);
+        if (canvas) {
+            canvas.width = 800;
+            canvas.height = 400;
+            console.log('Forced canvas size: ' + id + ' → ' + canvas.width + 'x' + canvas.height);
+        } else {
+            console.log('Canvas missing: ' + id);
         }
     });
 
-    // Simple hourly test (hardcoded to prove drawing)
-    var hourlyCanvas = document.getElementById('hourlyChart');
-    if (hourlyCanvas) {
-        var ctx = hourlyCanvas.getContext('2d');
+    // Test 1: Non-Chart.js draw (should show blue + text if canvas is paintable)
+    var testCanvas = document.getElementById('hourlyChart');
+    if (testCanvas) {
+        var testCtx = testCanvas.getContext('2d');
+        if (testCtx) {
+            testCtx.fillStyle = 'lightblue';
+            testCtx.fillRect(0, 0, testCanvas.width, testCanvas.height);
+            testCtx.font = '30px Arial';
+            testCtx.fillStyle = 'red';
+            testCtx.textAlign = 'center';
+            testCtx.fillText('CANVAS IS PAINTABLE', testCanvas.width / 2, testCanvas.height / 2);
+            console.log('Non-Chart.js test draw completed on hourlyChart');
+        } else {
+            console.error('No 2D context for test draw');
+        }
+    }
+
+    // Test 2: Minimal Chart.js (hardcoded data, no responsive)
+    if (testCanvas) {
+        var ctx = testCanvas.getContext('2d');
         if (ctx) {
             new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23'],
+                    labels: ['Test 0', 'Test 1', 'Test 2', 'Test 3'],
                     datasets: [{
-                        label: 'Hardcoded Test',
-                        data: [0,0,0,0,0,0,0,0,0,0,6,0,4,2,0,0,0,0,0,0,0,0,0,0],
+                        label: 'Hardcoded Bars',
+                        data: [3, 7, 2, 5],
                         backgroundColor: 'rgba(255, 99, 132, 0.6)'
                     }]
                 },
                 options: {
-                    responsive: false,  // Disable responsive to avoid size bugs
+                    responsive: false,  // important for test
                     scales: { y: { beginAtZero: true } }
                 }
             });
-            console.log('Hardcoded hourly chart attempted');
-        } else {
-            console.error('No context for hourlyChart');
+            console.log('Hardcoded Chart.js test attempted');
         }
-    } else {
-        console.error('hourlyChart missing');
     }
 
-    // Add similar hardcoded test for daily and rolling if needed
+    // Your real charts (only enable after test succeeds)
+    /*
+    // Uncomment these one by one after test works
+    new Chart(document.getElementById('hourlyChart'), { ... your real config ... });
+    new Chart(document.getElementById('dailyChart'), { ... });
+    new Chart(document.getElementById('rollingChart'), { ... });
+    */
 </script>
             
         </body>
