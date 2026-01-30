@@ -50,9 +50,13 @@ class NeonovaReportView {
 
 generateReportHTML(csvContent) {
     // Calculate scores and sections
-    const meanStabilityScore = Math.max(0, Math.min(100, this.metrics.rawMeanScore));
-    const medianStabilityScore = Math.max(0, Math.min(100, this.metrics.rawMedianScore));
-    const longDisconnSection = this.generateLongDisconnSection();
+    const meanStabilityScore = Number(Math.max(0, Math.min(100, this.metrics.rawMeanScore || 0)).toFixed(1));
+    const medianStabilityScore = Number(Math.max(0, Math.min(100, this.metrics.rawMedianScore || 0)).toFixed(1));
+    const longDisconnSection = this.generateLongDisconnSection();  // Assuming this returns the collapsible HTML
+
+    // Helper to format durations (from utils.js, assuming formatDuration exists; fallback to 'N/A')
+    const avgSession = this.metrics.avgSession ? formatDuration(this.metrics.avgSession) : 'N/A';
+    const avgReconnect = this.metrics.avgReconnect ? formatDuration(this.metrics.avgReconnect) : 'N/A';
 
     return `
         <!DOCTYPE html>
@@ -64,11 +68,10 @@ generateReportHTML(csvContent) {
                 body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; color: #333; }
                 h1, h2, h3 { text-align: center; color: #444; }
                 .scores-container { display: flex; justify-content: space-around; margin: 20px 0; }
-                .score { text-align: center; padding: 20px; border: 1px solid #ddd; border-radius: 8px; width: 200px; background: #fff; }
-                .score-value { font-size: 48px; font-weight: bold; color: #4caf50; }
-                .tooltip { position: relative; display: inline-block; cursor: help; }
-                .tooltip .tooltiptext { visibility: hidden; width: 300px; background-color: #555; color: #fff; text-align: left; border-radius: 6px; padding: 10px; position: absolute; z-index: 1; bottom: 125%; left: 50%; margin-left: -150px; opacity: 0; transition: opacity 0.3s; }
-                .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+                .score { text-align: center; padding: 20px; border: 1px solid #ddd; border-radius: 8px; width: 200px; background: #fff; position: relative; }
+                .score-value { font-size: 48px; font-weight: bold; color: #4caf50; cursor: help; }
+                .tooltiptext { visibility: hidden; width: 300px; background-color: #555; color: #fff; text-align: left; border-radius: 6px; padding: 10px; position: absolute; z-index: 1; bottom: 100%; left: 50%; margin-left: -150px; opacity: 0; transition: opacity 0.3s; }
+                .score-value:hover + .tooltiptext { visibility: visible; opacity: 1; }
                 .chart-section { margin: 40px 0; }
                 table { width: 100%; border-collapse: collapse; margin: 20px 0; background: #fff; }
                 th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
@@ -76,6 +79,7 @@ generateReportHTML(csvContent) {
                 .export-buttons { text-align: center; margin: 20px 0; }
                 .export-buttons button { margin: 0 10px; padding: 10px 20px; background: #4caf50; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
                 .export-buttons button:hover { background: #45a049; }
+                details summary { cursor: pointer; font-weight: bold; }
             </style>
             <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>  <!-- Chart.js for graphs -->
             <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>  <!-- jsPDF for PDF export -->
@@ -88,35 +92,31 @@ generateReportHTML(csvContent) {
             <div class="scores-container">
                 <div class="score">
                     <div class="score-value">${meanStabilityScore}/100</div>
-                    <p>Mean Stability Score</p>
-                    <span class="tooltip">?
-                        <span class="tooltiptext">
-                            <strong>How this score is calculated (using average session length):</strong><br><br>
-                            • Uptime component: ${Number(this.metrics.percentConnected || 0).toFixed(1)}% * 0.6 = ${Number(this.metrics.uptimeComponent || 0).toFixed(1)}<br>
-                            • Session quality bonus: ${Number(this.metrics.sessionBonusMean || 0).toFixed(1)}<br>
-                            • Fast recovery bonus: ${Number(this.metrics.totalFastBonus || 0).toFixed(1)}<br>
-                            • Flapping penalty: -${Number(this.metrics.flappingPenalty || 0).toFixed(1)}<br>
-                            • Long outage penalty: -${Number(this.metrics.longOutagePenalty || 0).toFixed(1)}<br><br>
-                            Raw score: ${Number(this.metrics.rawMeanScore || 0).toFixed(1)}<br>
-                            Displayed score: ${meanStabilityScore}/100
-                        </span>
+                    <span class="tooltiptext">
+                        <strong>How this score is calculated (using average session length):</strong><br><br>
+                        • Uptime component: ${Number(this.metrics.percentConnected || 0).toFixed(1)}% * 0.6 = ${Number(this.metrics.uptimeComponent || 0).toFixed(1)}<br>
+                        • Session quality bonus: ${Number(this.metrics.sessionBonusMean || 0).toFixed(1)}<br>
+                        • Fast recovery bonus: ${Number(this.metrics.totalFastBonus || 0).toFixed(1)}<br>
+                        • Flapping penalty: -${Number(this.metrics.flappingPenalty || 0).toFixed(1)}<br>
+                        • Long outage penalty: -${Number(this.metrics.longOutagePenalty || 0).toFixed(1)}<br><br>
+                        Raw score: ${Number(this.metrics.rawMeanScore || 0).toFixed(1)}<br>
+                        Displayed score: ${meanStabilityScore}/100
                     </span>
+                    <p>Mean Stability Score</p>
                 </div>
                 <div class="score">
                     <div class="score-value">${medianStabilityScore}/100</div>
-                    <p>Median Stability Score</p>
-                    <span class="tooltip">?
-                        <span class="tooltiptext">
-                            <strong>How this score is calculated (using median session length):</strong><br><br>
-                            • Uptime component: ${Number(this.metrics.percentConnected || 0).toFixed(1)}% * 0.6 = ${Number(this.metrics.uptimeComponent || 0).toFixed(1)}<br>
-                            • Session quality bonus: ${Number(this.metrics.sessionBonusMedian || 0).toFixed(1)}<br>
-                            • Fast recovery bonus: ${Number(this.metrics.totalFastBonus || 0).toFixed(1)}<br>
-                            • Flapping penalty: -${Number(this.metrics.flappingPenalty || 0).toFixed(1)}<br>
-                            • Long outage penalty: -${Number(this.metrics.longOutagePenalty || 0).toFixed(1)}<br><br>
-                            Raw score: ${Number(this.metrics.rawMedianScore || 0).toFixed(1)}<br>
-                            Displayed score: ${medianStabilityScore}/100
-                        </span>
+                    <span class="tooltiptext">
+                        <strong>How this score is calculated (using median session length):</strong><br><br>
+                        • Uptime component: ${Number(this.metrics.percentConnected || 0).toFixed(1)}% * 0.6 = ${Number(this.metrics.uptimeComponent || 0).toFixed(1)}<br>
+                        • Session quality bonus: ${Number(this.metrics.sessionBonusMedian || 0).toFixed(1)}<br>
+                        • Fast recovery bonus: ${Number(this.metrics.totalFastBonus || 0).toFixed(1)}<br>
+                        • Flapping penalty: -${Number(this.metrics.flappingPenalty || 0).toFixed(1)}<br>
+                        • Long outage penalty: -${Number(this.metrics.longOutagePenalty || 0).toFixed(1)}<br><br>
+                        Raw score: ${Number(this.metrics.rawMedianScore || 0).toFixed(1)}<br>
+                        Displayed score: ${medianStabilityScore}/100
                     </span>
+                    <p>Median Stability Score</p>
                 </div>
             </div>
 
@@ -131,15 +131,15 @@ generateReportHTML(csvContent) {
                 </thead>
                 <tbody>
                     <tr><td>Total Disconnects</td><td>${this.metrics.disconnects || 0}</td></tr>
-                    <tr><td>Average Session Duration</td><td>${this.metrics.avgSession || 'N/A'}</td></tr>
-                    <tr><td>Average Reconnect Time</td><td>${this.metrics.avgReconnect || 'N/A'}</td></tr>
+                    <tr><td>Average Session Duration</td><td>${avgSession}</td></tr>
+                    <tr><td>Average Reconnect Time</td><td>${avgReconnect}</td></tr>
                     <tr><td>Percent Connected</td><td>${Number(this.metrics.percentConnected || 0).toFixed(1)}%</td></tr>
                     <tr><td>Business Hours Disconnects</td><td>${this.metrics.businessDisconnects || 0}</td></tr>
                     <tr><td>Off-Hours Disconnects</td><td>${this.metrics.offHoursDisconnects || 0}</td></tr>
                     <tr><td>Time Since Last Disconnect</td><td>${this.metrics.timeSinceLastStr || 'N/A'}</td></tr>
                     <tr><td>Peak Disconnect Hour</td><td>${this.metrics.peakHourStr || 'None'}</td></tr>
                     <tr><td>Peak Disconnect Day</td><td>${this.metrics.peakDayStr || 'None'}</td></tr>
-                    <!-- Add more rows for other metrics as needed, e.g., from session/reconnect bins -->
+                    <!-- Add more rows for other metrics as needed -->
                 </tbody>
             </table>
 
@@ -157,8 +157,11 @@ generateReportHTML(csvContent) {
                 <canvas id="rollingChart" width="800" height="400"></canvas>
             </div>
 
-            <!-- Long Disconnects Section -->
-            ${longDisconnSection}
+            <!-- Long Disconnects Section (using HTML5 details for collapsible) -->
+            <details>
+                <summary>Long Disconnects (>30 minutes)</summary>
+                ${longDisconnSection}  // Assuming this is the table HTML
+            </details>
 
             <!-- Export Buttons -->
             <div class="export-buttons">
@@ -168,50 +171,65 @@ generateReportHTML(csvContent) {
             </div>
 
             <script>
-                // Chart.js Initialization
-                const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
-                new Chart(hourlyCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: Array.from({length: 24}, (_, i) => \`\${i}:00\`),
-                        datasets: [{
-                            label: 'Disconnects',
-                            data: ${JSON.stringify(this.metrics.hourlyDisconnects || Array(24).fill(0))},
-                            backgroundColor: 'rgba(75, 192, 192, 0.6)'
-                        }]
-                    },
-                    options: { scales: { y: { beginAtZero: true } } }
-                });
+                // Chart.js Initialization (with checks for empty data)
+                const hourlyData = ${JSON.stringify(this.metrics.hourlyDisconnects || Array(24).fill(0))};
+                if (hourlyData.reduce((a, b) => a + b, 0) === 0) {
+                    document.getElementById('hourlyChart').getContext('2d').fillText('No data available', 10, 50);
+                } else {
+                    const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+                    new Chart(hourlyCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: Array.from({length: 24}, (_, i) => \`\${i}:00\`),
+                            datasets: [{
+                                label: 'Disconnects',
+                                data: hourlyData,
+                                backgroundColor: 'rgba(75, 192, 192, 0.6)'
+                            }]
+                        },
+                        options: { scales: { y: { beginAtZero: true } } }
+                    });
+                }
 
-                const dailyCtx = document.getElementById('dailyChart').getContext('2d');
-                new Chart(dailyCtx, {
-                    type: 'line',
-                    data: {
-                        labels: ${JSON.stringify(this.metrics.dailyLabels || [])},
-                        datasets: [{
-                            label: 'Disconnects',
-                            data: ${JSON.stringify(this.metrics.dailyDisconnects || [])},
-                            borderColor: 'rgba(153, 102, 255, 1)',
-                            fill: false
-                        }]
-                    },
-                    options: { scales: { y: { beginAtZero: true } } }
-                });
+                const dailyData = ${JSON.stringify(this.metrics.dailyDisconnects || [])};
+                if (dailyData.length === 0) {
+                    document.getElementById('dailyChart').getContext('2d').fillText('No data available', 10, 50);
+                } else {
+                    const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+                    new Chart(dailyCtx, {
+                        type: 'line',
+                        data: {
+                            labels: ${JSON.stringify(this.metrics.dailyLabels || [])},
+                            datasets: [{
+                                label: 'Disconnects',
+                                data: dailyData,
+                                borderColor: 'rgba(153, 102, 255, 1)',
+                                fill: false
+                            }]
+                        },
+                        options: { scales: { y: { beginAtZero: true } } }
+                    });
+                }
 
-                const rollingCtx = document.getElementById('rollingChart').getContext('2d');
-                new Chart(rollingCtx, {
-                    type: 'line',
-                    data: {
-                        labels: ${JSON.stringify((this.metrics.rolling7Day || []).map(item => item.label))},
-                        datasets: [{
-                            label: 'Disconnects',
-                            data: ${JSON.stringify((this.metrics.rolling7Day || []).map(item => item.count))},
-                            borderColor: 'rgba(255, 159, 64, 1)',
-                            fill: false
-                        }]
-                    },
-                    options: { scales: { y: { beginAtZero: true } } }
-                });
+                const rollingData = ${JSON.stringify((this.metrics.rolling7Day || []).map(item => item.count))};
+                if (rollingData.length === 0) {
+                    document.getElementById('rollingChart').getContext('2d').fillText('No data available', 10, 50);
+                } else {
+                    const rollingCtx = document.getElementById('rollingChart').getContext('2d');
+                    new Chart(rollingCtx, {
+                        type: 'line',
+                        data: {
+                            labels: ${JSON.stringify((this.metrics.rolling7Day || []).map(item => item.label))},
+                            datasets: [{
+                                label: 'Disconnects',
+                                data: rollingData,
+                                borderColor: 'rgba(255, 159, 64, 1)',
+                                fill: false
+                            }]
+                        },
+                        options: { scales: { y: { beginAtZero: true } } }
+                    });
+                }
 
                 // Export Functions
                 function exportToHTML() {
