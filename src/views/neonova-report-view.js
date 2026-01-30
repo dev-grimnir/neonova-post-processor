@@ -49,10 +49,12 @@ class NeonovaReportView {
     }
 
 generateReportHTML(csvContent) {
-    console.log('Report view received metrics:', this.metrics);
-    console.log('Average session min in view:', this.metrics.avgSessionMin);
-    console.log('Average reconnect min in view:', this.metrics.avgReconnectMin);
-    console.log('Hourly disconnects in view:', this.metrics.hourlyDisconnects);
+    console.log('VIEW METRICS FULL:', this.metrics);
+    console.log('VIEW - hourlyDisconnects:', this.metrics.hourlyDisconnects);
+    console.log('VIEW - dailyDisconnects:', this.metrics.dailyDisconnects);
+    console.log('VIEW - dailyLabels:', this.metrics.dailyLabels);
+    console.log('VIEW - rolling7Day:', this.metrics.rolling7Day);
+    console.log('VIEW - rollingLabels:', this.metrics.rollingLabels);
     // Calculate scores and sections
     const meanStabilityScore = Number(Math.max(0, Math.min(100, this.metrics.rawMeanScore || 0)).toFixed(1));
     const medianStabilityScore = Number(Math.max(0, Math.min(100, this.metrics.rawMedianScore || 0)).toFixed(1));
@@ -174,6 +176,11 @@ generateReportHTML(csvContent) {
             <script>
                 // Chart.js Initialization
                 const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+                console.log('CHART DATA - hourly:', ${JSON.stringify(this.metrics.hourlyDisconnects || [])});
+                console.log('CHART DATA - daily labels:', ${JSON.stringify(this.metrics.dailyLabels || [])});
+                console.log('CHART DATA - daily values:', ${JSON.stringify(this.metrics.dailyDisconnects || [])});
+                console.log('CHART DATA - rolling labels:', ${JSON.stringify(this.metrics.rollingLabels || [])});
+                console.log('CHART DATA - rolling values:', ${JSON.stringify(this.metrics.rolling7Day || [])});
                 new Chart(hourlyCtx, {
                     type: 'bar',
                     data: {
