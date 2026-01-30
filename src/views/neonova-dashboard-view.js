@@ -167,7 +167,6 @@ class NeonovaDashboardView {
                     if (customer) {
                         customer.friendlyName = newName || null;
                         cell.textContent = customer.friendlyName || customer.radiusUsername;
-                        console.log(`Friendly name updated for ${username}: ${customer.friendlyName || '(default)'}`);
                     }
                 };
     
@@ -400,23 +399,16 @@ class NeonovaDashboardView {
     }
     
     show() {
-        console.log('view.show() called - panel exists?', !!this.panel);
         if (this.panel) {
-            console.log('Setting display to block');
             this.panel.style.display = 'block';
-            console.log('Panel display now:', this.panel.style.display);
         } else {
-            console.log('Panel not created yet');
         }
         this.updateMinimize();
     }
 
     hide() {
-        console.log('view.hide() called - panel exists?', !!this.panel);
         if (this.panel) {
-            console.log('Setting display to none');
             this.panel.style.display = 'none';
-            console.log('Panel display now:', this.panel.style.display);
         }
         this.updateMinimize();
     }
