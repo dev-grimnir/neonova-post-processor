@@ -82,6 +82,23 @@ generateReportHTML(csvContent) {
                 .export-buttons button { margin: 0 10px; padding: 10px 20px; background: #4caf50; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
                 .export-buttons button:hover { background: #45a049; }
                 details summary { cursor: pointer; font-weight: bold; color: #4caf50; }
+                .chart-section {
+                    position: relative;
+                    width: 100%;
+                    height: 400px;               /* Forces the container to have height */
+                    max-width: 1000px;
+                    margin: 40px auto;
+                    border: 2px solid red;       /* Temporary red border to see if it's visible */
+                    background: #f8f9fa;         /* Light gray background to confirm canvas area */
+                    overflow: hidden;
+                    box-sizing: border-box;
+                }
+
+                .chart-section canvas {
+                    width: 100% !important;
+                    height: 100% !important;
+                    display: block;
+                }
             </style>
             <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
