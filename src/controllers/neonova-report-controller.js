@@ -29,18 +29,10 @@ class NeonovaReportController extends BaseNeonovaController {
      * }
      */
     async generateReportData(username, startDate, endDate = new Date(), onProgress = null) {
-        console.log(`Generating report for ${username}, range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
-
         const entries = await this.paginateReportLogs(username, startDate, endDate, onProgress);
-        console.log(`Raw entries fetched: ${entries.length}`, entries.slice(0, 3));  // First 3 for sample
-        
         const cleaned = this.collector.cleanEntries(entries);
-        console.log(`Cleaned entries: ${cleaned.length}`, cleaned.slice(0, 3));
-
         this.analyzer = new NeonovaAnalyzer(cleaned);
         const metrics = this.analyzer.computeMetrics();
-        console.log('Computed metrics:', metrics);  // Full object for inspection
-    
         return {
             username,
             period: { start: startDate, end: endDate },
