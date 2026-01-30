@@ -66,40 +66,42 @@ generateReportHTML(csvContent) {
         <head>
             <meta charset="UTF-8">
             <title>RADIUS Connection Report</title>
-            <style>
-                body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; color: #333; }
-                h1, h2, h3 { text-align: center; color: #444; }
-                .scores-container { display: flex; justify-content: space-around; margin: 20px 0; }
-                .score { text-align: center; padding: 20px; border: 1px solid #ddd; border-radius: 8px; width: 200px; background: #fff; position: relative; }
-                .score-value { font-size: 48px; font-weight: bold; color: #4caf50; cursor: help; position: relative; }
-                .tooltiptext { visibility: hidden; width: 300px; background-color: #555; color: #fff; text-align: left; border-radius: 6px; padding: 10px; position: absolute; z-index: 1; top: 100%; left: 50%; margin-left: -150px; opacity: 0; transition: opacity 0.3s; }
-                .score-value:hover .tooltiptext { visibility: visible; opacity: 1; }
-                .chart-section { margin: 40px 0; }
-                table { width: 100%; border-collapse: collapse; margin: 20px 0; background: #fff; }
-                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                th { background: #f2f2f2; }
-                .export-buttons { text-align: center; margin: 20px 0; }
-                .export-buttons button { margin: 0 10px; padding: 10px 20px; background: #4caf50; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
-                .export-buttons button:hover { background: #45a049; }
-                details summary { cursor: pointer; font-weight: bold; color: #4caf50; }
-                .chart-section {F
-                    position: relative;
-                    width: 100%;
-                    height: 400px;               /* Forces the container to have height */
-                    max-width: 1000px;
-                    margin: 40px auto;
-                    border: 2px solid red;       /* Temporary red border to see if it's visible */
-                    background: #f8f9fa;         /* Light gray background to confirm canvas area */
-                    overflow: hidden;
-                    box-sizing: border-box;
-                }
+<style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; color: #333; }
+    h1, h2, h3 { text-align: center; color: #444; }
+    .scores-container { display: flex; justify-content: space-around; margin: 20px 0; }
+    .score { text-align: center; padding: 20px; border: 1px solid #ddd; border-radius: 8px; width: 200px; background: #fff; position: relative; }
+    .score-value { font-size: 48px; font-weight: bold; color: #4caf50; cursor: help; position: relative; }
+    .tooltiptext { visibility: hidden; width: 300px; background-color: #555; color: #fff; text-align: left; border-radius: 6px; padding: 10px; position: absolute; z-index: 1; top: 100%; left: 50%; margin-left: -150px; opacity: 0; transition: opacity 0.3s; }
+    .score-value:hover .tooltiptext { visibility: visible; opacity: 1; }
+    .chart-section { margin: 40px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; background: #fff; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background: #f2f2f2; }
+    .export-buttons { text-align: center; margin: 20px 0; }
+    .export-buttons button { margin: 0 10px; padding: 10px 20px; background: #4caf50; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+    .export-buttons button:hover { background: #45a049; }
+    details summary { cursor: pointer; font-weight: bold; color: #4caf50; }
 
-                .chart-section canvas {
-                    width: 100% !important;
-                    height: 100% !important;
-                    display: block;
-                }
-            </style>
+    /* Chart visibility fixes — this is the part you added */
+    .chart-section {
+        position: relative;
+        width: 100%;
+        height: 400px;               /* Forces the container to have height */
+        max-width: 1000px;
+        margin: 40px auto;
+        border: 2px solid red;       /* Temporary red border to see if it's visible */
+        background: #f8f9fa;         /* Light gray background to confirm canvas area */
+        overflow: hidden;
+        box-sizing: border-box;
+    }
+
+    .chart-section canvas {
+        width: 100% !important;
+        height: 100% !important;
+        display: block;
+    }
+</style>
             <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
         </head>
