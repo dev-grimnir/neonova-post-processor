@@ -187,13 +187,9 @@ class NeonovaAnalyzer {
         const sessionBonusMedian = getSessionBonus(medianSessionMin);
         const rawMedianScore = uptimeComponent + sessionBonusMedian + totalFastBonus - flappingPenalty - longOutagePenalty;
         const medianStabilityScore = Math.max(0, Math.min(100, rawMedianScore)).toFixed(0);
-
-        console.log('Raw avg session seconds:', this.metrics.avgSessionSec);
-        console.log('Formatted avg session:', formatDuration(this.metrics.avgSessionSec));
-        console.log('Raw avg reconnect seconds:', this.metrics.avgReconnectSec);
-        console.log('Formatted avg reconnect:', formatDuration(this.metrics.avgReconnectSec));
-
         return {
+            console.log('NeonovaAnalyzer - avgSessionMin = " + avgSessionMin);
+            console.log('NeonovaAnalyzer - avgReconnectMin = " + avgReconnectMin);
             peakHourStr, peakDayStr, businessDisconnects, offHoursDisconnects, timeSinceLastStr, avgDaily,
             totalConnectedSec, totalDisconnectedSec, percentConnected, numSessions, avgSessionMin,
             longestSessionMin, shortestSessionMin, medianReconnectMin, p95ReconnectMin, avgReconnectMin,
