@@ -43,7 +43,6 @@
     border-radius: 6px; cursor: pointer; font-family: Arial; font-size: 16px;
 `;
     openBtn.onclick = () => {
-        console.log('Button clicked - handler starting');
         try {
             dashboardController.togglePanel();
         } catch (err) {
