@@ -176,97 +176,100 @@ generateReportHTML(csvContent) {
 <script>
     console.log('Script running in report tab');
 
-    // Debug data arrival (you already have this, but keep it)
+    // Debug data arrival
     console.log('CHART DATA - hourly:', ${JSON.stringify(this.metrics.hourlyDisconnects || [])});
     console.log('CHART DATA - daily labels:', ${JSON.stringify(this.metrics.dailyLabels || [])});
     console.log('CHART DATA - daily values:', ${JSON.stringify(this.metrics.dailyDisconnects || [])});
     console.log('CHART DATA - rolling labels:', ${JSON.stringify(this.metrics.rollingLabels || [])});
     console.log('CHART DATA - rolling values:', ${JSON.stringify(this.metrics.rolling7Day || [])});
 
-    // Helper to safely get context and log issues
-    function initChart(canvasId, chartConfig) {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) {
-            console.error(`Canvas ${canvasId} not found`);
-            return;
-        }
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-            console.error(`No 2D context for ${canvasId}`);
-            return;
-        }
-        console.log(`Rendering chart: ${canvasId}`);
-        new Chart(ctx, chartConfig);
-    }
-
     // Hourly Chart
-    initChart('hourlyChart', {
-        type: 'bar',
-        data: {
-            labels: Array.from({length: 24}, (_, i) => \`\${i}:00\`),
-            datasets: [{
-                label: 'Disconnects',
-                data: ${JSON.stringify(this.metrics.hourlyDisconnects || Array(24).fill(0))},
-                backgroundColor: 'rgba(75, 192, 192, 0.6)'
-            }]
-        },
-        options: { 
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true } } 
+    const hourlyEl = document.getElementById('hourlyChart');
+    if (hourlyEl) {
+        const hourlyCtx = hourlyEl.getContext('2d');
+        if (hourlyCtx) {
+            new Chart(hourlyCtx, {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => \`\${i}:00\`),
+                    datasets: [{
+                        label: 'Disconnects',
+                        data: ${JSON.stringify(this.metrics.hourlyDisconnects || Array(24).fill(0))},
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)'
+                    }]
+                },
+                options: { 
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } } 
+                }
+            });
+        } else {
+            console.error('No 2D context for hourlyChart');
         }
-    });
+    } else {
+        console.error('hourlyChart element missing');
+    }
 
     // Daily Chart
-    initChart('dailyChart', {
-        type: 'line',
-        data: {
-            labels: ${JSON.stringify(this.metrics.dailyLabels || [])},
-            datasets: [{
-                label: 'Disconnects',
-                data: ${JSON.stringify(this.metrics.dailyDisconnects || [])},
-                borderColor: 'rgba(153, 102, 255, 1)',
-                fill: false
-            }]
-        },
-        options: { 
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true } } 
+    const dailyEl = document.getElementById('dailyChart');
+    if (dailyEl) {
+        const dailyCtx = dailyEl.getContext('2d');
+        if (dailyCtx) {
+            new Chart(dailyCtx, {
+                type: 'line',
+                data: {
+                    labels: ${JSON.stringify(this.metrics.dailyLabels || [])},
+                    datasets: [{
+                        label: 'Disconnects',
+                        data: ${JSON.stringify(this.metrics.dailyDisconnects || [])},
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        fill: false
+                    }]
+                },
+                options: { 
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } } 
+                }
+            });
+        } else {
+            console.error('No 2D context for dailyChart');
         }
-    });
+    } else {
+        console.error('dailyChart element missing');
+    }
 
     // Rolling Chart
-    initChart('rollingChart', {
-        type: 'line',
-        data: {
-            labels: ${JSON.stringify(this.metrics.rollingLabels || [])},
-            datasets: [{
-                label: 'Disconnects',
-                data: ${JSON.stringify(this.metrics.rolling7Day || [])},
-                borderColor: 'rgba(255, 159, 64, 1)',
-                fill: false
-            }]
-        },
-        options: { 
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true } } 
+    const rollingEl = document.getElementById('rollingChart');
+    if (rollingEl) {
+        const rollingCtx = rollingEl.getContext('2d');
+        if (rollingCtx) {
+            new Chart(rollingCtx, {
+                type: 'line',
+                data: {
+                    labels: ${JSON.stringify(this.metrics.rollingLabels || [])},
+                    datasets: [{
+                        label: 'Disconnects',
+                        data: ${JSON.stringify(this.metrics.rolling7Day || [])},
+                        borderColor: 'rgba(255, 159, 64, 1)',
+                        fill: false
+                    }]
+                },
+                options: { 
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } } 
+                }
+            });
+        } else {
+            console.error('No 2D context for rollingChart');
         }
-    });
-
-    // Export Functions (keep your existing ones here)
-    function exportToHTML() {
-        // ... your code ...
+    } else {
+        console.error('rollingChart element missing');
     }
 
-    function exportToPDF() {
-        // ... your code ...
-    }
-
-    function exportToCSV() {
-        // ... your code ...
-    }
+    // Export functions...
 </script>
             
         </body>
