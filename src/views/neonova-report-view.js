@@ -49,6 +49,10 @@ class NeonovaReportView {
     }
 
 generateReportHTML(csvContent) {
+    console.log('Report view received metrics:', this.metrics);
+    console.log('Average session min in view:', this.metrics.avgSessionMin);
+    console.log('Average reconnect min in view:', this.metrics.avgReconnectMin);
+    console.log('Hourly disconnects in view:', this.metrics.hourlyDisconnects);
     // Calculate scores and sections
     const meanStabilityScore = Number(Math.max(0, Math.min(100, this.metrics.rawMeanScore || 0)).toFixed(1));
     const medianStabilityScore = Number(Math.max(0, Math.min(100, this.metrics.rawMedianScore || 0)).toFixed(1));
