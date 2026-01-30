@@ -82,7 +82,7 @@ generateReportHTML(csvContent) {
                 .export-buttons button { margin: 0 10px; padding: 10px 20px; background: #4caf50; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
                 .export-buttons button:hover { background: #45a049; }
                 details summary { cursor: pointer; font-weight: bold; color: #4caf50; }
-                .chart-section {
+                .chart-section {F
                     position: relative;
                     width: 100%;
                     height: 400px;               /* Forces the container to have height */
@@ -191,89 +191,55 @@ generateReportHTML(csvContent) {
             </div>
 
 <script>
-    console.log('Report script loaded');
+    console.log('Report script started');
 
-    // Debug data arrival
-    console.log('CHART DATA - hourly: ' + ${JSON.stringify(this.metrics.hourlyDisconnects || [])});
-    console.log('CHART DATA - daily labels: ' + ${JSON.stringify(this.metrics.dailyLabels || [])});
-    console.log('CHART DATA - daily values: ' + ${JSON.stringify(this.metrics.dailyDisconnects || [])});
-    console.log('CHART DATA - rolling labels: ' + ${JSON.stringify(this.metrics.rollingLabels || [])});
-    console.log('CHART DATA - rolling values: ' + ${JSON.stringify(this.metrics.rolling7Day || [])});
+    // Debug data (keep this)
+    console.log('Hourly:', ${JSON.stringify(this.metrics.hourlyDisconnects || [])});
+    console.log('Daily labels:', ${JSON.stringify(this.metrics.dailyLabels || [])});
+    console.log('Daily data:', ${JSON.stringify(this.metrics.dailyDisconnects || [])});
+    console.log('Rolling labels:', ${JSON.stringify(this.metrics.rollingLabels || [])});
+    console.log('Rolling data:', ${JSON.stringify(this.metrics.rolling7Day || [])});
 
-    // Force canvas size (safety net)
-    ['hourlyChart', 'dailyChart', 'rollingChart'].forEach(function(id) {
+    // Force size again (belt and suspenders)
+    var canvases = ['hourlyChart', 'dailyChart', 'rollingChart'];
+    canvases.forEach(function(id) {
         var el = document.getElementById(id);
         if (el) {
             el.width = 800;
             el.height = 400;
-            console.log('Forced size on ' + id + ': ' + el.width + 'x' + el.height);
+            console.log('Forced canvas size: ' + id + ' ' + el.width + 'x' + el.height);
         }
     });
 
-    // Helper to init a chart with fallback text
-    function drawChart(canvasId, type, labels, data, color) {
-        var canvas = document.getElementById(canvasId);
-        if (!canvas) {
-            console.error('Canvas ' + canvasId + ' missing');
-            return;
+    // Simple hourly test (hardcoded to prove drawing)
+    var hourlyCanvas = document.getElementById('hourlyChart');
+    if (hourlyCanvas) {
+        var ctx = hourlyCanvas.getContext('2d');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23'],
+                    datasets: [{
+                        label: 'Hardcoded Test',
+                        data: [0,0,0,0,0,0,0,0,0,0,6,0,4,2,0,0,0,0,0,0,0,0,0,0],
+                        backgroundColor: 'rgba(255, 99, 132, 0.6)'
+                    }]
+                },
+                options: {
+                    responsive: false,  // Disable responsive to avoid size bugs
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+            console.log('Hardcoded hourly chart attempted');
+        } else {
+            console.error('No context for hourlyChart');
         }
-        var ctx = canvas.getContext('2d');
-        if (!ctx) {
-            console.error('No context for ' + canvasId);
-            return;
-        }
-
-        var total = data.reduce(function(a, b) { return a + b; }, 0);
-        if (total === 0 || data.length === 0 || labels.length !== data.length) {
-            ctx.font = '20px Arial';
-            ctx.fillStyle = 'gray';
-            ctx.textAlign = 'center';
-            ctx.fillText('No data or mismatch', canvas.width / 2, canvas.height / 2);
-            console.log(canvasId + ' showed no-data message');
-            return;
-        }
-
-        new Chart(ctx, {
-            type: type,
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Disconnects',
-                    data: data,
-                    backgroundColor: type === 'bar' ? color : undefined,
-                    borderColor: type === 'line' ? color : undefined,
-                    fill: false
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true } }
-            }
-        });
-        console.log(canvasId + ' chart initialized');
+    } else {
+        console.error('hourlyChart missing');
     }
 
-    // Run charts
-    drawChart('hourlyChart', 'bar', 
-        Array.from({length: 24}, function(_, i) { return i + ':00'; }),
-        ${JSON.stringify(this.metrics.hourlyDisconnects || Array(24).fill(0))},
-        'rgba(75, 192, 192, 0.6)'
-    );
-
-    drawChart('dailyChart', 'line', 
-        ${JSON.stringify(this.metrics.dailyLabels || [])},
-        ${JSON.stringify(this.metrics.dailyDisconnects || [])},
-        'rgba(153, 102, 255, 1)'
-    );
-
-    drawChart('rollingChart', 'line', 
-        ${JSON.stringify(this.metrics.rollingLabels || [])},
-        ${JSON.stringify(this.metrics.rolling7Day || [])},
-        'rgba(255, 159, 64, 1)'
-    );
-
-    // Export functions...
+    // Add similar hardcoded test for daily and rolling if needed
 </script>
             
         </body>
