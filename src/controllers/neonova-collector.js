@@ -50,7 +50,6 @@ class NeonovaCollector {
 
 cleanEntries(entries) {
     if (!entries || entries.length === 0) {
-        console.log('[Collector] No entries provided to clean.');
         return [];
     }
 
@@ -58,7 +57,6 @@ cleanEntries(entries) {
     let allEntries = entries.map(entry => {
         const date = entry.dateObj.getTime();  // Unix ms (numeric, unique)
         if (isNaN(date)) {
-            console.warn('Skipping entry with invalid dateObj:', entry);
             return null;
         }
         return { date, status: entry.status, dateObj: entry.dateObj };
@@ -76,14 +74,8 @@ cleanEntries(entries) {
             seen.add(key);
             cleaned.push(entry);
         } else {
-            console.log('Skipped duplicate entry:', entry);
         }
     });
-
-    console.log('[Collector] cleanEntries finished');
-    console.log('  - Raw entries before clean:', allEntries.length);
-    console.log('  - Cleaned entries after:', cleaned.length);
-    console.log('  - Sample cleaned:', cleaned.slice(0, 3));
 
     return cleaned;
 }
