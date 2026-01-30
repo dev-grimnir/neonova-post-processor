@@ -174,69 +174,104 @@ generateReportHTML(csvContent) {
             </div>
 
             <script>
-                // Chart.js Initialization
-                const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+                console.log('Script running in report tab');
+            
+                // Debug data arrival
                 console.log('CHART DATA - hourly:', ${JSON.stringify(this.metrics.hourlyDisconnects || [])});
                 console.log('CHART DATA - daily labels:', ${JSON.stringify(this.metrics.dailyLabels || [])});
                 console.log('CHART DATA - daily values:', ${JSON.stringify(this.metrics.dailyDisconnects || [])});
                 console.log('CHART DATA - rolling labels:', ${JSON.stringify(this.metrics.rollingLabels || [])});
                 console.log('CHART DATA - rolling values:', ${JSON.stringify(this.metrics.rolling7Day || [])});
-                new Chart(hourlyCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: Array.from({length: 24}, (_, i) => \`\${i}:00\`),
-                        datasets: [{
-                            label: 'Disconnects',
-                            data: ${JSON.stringify(this.metrics.hourlyDisconnects || Array(24).fill(0))},
-                            backgroundColor: 'rgba(75, 192, 192, 0.6)'
-                        }]
-                    },
-                    options: { scales: { y: { beginAtZero: true } } }
-                });
-
-                const dailyCtx = document.getElementById('dailyChart').getContext('2d');
-                new Chart(dailyCtx, {
-                    type: 'line',
-                    data: {
-                        labels: ${JSON.stringify(this.metrics.dailyLabels || [])},
-                        datasets: [{
-                            label: 'Disconnects',
-                            data: ${JSON.stringify(this.metrics.dailyDisconnects || [])},
-                            borderColor: 'rgba(153, 102, 255, 1)',
-                            fill: false
-                        }]
-                    },
-                    options: { scales: { y: { beginAtZero: true } } }
-                });
-
-                const rollingCtx = document.getElementById('rollingChart').getContext('2d');
-                new Chart(rollingCtx, {
-                    type: 'line',
-                    data: {
-                        labels: ${JSON.stringify((this.metrics.rolling7Day || []).map(item => item.label))},
-                        datasets: [{
-                            label: 'Disconnects',
-                            data: ${JSON.stringify((this.metrics.rolling7Day || []).map(item => item.count))},
-                            borderColor: 'rgba(255, 159, 64, 1)',
-                            fill: false
-                        }]
-                    },
-                    options: { scales: { y: { beginAtZero: true } } }
-                });
-
-                // Export Functions (as before)
-                function exportToHTML() {
-                    // ...
+            
+                // Hourly Chart
+                const hourlyEl = document.getElementById('hourlyChart');
+                if (hourlyEl) {
+                    const hourlyCtx = hourlyEl.getContext('2d');
+                    if (hourlyCtx) {
+                        new Chart(hourlyCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+                                datasets: [{
+                                    label: 'Disconnects',
+                                    data: ${JSON.stringify(this.metrics.hourlyDisconnects || Array(24).fill(0))},
+                                    backgroundColor: 'rgba(75, 192, 192, 0.6)'
+                                }]
+                            },
+                            options: { 
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: { y: { beginAtZero: true } } 
+                            }
+                        });
+                    } else {
+                        console.error('No 2D context for hourlyChart');
+                    }
+                } else {
+                    console.error('hourlyChart element missing');
                 }
-
-                function exportToPDF() {
-                    // ...
+            
+                // Daily Chart
+                const dailyEl = document.getElementById('dailyChart');
+                if (dailyEl) {
+                    const dailyCtx = dailyEl.getContext('2d');
+                    if (dailyCtx) {
+                        new Chart(dailyCtx, {
+                            type: 'line',
+                            data: {
+                                labels: ${JSON.stringify(this.metrics.dailyLabels || [])},
+                                datasets: [{
+                                    label: 'Disconnects',
+                                    data: ${JSON.stringify(this.metrics.dailyDisconnects || [])},
+                                    borderColor: 'rgba(153, 102, 255, 1)',
+                                    fill: false
+                                }]
+                            },
+                            options: { 
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: { y: { beginAtZero: true } } 
+                            }
+                        });
+                    } else {
+                        console.error('No 2D context for dailyChart');
+                    }
+                } else {
+                    console.error('dailyChart element missing');
                 }
-
-                function exportToCSV() {
-                    // ...
+            
+                // Rolling Chart (fixed!)
+                const rollingEl = document.getElementById('rollingChart');
+                if (rollingEl) {
+                    const rollingCtx = rollingEl.getContext('2d');
+                    if (rollingCtx) {
+                        new Chart(rollingCtx, {
+                            type: 'line',
+                            data: {
+                                labels: ${JSON.stringify(this.metrics.rollingLabels || [])},
+                                datasets: [{
+                                    label: 'Disconnects',
+                                    data: ${JSON.stringify(this.metrics.rolling7Day || [])},
+                                    borderColor: 'rgba(255, 159, 64, 1)',
+                                    fill: false
+                                }]
+                            },
+                            options: { 
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: { y: { beginAtZero: true } } 
+                            }
+                        });
+                    } else {
+                        console.error('No 2D context for rollingChart');
+                    }
+                } else {
+                    console.error('rollingChart element missing');
                 }
+            
+                // Your export functions...
             </script>
+            
         </body>
         </html>
     `;
