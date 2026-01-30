@@ -82,6 +82,13 @@ class NeonovaAnalyzer {
             const finalDuration = (this.lastDate.getTime() - lastTransitionTime) / 1000;
             if (finalDuration > 0) this.sessionSeconds.push(finalDuration);
         }
+
+        console.log("Cleaned entries count:", this.cleanEntries.length);
+        console.log("Statuses found:", [...new Set(this.cleanEntries.map(e => e.status))]); // should show both "Start" and "Stop"
+        console.log("Session durations found:", this.sessionSeconds.length, this.sessionSeconds);
+        console.log("Reconnect durations found:", this.reconnectSeconds.length, this.reconnectSeconds);
+        console.log("Disconnect events counted:", this.disconnects);
+        console.log("Long disconnects:", this.longDisconnects.length);
     }
 
     computeMetrics() {
