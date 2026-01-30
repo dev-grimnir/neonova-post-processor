@@ -1,8 +1,5 @@
 class NeonovaReportOrderView {
     constructor(container, username, friendlyName) {
-        console.log('NeonovaReportOrderView constructor called - container type:', typeof container, container?.nodeName || 'no node');
-        console.log('username:', username);
-        console.log('friendlyName:', friendlyName);
         this.container = container;
         this.username = username;
         this.friendlyName = friendlyName || username;
@@ -10,9 +7,6 @@ class NeonovaReportOrderView {
     }
 
     renderOrderForm() {
-        // Log #1: At the very top of the method
-        console.log('renderOrderForm started - this.container type:', typeof this.container, this.container?.nodeName || 'no node');
-    
         this.container.innerHTML = `
             <h1>Report Request - ${this.friendlyName} (${this.username})</h1>
     
@@ -39,11 +33,6 @@ class NeonovaReportOrderView {
             <div id="status" style="margin-top:10px; font-weight:bold; text-align:center;"></div>
             <div id="report-content" style="margin-top:30px;"></div>
         `;
-    
-        // Log #2: Immediately after setting innerHTML
-        console.log('innerHTML assignment completed - container children count:', this.container.children.length);
-        console.log('innerHTML length after set:', this.container.innerHTML.length);
-        console.log('First child tag name (should be H1):', this.container.children[0]?.tagName || 'no children');
     
         // Populate dropdowns
         const today = new Date();
@@ -99,9 +88,6 @@ class NeonovaReportOrderView {
                 this.container.querySelector('#status').textContent = 'Error: ' + data.message;
             }
         });
-    
-        // Log #3: At the very end of the method
-        console.log('renderOrderForm finished - dropdowns populated, listeners added');
     }
 
     showProgress() {
