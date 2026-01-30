@@ -95,7 +95,6 @@ class BaseNeonovaController {
 parsePageRows(doc) {
     const table = doc.querySelector('table[width="500"]') || doc.querySelector('table[cellspacing="2"][cellpadding="2"]');
     if (!table) {
-        console.warn('No table found in parsed doc');
         return [];
     }
 
@@ -112,8 +111,7 @@ parsePageRows(doc) {
 
         const dateObj = new Date(timestampStr);  // Parses ISO-like strings
         if (isNaN(dateObj.getTime())) {
-            console.warn('Invalid timestamp:', timestampStr);  // Log bad parses
-            return;  // Skip invalid
+            return;
         }
 
         entries.push({
@@ -123,8 +121,6 @@ parsePageRows(doc) {
             dateObj  // Valid Date
         });
     });
-
-    console.log('Parsed page rows sample:', entries.slice(0, 3));  // Add for debug
     return entries;
 }
 
@@ -260,7 +256,6 @@ parsePageRows(doc) {
             const doc = new DOMParser().parseFromString(html, 'text/html');
     
             const pageEntries = this.parsePageRows(doc);
-            console.log(`Page ${page} entries: ${pageEntries.length}`);
             entries.push(...pageEntries);
     
             if (typeof onProgress === 'function') {
