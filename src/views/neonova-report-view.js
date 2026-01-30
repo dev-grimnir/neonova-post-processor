@@ -193,43 +193,43 @@ generateReportHTML(csvContent) {
 <script>
     console.log('Report script loaded');
 
-    // Debug data (should match your main console)
-    console.log('Hourly data:', ${JSON.stringify(this.metrics.hourlyDisconnects || [])});
-    console.log('Daily labels:', ${JSON.stringify(this.metrics.dailyLabels || [])});
-    console.log('Daily data:', ${JSON.stringify(this.metrics.dailyDisconnects || [])});
-    console.log('Rolling labels:', ${JSON.stringify(this.metrics.rollingLabels || [])});
-    console.log('Rolling data:', ${JSON.stringify(this.metrics.rolling7Day || [])});
+    // Debug data arrival
+    console.log('CHART DATA - hourly: ' + ${JSON.stringify(this.metrics.hourlyDisconnects || [])});
+    console.log('CHART DATA - daily labels: ' + ${JSON.stringify(this.metrics.dailyLabels || [])});
+    console.log('CHART DATA - daily values: ' + ${JSON.stringify(this.metrics.dailyDisconnects || [])});
+    console.log('CHART DATA - rolling labels: ' + ${JSON.stringify(this.metrics.rollingLabels || [])});
+    console.log('CHART DATA - rolling values: ' + ${JSON.stringify(this.metrics.rolling7Day || [])});
 
     // Force canvas size (safety net)
-    ['hourlyChart', 'dailyChart', 'rollingChart'].forEach(id => {
-        const el = document.getElementById(id);
+    ['hourlyChart', 'dailyChart', 'rollingChart'].forEach(function(id) {
+        var el = document.getElementById(id);
         if (el) {
             el.width = 800;
             el.height = 400;
-            console.log(`Forced size on ${id}: ${el.width}x${el.height}`);
+            console.log('Forced size on ' + id + ': ' + el.width + 'x' + el.height);
         }
     });
 
     // Helper to init a chart with fallback text
     function drawChart(canvasId, type, labels, data, color) {
-        const canvas = document.getElementById(canvasId);
+        var canvas = document.getElementById(canvasId);
         if (!canvas) {
-            console.error(`Canvas ${canvasId} missing`);
+            console.error('Canvas ' + canvasId + ' missing');
             return;
         }
-        const ctx = canvas.getContext('2d');
+        var ctx = canvas.getContext('2d');
         if (!ctx) {
-            console.error(`No context for ${canvasId}`);
+            console.error('No context for ' + canvasId);
             return;
         }
 
-        const total = data.reduce((a, b) => a + b, 0);
+        var total = data.reduce(function(a, b) { return a + b; }, 0);
         if (total === 0 || data.length === 0 || labels.length !== data.length) {
             ctx.font = '20px Arial';
             ctx.fillStyle = 'gray';
             ctx.textAlign = 'center';
             ctx.fillText('No data or mismatch', canvas.width / 2, canvas.height / 2);
-            console.log(`${canvasId} showed no-data message`);
+            console.log(canvasId + ' showed no-data message');
             return;
         }
 
@@ -251,12 +251,12 @@ generateReportHTML(csvContent) {
                 scales: { y: { beginAtZero: true } }
             }
         });
-        console.log(`${canvasId} chart initialized`);
+        console.log(canvasId + ' chart initialized');
     }
 
     // Run charts
     drawChart('hourlyChart', 'bar', 
-        Array.from({length: 24}, (_, i) => \`\${i}:00\`),
+        Array.from({length: 24}, function(_, i) { return i + ':00'; }),
         ${JSON.stringify(this.metrics.hourlyDisconnects || Array(24).fill(0))},
         'rgba(75, 192, 192, 0.6)'
     );
