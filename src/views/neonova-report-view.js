@@ -133,8 +133,8 @@ generateReportHTML(csvContent) {
                 </thead>
                 <tbody>
                     <tr><td>Total Disconnects</td><td>${this.metrics.disconnects || 0}</td></tr>
-                    <tr><td>Average Session Duration</td><td>${this.metrics.avgSession || 'N/A'}</td></tr>
-                    <tr><td>Average Reconnect Time</td><td>${this.metrics.avgReconnect || 'N/A'}</td></tr>
+                    <tr><td>Average Session Duration</td><td>${this.metrics.avgSessionMin ? formatDuration(this.metrics.avgSessionMin * 60) : 'N/A'}</td></tr>
+                    <tr><td>Average Reconnect Time</td><td>${this.metrics.avgReconnectMin ? formatDuration(this.metrics.avgReconnectMin * 60) : 'N/A'}</td></tr>
                     <tr><td>Percent Connected</td><td>${Number(this.metrics.percentConnected || 0).toFixed(1)}%</td></tr>
                     <tr><td>Business Hours Disconnects</td><td>${this.metrics.businessDisconnects || 0}</td></tr>
                     <tr><td>Off-Hours Disconnects</td><td>${this.metrics.offHoursDisconnects || 0}</td></tr>
