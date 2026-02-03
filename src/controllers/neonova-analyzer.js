@@ -1,26 +1,22 @@
-/**
- * @file src/controllers/neonova-analyzer.js
- * Core analysis logic: state machine, sessions, reconnects, metrics
- * @requires ../core/utils
- */
 class NeonovaAnalyzer {
     constructor(cleanedEntries) {
-    this.cleanEntries = cleanedEntries;
-    this.disconnects = 0;
-    this.sessionSeconds = [];
-    this.reconnectSeconds = [];
-    this.reconnects = [];
-    this.longDisconnects = [];
-    this.firstDate = null;
-    this.lastDate = null;
-    this.lastDisconnectDate = null;
-    this.hourlyDisconnects = Array(24).fill(0);
-    this.dailyDisconnects = Array(7).fill(0);
-    this.hourlyCount = Array(24).fill(0);
-    this.dailyCount = {};
-    this.disconnectDates = []; // Force array
-    this.analyze();
-}
+        this.cleanEntries = cleanedEntries;
+        this.disconnects = 0;
+        this.sessionSeconds = [];
+        this.reconnectSeconds = [];
+        this.reconnects = [];
+        this.longDisconnects = [];
+        this.firstDate = null;
+        this.lastDate = null;
+        this.lastDisconnectDate = null;
+        this.hourlyDisconnects = Array(24).fill(0);
+        this.dayOfWeekDisconnects = Array(7).fill(0); // Renamed for clarity
+        this.hourlyCount = Array(24).fill(0);
+        this.dailyCount = {};
+        this.disconnectDates = []; 
+        this.metrics = {};
+        this.analyze();
+    }
 
     analyze() {
         let currentState = null;
@@ -59,7 +55,7 @@ class NeonovaAnalyzer {
                 this.hourlyCount[hour]++;
                 const dayKey = date.toLocaleDateString();
                 this.dailyCount[dayKey] = (this.dailyCount[dayKey] || 0) + 1;
-                this.dailyDisconnects[date.getDay()]++;
+                this.dayOfWeekDisconnects[date.getDay()]++;
                 if (currentState === "up" || currentState === null) {
                     if (currentState === "up" && lastTransitionTime !== null) {
                         const duration = (ts - lastTransitionTime) / 1000;
@@ -77,9 +73,13 @@ class NeonovaAnalyzer {
             const finalDuration = (this.lastDate.getTime() - lastTransitionTime) / 1000;
             if (finalDuration > 0) this.sessionSeconds.push(finalDuration);
         }
+
     }
 
     computeMetrics() {
+        const sortedKeys = Object.keys(this.dailyCount).sort((a, b) => new Date(a) - new Date(b));
+        const sortedDailyDisconnects = sortedKeys.map(k => this.dailyCount[k]);
+
         const peakHourCount = Math.max(...this.hourlyCount);
         const peakHour = this.hourlyCount.indexOf(peakHourCount);
         const peakHourStr = peakHourCount > 0 ? `${peakHour}:00-${peakHour + 1}:00 (${peakHourCount} disconnects)` : 'None';
@@ -109,7 +109,7 @@ class NeonovaAnalyzer {
         const dailyValues = Object.values(this.dailyCount);
         const avgDaily = dailyValues.length ? (dailyValues.reduce((a, b) => a + b, 0) / dailyValues.length).toFixed(1) : '0';
 
-        const totalConnectedSec = this.sessionSeconds.reduce((a, b) => a + b, 0);
+        const totalConnectedSec = this.sessionSeconds.reduce((a, b) => a + b, 0) || 0;
         const totalRangeSec = this.firstDate && this.lastDate ? (this.lastDate - this.firstDate) / 1000 : 1;
         const totalDisconnectedSec = totalRangeSec - totalConnectedSec;
         const percentConnected = totalRangeSec > 0 ? (totalConnectedSec / totalRangeSec * 100).toFixed(1) : 'N/A';
@@ -182,24 +182,49 @@ class NeonovaAnalyzer {
         const rawMedianScore = uptimeComponent + sessionBonusMedian + totalFastBonus - flappingPenalty - longOutagePenalty;
         const medianStabilityScore = Math.max(0, Math.min(100, rawMedianScore)).toFixed(0);
 
+        // Return metrics
         return {
-            peakHourStr, peakDayStr, businessDisconnects, offHoursDisconnects, timeSinceLastStr, avgDaily,
-            totalConnectedSec, totalDisconnectedSec, percentConnected, numSessions, avgSessionMin,
-            longestSessionMin, shortestSessionMin, medianReconnectMin, p95ReconnectMin, avgReconnectMin,
-            quickReconnects, daysSpanned, uptimeComponent, sessionBonusMean, sessionBonusMedian,
-            totalFastBonus, flappingPenalty, longOutagePenalty, meanStabilityScore, medianStabilityScore,
-            rawMeanScore, rawMedianScore, monitoringPeriod: this.firstDate && this.lastDate ? `${this.firstDate.toLocaleString()} to ${this.lastDate.toLocaleString()}` : 'N/A',
+            peakHourStr,
+            peakDayStr,
+            businessDisconnects,
+            offHoursDisconnects,
+            timeSinceLastStr,
+            avgDaily,
+            totalConnectedSec,
+            totalDisconnectedSec,
+            percentConnected,
+            numSessions,
+            avgSessionMin,
+            longestSessionMin,
+            shortestSessionMin,
+            medianReconnectMin,
+            p95ReconnectMin,
+            avgReconnectMin,
+            quickReconnects,
+            daysSpanned,
+            uptimeComponent,
+            sessionBonusMean,
+            sessionBonusMedian,
+            totalFastBonus,
+            flappingPenalty,
+            longOutagePenalty,
+            meanStabilityScore,
+            medianStabilityScore,
+            rawMeanScore,
+            rawMedianScore,
+            monitoringPeriod: this.firstDate && this.lastDate 
+                ? `${this.firstDate.toLocaleString()} to ${this.lastDate.toLocaleString()}` 
+                : 'N/A',
             sessionBins: this.computeSessionBins(),
             reconnectBins: this.computeReconnectBins(),
             rolling7Day: this.computeRolling7Day(),
-            rollingLabels: this.rollingLabels,
+            rollingLabels: this.rollingLabels || [],  
             longDisconnects: this.longDisconnects,
             disconnects: this.disconnects,
-            hourlyDisconnects: this.hourlyDisconnects, 
-            cleanedEntriesLength: this.cleanEntries.length,
-            allEntriesLength: this.cleanEntries.length,
             hourlyDisconnects: this.hourlyDisconnects,
-            dailyDisconnects: this.dailyDisconnects,
+            cleanedEntriesLength: this.cleanEntries.length,
+            dailyDisconnects: sortedDailyDisconnects,
+            dailyLabels: sortedKeys,
             hourlyCount: this.hourlyCount
         };
     }
@@ -230,12 +255,10 @@ class NeonovaAnalyzer {
     }
 
     computeRolling7Day() {
-        // Extra guard: if undefined, set to empty array
         if (this.disconnectDates === undefined || this.disconnectDates === null) {
             this.disconnectDates = [];
         }
     
-        // Now safe to sort
         this.disconnectDates.sort((a, b) => a - b);
     
         const rolling7Day = [];

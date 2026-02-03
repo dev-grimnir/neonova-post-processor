@@ -27,9 +27,6 @@ class NeonovaCollector {
             }
         });
         localStorage.setItem('novaEntries', JSON.stringify(this.allEntries));
-        console.log('[Collector] collectFromPage finished');
-        console.log('  - Rows processed:', rows.length);
-        console.log('  - Total entries now:', this.allEntries.length);
     }
 
     startAnalysis() {
@@ -51,27 +48,37 @@ class NeonovaCollector {
         return false;
     }
 
-    cleanEntries() {
-        this.allEntries = this.allEntries.map(entry => {
-            const timestamp = Number(entry.timestamp);
-            const fixedDate = new Date(timestamp);
-            return { date: timestamp, status: entry.status, dateObj: fixedDate };
-        });
-        this.allEntries.sort((a, b) => a.date - b.date);
-
-        const cleaned = [];
-        let lastStatus = null;
-        this.allEntries.forEach(entry => {
-            if (lastStatus === null || entry.status !== lastStatus) {
-                cleaned.push(entry);
-                lastStatus = entry.status;
-            }
-        });
-        console.log('[Collector] cleanEntries finished');
-        console.log('  - Raw entries before clean:', this.allEntries.length);
-        console.log('  - Cleaned entries after:', cleaned.length);
-        return cleaned;
+cleanEntries(entries) {
+    if (!entries || entries.length === 0) {
+        return [];
     }
+
+    // Map to standardized format (use getTime() for numeric date)
+    let allEntries = entries.map(entry => {
+        const date = entry.dateObj.getTime();  // Unix ms (numeric, unique)
+        if (isNaN(date)) {
+            return null;
+        }
+        return { date, status: entry.status, dateObj: entry.dateObj };
+    }).filter(entry => entry !== null);  // Remove invalids
+
+    // Sort ascending by date (oldest to newest)
+    allEntries.sort((a, b) => a.date - b.date);
+
+    // De-dupe: Keep unique by date + status
+    const seen = new Set();
+    const cleaned = [];
+    allEntries.forEach(entry => {
+        const key = `${entry.date}_${entry.status}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            cleaned.push(entry);
+        } else {
+        }
+    });
+
+    return cleaned;
+}
 
     getPages() {
         return this.pages;
