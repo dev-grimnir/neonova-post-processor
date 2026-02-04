@@ -251,87 +251,72 @@ parsePageRows(doc) {
         return true;
     }
     
-async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
-    // Legacy support
-    if (typeof startDate === 'function') { onProgress = startDate; startDate = null; endDate = null; }
-    else if (typeof endDate === 'function') { onProgress = endDate; endDate = null; }
+// src/controllers/BaseNeonovaController.js
+// Replace ONLY the paginateReportLogs method with this version.
+// Everything else in your class stays exactly as you have it.
 
-    const entries = [];
-    let page = 1;
-    let offset = 0;
-    const hitsPerPage = 100;
+    async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
+        const entries = [];
+        let doc = null;
+        let page = 1;
 
-    let totalEntries = null;
+        const now = new Date();
+        let sDate = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
+        let eDate = endDate ? new Date(endDate) : now;
 
-    const now = new Date();
-    let sDate = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
-    let eDate = endDate ? new Date(endDate) : now;
+        sDate.setHours(0, 0, 0, 0);
+        eDate.setHours(23, 59, 59, 999);
 
-    // === FORCE FULL END-OF-DAY (this was the missing 8–26 rows) ===
-    sDate.setHours(0, 0, 0, 0);
-    eDate.setHours(23, 59, 59, 999);
-
-    while (true) {
-        const params = new URLSearchParams({
-            acctsearch: '2', sd: 'fairpoint.net', iuserid: username,
-            ip: '', session: '', nasip: '', statusview: 'both',
+        // === FIRST PAGE: real POST exactly like the normal UI ===
+        const overrides = {
             syear: sDate.getFullYear().toString(),
             smonth: (sDate.getMonth() + 1).toString().padStart(2, '0'),
             sday: sDate.getDate().toString().padStart(2, '0'),
-            shour: '00', smin: '00',
             eyear: eDate.getFullYear().toString(),
             emonth: (eDate.getMonth() + 1).toString().padStart(2, '0'),
             eday: eDate.getDate().toString().padStart(2, '0'),
-            ehour: '23', emin: '59',
-            order: 'date', hits: hitsPerPage.toString(),
-            location: offset.toString(), direction: '0', dump: ''
-        });
+            ehour: '23',
+            emin: '59'
+        };
 
-        const url = `https://admin.neonova.net/rat/index.php?${params.toString()}`;
-        const res = await fetch(url, {
-            credentials: 'include',
-            cache: 'no-cache',
-            headers: {
-                'Referer': url,
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5',
-                'Sec-Fetch-Dest': 'document',
-                'Sec-Fetch-Mode': 'navigate',
-                'Sec-Fetch-Site': 'same-origin',
-                'Upgrade-Insecure-Requests': '1'
+        doc = await this.submitSearch(username, overrides);
+
+        let totalEntries = this._parseTotalEntries(doc);
+        console.log(`Total entries detected: ${totalEntries}`);
+
+        while (doc) {
+            const pageEntries = this.parsePageRows(doc);
+            entries.push(...pageEntries);
+
+            if (typeof onProgress === 'function') {
+                const percent = totalEntries ? Math.round((entries.length / totalEntries) * 100) : 0;
+                onProgress(entries.length, page, totalEntries, percent);
             }
-        });
 
-        if (!res.ok) break;
+            console.log(`Page ${page} → ${pageEntries.length} rows (total now ${entries.length})`);
 
-        const html = await res.text();
-        const doc = new DOMParser().parseFromString(html, 'text/html');
+            if (pageEntries.length < 100) break;
 
-        // Use the parser you just verified works
-        if (page === 1) {
-            totalEntries = this._parseTotalEntries(doc);
-            console.log(`Total entries detected: ${totalEntries}`);
+            // === FOLLOW THE SERVER'S OWN "NEXT" LINK (this is the magic) ===
+            const nextLink = this.findNextPageLink(doc);
+            if (!nextLink) {
+                console.log('No more NEXT link → stopping');
+                break;
+            }
+
+            const nextUrl = nextLink.href;
+            const res = await fetch(nextUrl, { credentials: 'include', cache: 'no-cache' });
+            if (!res.ok) break;
+
+            const html = await res.text();
+            doc = new DOMParser().parseFromString(html, 'text/html');
+            page++;
         }
 
-        const pageEntries = this.parsePageRows(doc);
-        entries.push(...pageEntries);
-
-        if (typeof onProgress === 'function') {
-            const percent = totalEntries ? Math.round((entries.length / totalEntries) * 100) : 0;
-            onProgress(entries.length, page, totalEntries, percent);
-        }
-
-        if (pageEntries.length < hitsPerPage) break;
-        if (totalEntries && page >= Math.ceil(totalEntries / hitsPerPage)) break;
-
-        offset += hitsPerPage;
-        page++;
+        entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+        console.log(`Pagination finished with ${entries.length} raw entries`);
+        return entries;
     }
-
-    entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
-    console.log(`Pagination finished with ${entries.length} raw entries`);
-    return entries;
-}
 
     
 /**
