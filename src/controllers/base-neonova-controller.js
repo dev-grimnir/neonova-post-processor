@@ -261,17 +261,24 @@ async paginateReportLogs(username, startDate = null, endDate = null, onProgress 
         // Parse total entries ONCE (page 1 only)
         // Inside if (page === 1) after selector
         if (page === 1) {
-            console.log('Attempting total parse on page 1');
-            const headerTable = ... // existing
-            if (!headerTable) {
-                console.warn('Header table not found with current selector');
-            } else {
-                console.log('Header table found, cells count:', headerTable.querySelectorAll('td').length);
-                // ... existing code ...
+            console.log('Page 1 Detected.')
+            const headerTable = doc.querySelector('table[cellspacing="2"][cellspacing="2"][border="0"] tr[bgcolor="gray"]');
+            if (headerTable) {
+                const cells = headerTable.querySelectorAll('td');
+                if (cells.length >= 5) {
+                    // cells[4] should be the "of Z" cell
+                    const ofText = cells[4].textContent.trim(); // e.g. "of  12  "
+                    const match = ofText.match(/of\s*([\d,]+)/i);
+                    if (match) {
+                        totalEntries = parseInt(match[1].replace(/,/g, ''), 10);
+                        if (!isNaN(totalEntries) && totalEntries > 0) {
+                            totalPages = Math.ceil(totalEntries / hitsPerPage);
+                            console.log(`Detected total entries: ${totalEntries} → ${totalPages} pages required`);
+                        }
+                    }
+                }
             }
-            if (!totalEntries) {
-                console.warn('Total entries parsing failed - no match or invalid number');
-            }
+            // Fallback: if no match, we can still rely on partial-page break
         }
         
         // After pageEntries = this.parsePageRows(doc)
