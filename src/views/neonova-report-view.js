@@ -189,6 +189,8 @@ class NeonovaReportView {
                     <canvas id="rollingChart"></canvas>
                 </div>
 
+                 ${longDisconnSection}
+
                 <!-- Export Buttons -->
                 <div class="export-buttons">
                     <button onclick="exportToHTML()">Export HTML</button>
