@@ -17,7 +17,7 @@ class BaseNeonovaController {
             eyear: '',
             ehour: '',
             emin: '',
-            hits: '50',
+            hits: '100',
             order: 'date',
             submit: 'Search'
         };
