@@ -293,7 +293,7 @@ async paginateReportLogs(username, startDate = null, endDate = null, onProgress 
         }
         
         // After pageEntries = this.parsePageRows(doc)
-        console.log(`Page ${page} parsed ${pageEntries.length} entries (total so far: ${entries.length})`);
+        //console.log(`Page ${page} parsed ${pageEntries.length} entries (total so far: ${entries.length})`);
         
         // Before each break
         if (pageEntries.length < hitsPerPage) {
