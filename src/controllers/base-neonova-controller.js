@@ -259,25 +259,32 @@ async paginateReportLogs(username, startDate = null, endDate = null, onProgress 
         const doc = new DOMParser().parseFromString(html, 'text/html');
 
         // Parse total entries ONCE (page 1 only)
+        // Inside if (page === 1) after selector
         if (page === 1) {
-            console.log('Page 1 Detected.')
-            const headerTable = doc.querySelector('table[cellspacing="2"][cellspacing="2"][border="0"] tr[bgcolor="gray"]');
-            if (headerTable) {
-                const cells = headerTable.querySelectorAll('td');
-                if (cells.length >= 5) {
-                    // cells[4] should be the "of Z" cell
-                    const ofText = cells[4].textContent.trim(); // e.g. "of  12  "
-                    const match = ofText.match(/of\s*([\d,]+)/i);
-                    if (match) {
-                        totalEntries = parseInt(match[1].replace(/,/g, ''), 10);
-                        if (!isNaN(totalEntries) && totalEntries > 0) {
-                            totalPages = Math.ceil(totalEntries / hitsPerPage);
-                            console.log(`Detected total entries: ${totalEntries} → ${totalPages} pages required`);
-                        }
-                    }
-                }
+            console.log('Attempting total parse on page 1');
+            const headerTable = ... // existing
+            if (!headerTable) {
+                console.warn('Header table not found with current selector');
+            } else {
+                console.log('Header table found, cells count:', headerTable.querySelectorAll('td').length);
+                // ... existing code ...
             }
-            // Fallback: if no match, we can still rely on partial-page break
+            if (!totalEntries) {
+                console.warn('Total entries parsing failed - no match or invalid number');
+            }
+        }
+        
+        // After pageEntries = this.parsePageRows(doc)
+        console.log(`Page ${page} parsed ${pageEntries.length} entries (total so far: ${entries.length})`);
+        
+        // Before each break
+        if (pageEntries.length < hitsPerPage) {
+            console.log(`Stopping: partial page (${pageEntries.length} < 100)`);
+            break;
+        }
+        if (totalPages !== null && page >= totalPages) {
+            console.log(`Stopping: reached calculated total pages (${totalPages})`);
+            break;
         }
 
         const pageEntries = this.parsePageRows(doc);
