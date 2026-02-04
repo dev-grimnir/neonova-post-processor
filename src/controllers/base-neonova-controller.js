@@ -260,6 +260,7 @@ async paginateReportLogs(username, startDate = null, endDate = null, onProgress 
 
         // Parse total entries ONCE (page 1 only)
         if (page === 1) {
+            console.log('Page 1 Detected.')
             const headerTable = doc.querySelector('table[cellspacing="2"][cellspacing="2"][border="0"] tr[bgcolor="gray"]');
             if (headerTable) {
                 const cells = headerTable.querySelectorAll('td');
