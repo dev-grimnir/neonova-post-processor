@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         NeoNova Exact Raw (Site-Reported Total + Sample Row)
+// @name         NeoNova Full Search (Forced Correct URL + Robust Parser)
 // @match        https://admin.neonova.net/*
 // @grant        none
 // @run-at       document-end
@@ -10,73 +10,88 @@
     if (window.name !== 'MAIN') return;
 
     console.clear();
-    console.log('=== EXACT RAW MATCH (diagnostics) ===');
+    console.log('=== FULL SEARCH (Forced URL + Robust Parser) ===');
 
     const username = 'kandkpepper';
 
-    const startDate = new Date(2025, 2, 1);           // March 1 00:00 local
-    const endDate   = new Date();
-    endDate.setHours(23, 59, 59, 999);
+    // Exact parameters that the normal search UI uses
+    const params = new URLSearchParams({
+        acctsearch: '2',
+        sd: 'fairpoint.net',
+        iuserid: username,
+        syear: '2025', smonth: '03', sday: '01', shour: '00', smin: '00',
+        eyear: '2026', emonth: '02', eday: '04', ehour: '23', emin: '59',
+        order: 'date',
+        hits: '100',
+        location: '0',
+        direction: '0'
+    });
 
-    console.log(`Range (local): ${startDate.toLocaleString()} → ${endDate.toLocaleString()}`);
+    const baseUrl = 'https://admin.neonova.net/rat/index.php';
+
+    console.log('Using forced search URL:', baseUrl + '?' + params.toString());
 
     let allRows = [];
     let page = 1;
     let offset = 0;
-    let siteReportedTotal = null;
 
     while (true) {
-        const params = new URLSearchParams({
-            acctsearch: '2', sd: 'fairpoint.net', iuserid: username,
-            syear: startDate.getFullYear(), smonth: (startDate.getMonth()+1).toString().padStart(2,'0'), sday: startDate.getDate().toString().padStart(2,'0'),
-            shour: '00', smin: '00',
-            eyear: endDate.getFullYear(), emonth: (endDate.getMonth()+1).toString().padStart(2,'0'), eday: endDate.getDate().toString().padStart(2,'0'),
-            ehour: '23', emin: '59',
-            order: 'date', hits: '100',
-            location: offset.toString(), direction: '0'
-        });
+        params.set('location', offset.toString());
+        const url = baseUrl + '?' + params.toString();
 
-        const res = await fetch(`https://admin.neonova.net/rat/index.php?${params}`, {credentials: 'include'});
+        const res = await fetch(url, {credentials: 'include', cache: 'no-cache'});
         const html = await res.text();
         const doc = new DOMParser().parseFromString(html, 'text/html');
 
-        // === Extract the number the site claims ===
-        if (page === 1) {
-            const text = doc.body.textContent;
-            const match = text.match(/(?:of|total|records).*?(\d{3,6})/i);
-            siteReportedTotal = match ? parseInt(match[1]) : 'not found';
-            console.log(`Site-reported total on page 1: ${siteReportedTotal}`);
+        // Robust parser: look for the real data table (skip any summary/header rows)
+        const tables = doc.querySelectorAll('table');
+        let rows = [];
+        for (const table of tables) {
+            const trs = table.querySelectorAll('tr');
+            for (const tr of trs) {
+                const tds = tr.querySelectorAll('td');
+                if (tds.length >= 5) {
+                    const timestamp = tds[0]?.textContent.trim();
+                    const status = tds[1]?.textContent.trim();
+                    if (timestamp && timestamp !== 'Search Results' && timestamp !== 'Entry:') {
+                        rows.push({timestamp, status});
+                    }
+                }
+            }
         }
-
-        const rows = [...doc.querySelectorAll('table tr')].slice(1)   // skip header
-            .map(tr => {
-                const cells = tr.querySelectorAll('td');
-                if (cells.length < 5) return null;
-                return {
-                    timestamp: cells[0]?.textContent.trim(),
-                    status:    cells[1]?.textContent.trim(),   // usually "Start" or "Stop"
-                    ip:        cells[2]?.textContent.trim(),
-                    // add more if you want
-                };
-            })
-            .filter(Boolean);
 
         allRows.push(...rows);
         console.log(`Page ${page} → ${rows.length} rows (total now ${allRows.length})`);
 
-        if (rows.length < 100) break;
+        if (rows.length < 100) {
+            console.log('No more rows → stopping');
+            break;
+        }
 
         offset += 100;
         page++;
     }
 
+    // Clean duplicates (exact timestamp + status)
+    const seen = new Set();
+    const cleaned = allRows.filter(row => {
+        const key = `${row.timestamp}_${row.status}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+
     console.log('\n=== FINAL RESULT ===');
     console.log(`Raw fetched          : ${allRows.length}`);
-    console.log(`Site claimed total   : ${siteReportedTotal}`);
-    console.log(`Unique timestamps    : ${new Set(allRows.map(r => r.timestamp)).size}`);
+    console.log(`After cleaning       : ${cleaned.length}`);
+    console.log(`Unique timestamps    : ${new Set(cleaned.map(r => r.timestamp)).size}`);
 
-    // Sample row so we can see why everything is Stop
-    if (allRows.length) {
-        console.log('Sample raw row:', allRows[0]);
+    if (cleaned.length) {
+        console.log('First :', cleaned[0].timestamp, cleaned[0].status);
+        console.log('Last  :', cleaned[cleaned.length-1].timestamp, cleaned[cleaned.length-1].status);
     }
+
+    // Optional: copy to clipboard for easy pasting
+    const json = JSON.stringify(cleaned, null, 2);
+    navigator.clipboard.writeText(json).then(() => console.log('Cleaned data copied to clipboard'));
 })();
