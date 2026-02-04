@@ -254,8 +254,6 @@ class NeonovaReportView {
                             plugins: { tooltip: { enabled: true } }
                         }
                     });
-
-                    ${longDisconnSection}
                     
                     const csvContent = \`${csvContent.replace(/`/g, '\\`').replace(/\n/g, '\\n')}\`;
 
