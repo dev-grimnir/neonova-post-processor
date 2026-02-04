@@ -258,27 +258,38 @@ async paginateReportLogs(username, startDate = null, endDate = null, onProgress 
         const html = await res.text();
         const doc = new DOMParser().parseFromString(html, 'text/html');
 
-        // Parse total entries ONCE (page 1 only)
-        // Inside if (page === 1) after selector
+        // Parse total entries ONCE (page 1 only) — FIXED SELECTOR + ROBUST FALLBACK
         if (page === 1) {
-            console.log('Page 1 Detected.')
-            const headerTable = doc.querySelector('table[cellspacing="2"][cellspacing="2"][border="0"] tr[bgcolor="gray"]');
-            if (headerTable) {
-                const cells = headerTable.querySelectorAll('td');
-                if (cells.length >= 5) {
-                    // cells[4] should be the "of Z" cell
-                    const ofText = cells[4].textContent.trim(); // e.g. "of  12  "
-                    const match = ofText.match(/of\s*([\d,]+)/i);
-                    if (match) {
-                        totalEntries = parseInt(match[1].replace(/,/g, ''), 10);
-                        if (!isNaN(totalEntries) && totalEntries > 0) {
-                            totalPages = Math.ceil(totalEntries / hitsPerPage);
-                            console.log(`Detected total entries: ${totalEntries} → ${totalPages} pages required`);
-                        }
+            console.log('Attempting total-entries parse (page 1)');
+        
+            let ofText = '';
+        
+            // Corrected selector (removed duplicate cellspacing)
+            let headerRow = doc.querySelector('table[cellspacing="2"][cellpadding="2"][border="0"] tr[bgcolor="gray"]');
+            if (headerRow) {
+                const cells = headerRow.querySelectorAll('td');
+                if (cells.length >= 5) ofText = cells[4].textContent.trim();
+            }
+        
+            // Fallback: search entire page text (catches cases where table structure varies)
+            if (!ofText) {
+                const bodyText = doc.body.textContent || '';
+                const match = bodyText.match(/of\s*([\d,]+)/i);
+                if (match) ofText = match[0];
+            }
+        
+            if (ofText) {
+                const numMatch = ofText.match(/[\d,]+/);
+                if (numMatch) {
+                    totalEntries = parseInt(numMatch[0].replace(/,/g, ''), 10);
+                    if (!isNaN(totalEntries) && totalEntries > 0) {
+                        totalPages = Math.ceil(totalEntries / hitsPerPage);
+                        console.log(`Total entries detected: ${totalEntries} → ${totalPages} pages`);
                     }
                 }
+            } else {
+                console.warn('Could not find total count on page 1');
             }
-            // Fallback: if no match, we can still rely on partial-page break
         }
         
         // After pageEntries = this.parsePageRows(doc)
