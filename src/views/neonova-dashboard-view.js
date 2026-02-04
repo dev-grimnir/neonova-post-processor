@@ -252,20 +252,31 @@ class NeonovaDashboardView {
                             progressView.updateProgress(percent, `Fetched ${entries} entries (page ${page})`);
                         }
                     ).then(data => {
-                        // Close progress modal
-                        progressOverlay.remove();
-    
-                        // Generate report HTML
-                        const reportView = new NeonovaReportView(data.username, data.friendlyName, data.metrics, data.entries.length, data.metrics.longDisconnects);
+                        console.log('=== REPORT DATA RECEIVED ===');
+                        console.log('Entries:', data.entries.length);
+                        console.log('Long disconnects:', data.metrics.longDisconnects?.length || 0);
+                        console.log('Starting HTML generation...');
+                    
+                        const reportView = new NeonovaReportView(
+                            data.username,
+                            data.friendlyName,
+                            data.metrics,
+                            data.entries.length,
+                            data.metrics.longDisconnects
+                        );
+                    
+                        console.log('ReportView created, calling generateReportHTML...');
                         const reportHTML = reportView.generateReportHTML('');
-    
-                        // Open in new tab
+                    
+                        console.log('HTML ready, size:', reportHTML.length, 'bytes');
                         const newTab = window.open('', '_blank');
                         newTab.document.write(reportHTML);
                         newTab.document.close();
+                    
+                        console.log('Report opened successfully');
                     }).catch(error => {
-                        progressView.showError(error.message);
-                        // Keep modal open for user to see error and close manually
+                        console.error('Report generation failed:', error);
+                        progressView.showError(error.message || 'Unknown error while building report');
                     });
                 };
             });
