@@ -227,28 +227,16 @@ parsePageRows(doc) {
     
     // 4. Robust total-entries parser (the one that was flaky)
     _parseTotalEntries(doc) {
-        let ofText = '';
-    
-        // Exact match
-        const headerRow = doc.querySelector('table[cellspacing="2"][cellpadding="2"][border="0"] tr[bgcolor="gray"]');
-        if (headerRow) {
-            const cells = headerRow.querySelectorAll('td');
-            if (cells.length >= 5) ofText = cells[4].textContent.trim();
-        }
-    
-        // Fallback: search whole page
-        if (!ofText) {
-            const match = (doc.body.textContent || '').match(/of\s*([\d,]+)/i);
-            if (match) ofText = match[0];
-        }
-    
-        const numMatch = ofText.match(/[\d,]+/);
-        if (numMatch) {
-            const total = parseInt(numMatch[0].replace(/,/g, ''), 10);
-            if (!isNaN(total) && total > 0) return total;
-        }
-        return null;
+    // Exact match to the table you showed me
+    let cell = doc.querySelector('table[cellspacing="2"][cellpadding="2"][border="0"] tr[bgcolor="gray"] td:last-child');
+    if (cell) {
+        const m = cell.textContent.match(/[\d,]+/);
+        if (m) return parseInt(m[0].replace(/,/g, ''), 10);
     }
+    // Fallback
+    const m = (doc.body.textContent || '').match(/of\s*([\d,]+)/i);
+    return m ? parseInt(m[1].replace(/,/g, ''), 10) : null;
+}
     
     // 5. Simple wrapper (easy to extend later)
     _parsePageEntries(doc) {
@@ -264,8 +252,7 @@ parsePageRows(doc) {
     }
     
 async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
-    console.log(`[PAGINATE] Starting for ${username}`);
-
+    // Legacy support
     if (typeof startDate === 'function') { onProgress = startDate; startDate = null; endDate = null; }
     else if (typeof endDate === 'function') { onProgress = endDate; endDate = null; }
 
@@ -273,19 +260,18 @@ async paginateReportLogs(username, startDate = null, endDate = null, onProgress 
     let page = 1;
     let offset = 0;
     const hitsPerPage = 100;
+
     let totalEntries = null;
 
     const now = new Date();
     let sDate = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
     let eDate = endDate ? new Date(endDate) : now;
+
+    // === FORCE FULL END-OF-DAY (this was the missing 8–26 rows) ===
     sDate.setHours(0, 0, 0, 0);
     eDate.setHours(23, 59, 59, 999);
 
-    console.log(`[PAGINATE] Date range: ${sDate.toISOString()} → ${eDate.toISOString()}`);
-
     while (true) {
-        console.log(`[PAGINATE] Fetching page ${page}, offset ${offset}`);
-
         const params = new URLSearchParams({
             acctsearch: '2', sd: 'fairpoint.net', iuserid: username,
             ip: '', session: '', nasip: '', statusview: 'both',
@@ -302,47 +288,32 @@ async paginateReportLogs(username, startDate = null, endDate = null, onProgress 
         });
 
         const url = `https://admin.neonova.net/rat/index.php?${params.toString()}`;
-        console.log(`[PAGINATE] URL: ${url}`);
-
-        let doc;
-        try {
-            const res = await fetch(url, {
-                credentials: 'include',
-                cache: 'no-cache',
-                headers: {
-                    'Referer': url,
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.5',
-                    'Sec-Fetch-Dest': 'document',
-                    'Sec-Fetch-Mode': 'navigate',
-                    'Sec-Fetch-Site': 'same-origin',
-                    'Upgrade-Insecure-Requests': '1'
-                }
-            });
-
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const html = await res.text();
-            doc = new DOMParser().parseFromString(html, 'text/html');
-            console.log(`[PAGINATE] Page ${page} fetched OK`);
-        } catch (err) {
-            console.error(`[PAGINATE] Fetch failed on page ${page}:`, err);
-            break;
-        }
-
-        // Total on first page
-        if (page === 1) {
-            totalEntries = this._parseTotalEntries ? this._parseTotalEntries(doc) : null; // if you have the helper
-            if (!totalEntries) {
-                // fallback parser
-                let ofText = (doc.body.textContent || '').match(/of\s*([\d,]+)/i);
-                totalEntries = ofText ? parseInt(ofText[1].replace(/,/g,''), 10) : null;
+        const res = await fetch(url, {
+            credentials: 'include',
+            cache: 'no-cache',
+            headers: {
+                'Referer': url,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'same-origin',
+                'Upgrade-Insecure-Requests': '1'
             }
-            console.log(`[PAGINATE] Total detected: ${totalEntries || 'unknown'}`);
+        });
+
+        if (!res.ok) break;
+
+        const html = await res.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+
+        // Use the parser you just verified works
+        if (page === 1) {
+            totalEntries = this._parseTotalEntries(doc);
+            console.log(`Total entries detected: ${totalEntries}`);
         }
 
         const pageEntries = this.parsePageRows(doc);
-        console.log(`[PAGINATE] Page ${page} returned ${pageEntries.length} rows`);
-
         entries.push(...pageEntries);
 
         if (typeof onProgress === 'function') {
@@ -350,25 +321,15 @@ async paginateReportLogs(username, startDate = null, endDate = null, onProgress 
             onProgress(entries.length, page, totalEntries, percent);
         }
 
-        if (pageEntries.length < hitsPerPage) {
-            console.log(`[PAGINATE] Partial page → stopping`);
-            break;
-        }
-        if (totalEntries && page >= Math.ceil(totalEntries / hitsPerPage)) {
-            console.log(`[PAGINATE] Reached calculated total pages → stopping`);
-            break;
-        }
-        if (page > 1000) {
-            console.warn(`[PAGINATE] Safety cap hit`);
-            break;
-        }
+        if (pageEntries.length < hitsPerPage) break;
+        if (totalEntries && page >= Math.ceil(totalEntries / hitsPerPage)) break;
 
         offset += hitsPerPage;
         page++;
     }
 
     entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
-    console.log(`[PAGINATE] Finished with ${entries.length} raw entries`);
+    console.log(`Pagination finished with ${entries.length} raw entries`);
     return entries;
 }
 
