@@ -51,17 +51,19 @@ class NeonovaCollector {
     cleanEntries(rawEntries) {
         if (!rawEntries || rawEntries.length === 0) return [];
     
-        const cleaned = [rawEntries[0]];   // always keep the first one
+        const cleaned = [rawEntries[0]];   // always keep the first record
     
         for (let i = 1; i < rawEntries.length; i++) {
             const prev = rawEntries[i - 1];
             const curr = rawEntries[i];
     
-            // Keep everything EXCEPT consecutive identical status
-            if (prev.status !== curr.status) {
-                cleaned.push(curr);
+            if (prev.status === curr.status) {
+                // Consecutive duplicates → keep only ONE (the later one, so we preserve the timestamp)
+                cleaned[cleaned.length - 1] = curr;
+                console.log(`[CLEAN] Kept only one of consecutive ${curr.status} @ ${curr.timestamp}`);
             } else {
-                console.log(`[CLEAN] Removed consecutive ${curr.status} @ ${curr.timestamp}`);
+                // Normal transition → keep both
+                cleaned.push(curr);
             }
         }
     
