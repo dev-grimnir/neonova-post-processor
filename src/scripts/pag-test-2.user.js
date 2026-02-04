@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         NeoNova Exact Raw Match (Robust Parser)
+// @name         NeoNova Exact Raw Match - FINAL
 // @match        https://admin.neonova.net/*
 // @grant        none
 // @run-at       document-end
@@ -10,12 +10,12 @@
     if (window.name !== 'MAIN') return;
 
     console.clear();
-    console.log('=== ROBUST EXACT MATCH ===');
+    console.log('=== FINAL EXACT MATCH v3 ===');
 
     const username = 'kandkpepper';
     const startDate = new Date('2025-03-01T00:00:00');
     const endDate   = new Date();
-    endDate.setHours(23, 59, 59, 999);
+    endDate.setHours(23,59,59,999);
 
     console.log(`Range: ${startDate.toISOString()} → ${endDate.toISOString()}`);
 
@@ -37,15 +37,16 @@
         });
 
         const url = `https://admin.neonova.net/rat/index.php?${params}`;
-        const res = await fetch(url, { credentials: 'include', cache: 'no-cache', headers: { 'Referer': url } });
+        const res = await fetch(url, {credentials: 'include', cache: 'no-cache', headers: {'Referer': url}});
         if (!res.ok) break;
 
         const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
 
-        // Total parser (exact one that worked for you)
+        // Total parser (the one that always worked)
         if (page === 1) {
             let cell = doc.querySelector('table[cellspacing="2"][cellpadding="2"][border="0"] tr[bgcolor="gray"] td:last-child');
             if (cell) {
+                console.log('Total cell text:', cell.textContent);
                 const m = cell.textContent.match(/[\d,]+/);
                 if (m) totalEntries = parseInt(m[0].replace(/,/g,''), 10);
             }
@@ -56,30 +57,33 @@
             console.log(`Total detected: ${totalEntries}`);
         }
 
-        // ROBUST row parser
-        const rows = doc.querySelectorAll('tr');
+        // EXACT row parser from the versions that worked
+        const table = doc.querySelector('table[cellspacing="2"][cellpadding="2"][border="0"]');
+        const rows = table ? table.querySelectorAll('tr[bgcolor="#eeeeee"], tr[bgcolor="#ffffff"]') : [];
+        console.log(`Page ${page} - found ${rows.length} data rows`);
+
         const pageEntries = [];
         rows.forEach(row => {
             const cells = row.querySelectorAll('td');
             if (cells.length < 10) return;
 
-            const tsCell0 = cells[0].textContent.trim();
-            const tsCell1 = cells[1].textContent.trim();
-            const statusCell = cells[3].textContent.trim();
+            const ts0 = cells[0].textContent.trim();
+            const ts1 = cells[1].textContent.trim();
+            const statusText = cells[3].textContent.trim();
 
-            if (!tsCell0 || !tsCell1) return;
+            if (!ts0 || !ts1) return;
 
-            const timestamp = `${tsCell0} ${tsCell1}`;
+            const timestamp = `${ts0} ${ts1}`;
             const dateObj = new Date(timestamp);
-            if (isNaN(dateObj)) return;
+            if (isNaN(dateObj.getTime())) return;
 
-            const status = statusCell.toLowerCase().includes('start') ? 'Start' : 'Stop';
+            const status = statusText.toLowerCase().includes('start') ? 'Start' : 'Stop';
 
             pageEntries.push({ timestamp, status, dateObj });
         });
 
         entries.push(...pageEntries);
-        console.log(`Page ${page} → ${pageEntries.length} rows parsed, total so far: ${entries.length}`);
+        console.log(`Page ${page} → ${pageEntries.length} parsed → total now ${entries.length}`);
 
         if (totalEntries && entries.length >= totalEntries) break;
         if (pageEntries.length < hitsPerPage) break;
@@ -88,13 +92,14 @@
         page++;
     }
 
-    console.log(`\nRaw fetched: ${entries.length}`);
+    console.log(`\n=== RAW RESULT ===`);
+    console.log(`Raw fetched: ${entries.length}`);
 
-    // Clean: keep one of consecutive duplicates
+    // Clean: keep only ONE of any consecutive identical status
     const cleaned = entries.length ? [entries[0]] : [];
     for (let i = 1; i < entries.length; i++) {
         if (entries[i].status === entries[i-1].status) {
-            cleaned[cleaned.length - 1] = entries[i];
+            cleaned[cleaned.length-1] = entries[i];
         } else {
             cleaned.push(entries[i]);
         }
