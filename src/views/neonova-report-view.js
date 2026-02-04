@@ -81,17 +81,14 @@ class NeonovaReportView {
         const meanStabilityScore = Number(Math.max(0, Math.min(100, this.metrics.rawMeanScore || 0)).toFixed(1));
         const medianStabilityScore = Number(Math.max(0, Math.min(100, this.metrics.rawMedianScore || 0)).toFixed(1));
     
-        // === LONG DISCONNECTS SECTION (now correctly computed) ===
         const longDisconnSection = this.generateLongDisconnSection ? this.generateLongDisconnSection() : '';
     
-        // === CHART DATA (serialize once, safely) ===
         const hourlyData = JSON.stringify(this.metrics.hourlyDisconnects || Array(24).fill(0));
         const dailyLabels = JSON.stringify(this.metrics.dailyLabels || []);
         const dailyData = JSON.stringify(this.metrics.dailyDisconnects || []);
         const rollingLabels = JSON.stringify(this.metrics.rollingLabels || []);
         const rollingData = JSON.stringify(this.metrics.rolling7Day || []);
     
-        // === CSV (safe escaping) ===
         const csvContent = this.generateCsvContent();
     
         return `
@@ -116,7 +113,7 @@ class NeonovaReportView {
                     .export-buttons { text-align: center; margin: 20px 0; }
                     .export-buttons button { margin: 0 10px; padding: 10px 20px; background: #4caf50; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
                     .export-buttons button:hover { background: #45a049; }
-                    details summary { cursor: pointer; font-weight: bold; color: #4caf50; }
+                    .collapsible-header { cursor: pointer; font-weight: bold; color: #4caf50; margin: 30px 0 10px; }
                 </style>
                 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
                 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -126,26 +123,58 @@ class NeonovaReportView {
                 <h1>RADIUS Connection Report for ${this.friendlyName || this.username || 'Unknown'}</h1>
                 <h3>Monitoring period: ${this.metrics.monitoringPeriod || 'N/A'} (${Number(this.metrics.daysSpanned || 0).toFixed(1)} days spanned)</h3>
     
-                <!-- Scores -->
+                <!-- Stability Scores -->
                 <div class="scores-container">
                     <div class="score">
-                        <div class="score-value">${meanStabilityScore}/100<span class="tooltiptext">...your tooltip text...</span></div>
+                        <div class="score-value">${meanStabilityScore}/100
+                            <span class="tooltiptext">
+                                <strong>How this score is calculated (using average session length):</strong><br><br>
+                                • Uptime component: ${Number(this.metrics.percentConnected || 0).toFixed(1)}% * 0.6 = ${Number(this.metrics.uptimeComponent || 0).toFixed(1)}<br>
+                                • Session quality bonus: ${Number(this.metrics.sessionBonusMean || 0).toFixed(1)}<br>
+                                • Fast recovery bonus: ${Number(this.metrics.totalFastBonus || 0).toFixed(1)}<br>
+                                • Flapping penalty: -${Number(this.metrics.flappingPenalty || 0).toFixed(1)}<br>
+                                • Long outage penalty: -${Number(this.metrics.longOutagePenalty || 0).toFixed(1)}<br><br>
+                                Raw score: ${Number(this.metrics.rawMeanScore || 0).toFixed(1)}<br>
+                                Displayed score: ${meanStabilityScore}/100
+                            </span>
+                        </div>
                         <p>Mean Stability Score</p>
                     </div>
                     <div class="score">
-                        <div class="score-value">${medianStabilityScore}/100<span class="tooltiptext">...your tooltip text...</span></div>
+                        <div class="score-value">${medianStabilityScore}/100
+                            <span class="tooltiptext">
+                                <strong>How this score is calculated (using median session length):</strong><br><br>
+                                • Uptime component: ${Number(this.metrics.percentConnected || 0).toFixed(1)}% * 0.6 = ${Number(this.metrics.uptimeComponent || 0).toFixed(1)}<br>
+                                • Session quality bonus: ${Number(this.metrics.sessionBonusMedian || 0).toFixed(1)}<br>
+                                • Fast recovery bonus: ${Number(this.metrics.totalFastBonus || 0).toFixed(1)}<br>
+                                • Flapping penalty: -${Number(this.metrics.flappingPenalty || 0).toFixed(1)}<br>
+                                • Long outage penalty: -${Number(this.metrics.longOutagePenalty || 0).toFixed(1)}<br><br>
+                                Raw score: ${Number(this.metrics.rawMedianScore || 0).toFixed(1)}<br>
+                                Displayed score: ${medianStabilityScore}/100
+                            </span>
+                        </div>
                         <p>Median Stability Score</p>
                     </div>
                 </div>
     
-                <!-- Key Statistics Table (unchanged) -->
+                <!-- Key Statistics Table – FULL VERSION -->
                 <h2>Key Statistics</h2>
                 <table>
                     <thead><tr><th>Metric</th><th>Value</th></tr></thead>
                     <tbody>
-                        <!-- your existing rows -->
                         <tr><td>Total Disconnects</td><td>${this.metrics.disconnects || 0}</td></tr>
-                        <!-- ... rest of your table rows ... -->
+                        <tr><td>Average Session Duration</td><td>${this.metrics.avgSessionMin ? formatDuration(this.metrics.avgSessionMin * 60) : 'N/A'}</td></tr>
+                        <tr><td>Average Reconnect Time</td><td>${this.metrics.avgReconnectMin ? formatDuration(this.metrics.avgReconnectMin * 60) : 'N/A'}</td></tr>
+                        <tr><td>Percent Connected</td><td>${Number(this.metrics.percentConnected || 0).toFixed(1)}%</td></tr>
+                        <tr><td>Business Hours Disconnects</td><td>${this.metrics.businessDisconnects || 0}</td></tr>
+                        <tr><td>Off-Hours Disconnects</td><td>${this.metrics.offHoursDisconnects || 0}</td></tr>
+                        <tr><td>Time Since Last Disconnect</td><td>${this.metrics.timeSinceLastStr || 'N/A'}</td></tr>
+                        <tr><td>Peak Disconnect Hour</td><td>${this.metrics.peakHourStr || 'None'}</td></tr>
+                        <tr><td>Peak Disconnect Day</td><td>${this.metrics.peakDayStr || 'None'}</td></tr>
+                        <tr><td>Longest Session</td><td>${this.metrics.longestSessionMin ? formatDuration(this.metrics.longestSessionMin * 60) : 'N/A'}</td></tr>
+                        <tr><td>Shortest Session</td><td>${this.metrics.shortestSessionMin ? formatDuration(this.metrics.shortestSessionMin * 60) : 'N/A'}</td></tr>
+                        <tr><td>Median Reconnect Time</td><td>${this.metrics.medianReconnectMin ? formatDuration(this.metrics.medianReconnectMin * 60) : 'N/A'}</td></tr>
+                        <tr><td>95th Percentile Reconnect Time</td><td>${this.metrics.p95ReconnectMin ? formatDuration(this.metrics.p95ReconnectMin * 60) : 'N/A'}</td></tr>
                     </tbody>
                 </table>
     
@@ -154,7 +183,7 @@ class NeonovaReportView {
                 <div class="chart-section"><h2>Disconnects by Day</h2><canvas id="dailyChart"></canvas></div>
                 <div class="chart-section"><h2>Rolling 7-Day Disconnects</h2><canvas id="rollingChart"></canvas></div>
     
-                <!-- LONG DISCONNECTS TABLE (now actually inserted) -->
+                <!-- Long Disconnects -->
                 ${longDisconnSection}
     
                 <!-- Export Buttons -->
@@ -165,32 +194,48 @@ class NeonovaReportView {
                 </div>
     
                 <script>
-                    // Charts – data is now safely injected
-                    new Chart(document.getElementById('hourlyChart'), {
-                        type: 'bar',
-                        data: { labels: Array.from({length: 24}, (_, i) => \`\${i}:00\`), datasets: [{ label: 'Disconnects', data: ${hourlyData}, backgroundColor: 'rgba(255, 99, 132, 0.6)' }] },
-                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-                    });
+                    // Charts (data safely injected)
+                    new Chart(document.getElementById('hourlyChart'), { type: 'bar', data: { labels: Array.from({length: 24}, (_, i) => \`\${i}:00\`), datasets: [{ label: 'Disconnects', data: ${hourlyData}, backgroundColor: 'rgba(255, 99, 132, 0.6)' }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } } });
+                    new Chart(document.getElementById('dailyChart'), { type: 'bar', data: { labels: ${dailyLabels}, datasets: [{ label: 'Disconnects', data: ${dailyData}, backgroundColor: 'rgba(54, 162, 235, 0.6)' }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } } });
+                    new Chart(document.getElementById('rollingChart'), { type: 'line', data: { labels: ${rollingLabels}, datasets: [{ label: '7-Day Rolling Disconnects', data: ${rollingData}, borderColor: 'rgba(75, 192, 192, 1)', fill: false }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } } });
     
-                    new Chart(document.getElementById('dailyChart'), {
-                        type: 'bar',
-                        data: { labels: ${dailyLabels}, datasets: [{ label: 'Disconnects', data: ${dailyData}, backgroundColor: 'rgba(54, 162, 235, 0.6)' }] },
-                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-                    });
+                    // Collapse toggle
+                    function toggleLongDisconnects() {
+                        const container = document.getElementById('longDisconnectsContainer');
+                        container.style.display = (container.style.display === 'none') ? 'block' : 'none';
+                    }
     
-                    new Chart(document.getElementById('rollingChart'), {
-                        type: 'line',
-                        data: { labels: ${rollingLabels}, datasets: [{ label: '7-Day Rolling Disconnects', data: ${rollingData}, borderColor: 'rgba(75, 192, 192, 1)', fill: false }] },
-                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-                    });
-    
+                    // CSV (escaped safely)
                     const csvContent = \`${csvContent.replace(/`/g, '\\`')}\`;
     
-                    function exportToHTML() { /* your existing function */ }
-                    function exportToCSV() { /* your existing function */ }
-                    async function exportToPDF() { /* your existing function */ }
+                    function exportToHTML() {
+                        const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = 'radius_report.html';
+                        a.click();
+                    }
+    
+                    function exportToCSV() {
+                        const blob = new Blob([csvContent], { type: 'text/csv' });
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = 'radius_report.csv';
+                        a.click();
+                    }
+    
+                    async function exportToPDF() {
+                        const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+                        const canvas = await html2canvas(document.body, { scale: 2 });
+                        const imgData = canvas.toDataURL('image/png');
+                        const imgWidth = pdf.internal.pageSize.getWidth();
+                        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                        pdf.save('radius_report.pdf');
+                    }
                 </script>
             </body>
             </html>`;
     }
+
 }
