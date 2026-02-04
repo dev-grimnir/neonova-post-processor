@@ -187,7 +187,7 @@ parsePageRows(doc) {
  * @returns {Promise<Array<{timestamp: string, status: string, sessionTime: string, dateObj: Date}>>}
  */
 async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
-    // Legacy support
+    // Legacy support for old calls
     if (typeof startDate === 'function') {
         onProgress = startDate; startDate = null; endDate = null;
     } else if (typeof endDate === 'function') {
@@ -223,35 +223,48 @@ async paginateReportLogs(username, startDate = null, endDate = null, onProgress 
         });
 
         const url = `https://admin.neonova.net/rat/index.php?${params.toString()}`;
-        const res = await fetch(url, { credentials: 'include', cache: 'no-cache', headers: { Referer: url, ... } });
 
-        if (!res.ok) { console.warn(`Fetch failed page ${page}`); break; }
+        const res = await fetch(url, {
+            credentials: 'include',
+            cache: 'no-cache',
+            headers: {
+                'Referer': url,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'same-origin',
+                'Upgrade-Insecure-Requests': '1'
+            }
+        });
+
+        if (!res.ok) {
+            console.warn(`Fetch failed on page ${page}: HTTP ${res.status}`);
+            break;
+        }
 
         const html = await res.text();
         const doc = new DOMParser().parseFromString(html, 'text/html');
 
-        // === TOTAL ENTRIES PARSING (page 1 only) ===
+        // === TOTAL ENTRIES PARSING (fixed selector + fallback) ===
         if (page === 1) {
             console.log('Attempting total-entries parse (page 1)');
-            let ofText = '';
 
-            // Fixed selector (removed duplicate cellspacing)
+            let ofText = '';
             let headerRow = doc.querySelector('table[cellspacing="2"][cellpadding="2"][border="0"] tr[bgcolor="gray"]');
             if (headerRow) {
                 const cells = headerRow.querySelectorAll('td');
                 if (cells.length >= 5) ofText = cells[4].textContent.trim();
             }
-
-            // Fallback body search
             if (!ofText) {
                 const match = (doc.body.textContent || '').match(/of\s*([\d,]+)/i);
                 if (match) ofText = match[0];
             }
 
             if (ofText) {
-                const num = ofText.match(/[\d,]+/);
-                if (num) {
-                    totalEntries = parseInt(num[0].replace(/,/g, ''), 10);
+                const numMatch = ofText.match(/[\d,]+/);
+                if (numMatch) {
+                    totalEntries = parseInt(numMatch[0].replace(/,/g, ''), 10);
                     if (!isNaN(totalEntries) && totalEntries > 0) {
                         totalPages = Math.ceil(totalEntries / hitsPerPage);
                         console.log(`Total entries: ${totalEntries} → ${totalPages} pages`);
@@ -263,6 +276,7 @@ async paginateReportLogs(username, startDate = null, endDate = null, onProgress 
         const pageEntries = this.parsePageRows(doc);
         entries.push(...pageEntries);
 
+        // Progress callback with real percent
         if (typeof onProgress === 'function') {
             const percent = totalEntries ? Math.round((entries.length / totalEntries) * 100) : 0;
             onProgress(entries.length, page, totalEntries, percent);
@@ -270,7 +284,7 @@ async paginateReportLogs(username, startDate = null, endDate = null, onProgress 
 
         if (pageEntries.length < hitsPerPage) break;
         if (totalPages !== null && page >= totalPages) break;
-        if (page > 1000) { console.warn('Safety cap'); break; }
+        if (page > 1000) { console.warn('Safety cap hit'); break; }
 
         offset += hitsPerPage;
         page++;
