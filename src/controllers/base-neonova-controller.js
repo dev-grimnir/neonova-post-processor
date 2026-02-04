@@ -203,8 +203,18 @@ async paginateReportLogs(username, startDate = null, endDate = null, onProgress 
     let totalPages = null;
 
     const now = new Date();
-    const sDate = startDate || new Date(now.getFullYear(), now.getMonth(), 1);
-    const eDate = endDate || now;
+    let sDate = startDate || new Date(now.getFullYear(), now.getMonth(), 1);
+    let eDate = endDate || now;
+
+    // === FORCE INCLUSIVE END-OF-DAY (this is the fix) ===
+    if (endDate) {
+        eDate = new Date(endDate);
+        eDate.setHours(23, 59, 59, 999);   // inclusive to last second of the day
+    } else {
+        eDate = now;
+    }
+
+    sDate.setHours(0, 0, 0, 0);  // start of day
 
     while (true) {
         const params = new URLSearchParams({
