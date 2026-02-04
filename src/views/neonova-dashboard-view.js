@@ -269,11 +269,27 @@ class NeonovaDashboardView {
                         const reportHTML = reportView.generateReportHTML('');
                     
                         console.log('HTML ready, size:', reportHTML.length, 'bytes');
-                        const newTab = window.open('', '_blank');
-                        newTab.document.write(reportHTML);
-                        newTab.document.close();
-                    
-                        console.log('Report opened successfully');
+
+                        // Open report reliably (popup-blocker proof)
+                        const dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(reportHTML);
+                        const newTab = window.open(dataUrl, '_blank');
+                        
+                        if (newTab) {
+                            console.log('Report opened successfully via data URL');
+                        } else {
+                            // Fallback: download as file if popup was blocked
+                            const blob = new Blob([reportHTML], { type: 'text/html' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `neonova-report-${data.username || 'unknown'}.html`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                            alert('Report saved as file (popup was blocked by browser)');
+                        }
+                        
                     }).catch(error => {
                         console.error('Report generation failed:', error);
                         progressView.showError(error.message || 'Unknown error while building report');
