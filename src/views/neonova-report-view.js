@@ -255,6 +255,8 @@ class NeonovaReportView {
                         }
                     });
 
+                    ${longDisconnSection}
+                    
                     const csvContent = \`${csvContent.replace(/`/g, '\\`').replace(/\n/g, '\\n')}\`;
 
                     function exportToHTML() {
