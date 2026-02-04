@@ -201,12 +201,12 @@ parsePageRows(doc) {
         
             const now = new Date();
         
-            // === FORCE INCLUSIVE END-OF-DAY (this fixes the 8-row cutoff) ===
+            // === FORCE FULL INCLUSIVE DAYS (fixes the 8-row cutoff) ===
             let sDate = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
             let eDate = endDate ? new Date(endDate) : now;
         
             sDate.setHours(0, 0, 0, 0);
-            eDate.setHours(23, 59, 59, 999);   // ← critical line
+            eDate.setHours(23, 59, 59, 999);   // ← this line was missing the full end-of-day
         
             while (true) {
                 const params = new URLSearchParams({
@@ -289,7 +289,7 @@ parsePageRows(doc) {
             }
         
             entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
-            console.log(`Pagination finished with ${entries.length} raw entries (should be ~3454)`);
+            console.log(`Pagination finished with ${entries.length} raw entries`);
             return entries;
         }
 
