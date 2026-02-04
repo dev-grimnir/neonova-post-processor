@@ -16,7 +16,7 @@
 
     const username = 'kandkpepper';
     const startDate = new Date('2025-03-01T00:00:00');
-    const endDate   = new Date('2026-02-03T23:59:59');
+    const endDate   = new Date('2026-02-04T23:59:59');
 
     const controller = new BaseNeonovaController();
 
