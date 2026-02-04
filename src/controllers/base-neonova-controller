@@ -251,7 +251,7 @@ async paginateReportLogs(username, startDate = null, endDate = null, onProgress 
         });
 
         if (!res.ok) {
-            console.warn(`Fetch failed on page ${page}: HTTP ${res.status}`);
+            //console.warn(`Fetch failed on page ${page}: HTTP ${res.status}`);
             break;
         }
 
@@ -260,7 +260,7 @@ async paginateReportLogs(username, startDate = null, endDate = null, onProgress 
 
         // Parse total entries ONCE (page 1 only) — FIXED SELECTOR + ROBUST FALLBACK
         if (page === 1) {
-            console.log('Attempting total-entries parse (page 1)');
+            //console.log('Attempting total-entries parse (page 1)');
         
             let ofText = '';
         
@@ -284,11 +284,11 @@ async paginateReportLogs(username, startDate = null, endDate = null, onProgress 
                     totalEntries = parseInt(numMatch[0].replace(/,/g, ''), 10);
                     if (!isNaN(totalEntries) && totalEntries > 0) {
                         totalPages = Math.ceil(totalEntries / hitsPerPage);
-                        console.log(`Total entries detected: ${totalEntries} → ${totalPages} pages`);
+                        //console.log(`Total entries detected: ${totalEntries} → ${totalPages} pages`);
                     }
                 }
             } else {
-                console.warn('Could not find total count on page 1');
+                //console.warn('Could not find total count on page 1');
             }
         }
         
