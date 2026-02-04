@@ -1,7 +1,5 @@
 // ==UserScript==
-// @name         NeoNova Pagination Debug (Clean Console Only)
-// @namespace    http://tampermonkey.net/
-// @version      0.0.1
+// @name         NeoNova Pagination FINAL (Trust Total)
 // @match        https://admin.neonova.net/*
 // @grant        none
 // @run-at       document-end
@@ -14,38 +12,31 @@
     if (window.name !== 'MAIN') return;
 
     console.clear();
-    console.log('=== CLEAN PAGINATION DEBUG START ===');
+    console.log('=== FINAL TRUST-TOTAL TEST ===');
 
     const username = 'kandkpepper';
     const startDate = new Date('2025-03-01T00:00:00');
-    const endDate   = new Date('2026-02-03T23:59:59');   // full last day
+    const endDate   = new Date('2026-02-03T23:59:59');
 
     const controller = new BaseNeonovaController();
-    const collector = new NeonovaCollector();
+
+    // Force full end-of-day
+    startDate.setHours(0,0,0,0);
+    endDate.setHours(23,59,59,999);
 
     console.log(`Range: ${startDate.toISOString()} → ${endDate.toISOString()}`);
 
-    // === OVERRIDE with the exact parser that worked in DevTools ===
-    controller._parseTotalEntries = function (doc) {
-        let cell = doc.querySelector('table[cellspacing="2"][cellpadding="2"][border="0"] tr[bgcolor="gray"] td:last-child');
-        if (cell) {
-            const m = cell.textContent.match(/[\d,]+/);
-            if (m) return parseInt(m[0].replace(/,/g, ''), 10);
-        }
-        const m = (doc.body.textContent || '').match(/of\s*([\d,]+)/i);
-        return m ? parseInt(m[1].replace(/,/g, ''), 10) : null;
-    };
-
     const entries = await controller.paginateReportLogs(username, startDate, endDate, (count, page, total) => {
         const pct = total ? Math.round(count / total * 100) : 0;
-        console.log(`Page ${page} → ${count} entries (${pct}%)  [total=${total}]`);
+        console.log(`Page ${page} → ${count} entries (${pct}%)  total=${total}`);
     });
 
     console.log('\n=== RAW RESULT ===');
     console.log(`Raw entries fetched : ${entries.length}`);
-    console.log(`First timestamp     : ${entries[0]?.timestamp}`);
-    console.log(`Last timestamp      : ${entries[entries.length-1]?.timestamp}`);
+    console.log(`First : ${entries[0]?.timestamp}`);
+    console.log(`Last  : ${entries[entries.length-1]?.timestamp}`);
 
+    const collector = new NeonovaCollector();
     const cleaned = collector.cleanEntries(entries);
     console.log(`After cleanEntries  : ${cleaned.length} entries`);
 })();
