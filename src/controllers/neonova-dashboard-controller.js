@@ -188,14 +188,6 @@ class NeonovaDashboardController extends BaseNeonovaController{
     getCurrentMonthStart() {
         const now = new Date();
         return new Date(now.getFullYear(), now.getMonth(), 1);
-    }
-    
-    async poll() {
-        for (const customer of this.customers) {
-            await this.updateCustomerStatus(customer);
-        }
-        this.save();
-        this.view.render();
     }    
 
     async generateReportData(username, friendlyName, startDate, endDate, onProgress) {
