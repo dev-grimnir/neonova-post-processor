@@ -1,8 +1,10 @@
 // ==UserScript==
-// @name         NeoNova Exact Raw Match - FINAL
+// @name         NeoNova Exact Raw Match (Controller + Strict Stop)
 // @match        https://admin.neonova.net/*
 // @grant        none
 // @run-at       document-end
+// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/controllers/base-neonova-controller.js
+// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/controllers/neonova-collector.js
 // ==/UserScript==
 
 (async function () {
@@ -10,104 +12,76 @@
     if (window.name !== 'MAIN') return;
 
     console.clear();
-    console.log('=== FINAL EXACT MATCH v3 ===');
+    console.log('=== EXACT RAW MATCH (Controller Strict Stop) ===');
 
     const username = 'kandkpepper';
     const startDate = new Date('2025-03-01T00:00:00');
-    const endDate   = new Date();
-    endDate.setHours(23,59,59,999);
+    const endDate   = new Date();               // today
+    endDate.setHours(23, 59, 59, 999);
+
+    const controller = new BaseNeonovaController();
+    const collector = new NeonovaCollector();
 
     console.log(`Range: ${startDate.toISOString()} → ${endDate.toISOString()}`);
 
-    const entries = [];
-    let page = 1;
-    let offset = 0;
-    const hitsPerPage = 100;
-    let totalEntries = null;
+    // === Strict pagination that stops exactly at total ===
+    const entries = await (async function () {
+        const list = [];
+        let page = 1;
+        let offset = 0;
+        const hitsPerPage = 100;
+        let totalEntries = null;
 
-    while (true) {
-        const params = new URLSearchParams({
-            acctsearch: '2', sd: 'fairpoint.net', iuserid: username,
-            syear: startDate.getFullYear(), smonth: (startDate.getMonth()+1).toString().padStart(2,'0'), sday: startDate.getDate().toString().padStart(2,'0'),
-            shour: '00', smin: '00',
-            eyear: endDate.getFullYear(), emonth: (endDate.getMonth()+1).toString().padStart(2,'0'), eday: endDate.getDate().toString().padStart(2,'0'),
-            ehour: '23', emin: '59',
-            order: 'date', hits: hitsPerPage.toString(),
-            location: offset.toString(), direction: '0', dump: ''
-        });
+        const sDate = new Date(startDate); sDate.setHours(0,0,0,0);
+        const eDate = new Date(endDate);   eDate.setHours(23,59,59,999);
 
-        const url = `https://admin.neonova.net/rat/index.php?${params}`;
-        const res = await fetch(url, {credentials: 'include', cache: 'no-cache', headers: {'Referer': url}});
-        if (!res.ok) break;
+        while (true) {
+            const params = new URLSearchParams({
+                acctsearch: '2', sd: 'fairpoint.net', iuserid: username,
+                syear: sDate.getFullYear(), smonth: (sDate.getMonth()+1).toString().padStart(2,'0'), sday: sDate.getDate().toString().padStart(2,'0'),
+                shour: '00', smin: '00',
+                eyear: eDate.getFullYear(), emonth: (eDate.getMonth()+1).toString().padStart(2,'0'), eday: eDate.getDate().toString().padStart(2,'0'),
+                ehour: '23', emin: '59',
+                order: 'date', hits: hitsPerPage.toString(),
+                location: offset.toString(), direction: '0', dump: ''
+            });
 
-        const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+            const url = `https://admin.neonova.net/rat/index.php?${params}`;
+            const res = await fetch(url, {credentials: 'include', cache: 'no-cache', headers: {'Referer': url}});
+            if (!res.ok) break;
 
-        // Total parser (the one that always worked)
-        if (page === 1) {
-            let cell = doc.querySelector('table[cellspacing="2"][cellpadding="2"][border="0"] tr[bgcolor="gray"] td:last-child');
-            if (cell) {
-                console.log('Total cell text:', cell.textContent);
-                const m = cell.textContent.match(/[\d,]+/);
-                if (m) totalEntries = parseInt(m[0].replace(/,/g,''), 10);
+            const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+
+            if (page === 1) {
+                totalEntries = controller._parseTotalEntries(doc);
+                console.log(`Total detected: ${totalEntries}`);
             }
-            if (!totalEntries) {
-                const m = (doc.body.textContent || '').match(/of\s*([\d,]+)/i);
-                if (m) totalEntries = parseInt(m[1].replace(/,/g,''), 10);
+
+            const pageEntries = controller.parsePageRows(doc);
+            list.push(...pageEntries);
+
+            console.log(`Page ${page} → ${pageEntries.length} rows → total now ${list.length}`);
+
+            if (totalEntries && list.length >= totalEntries) {
+                console.log('Stopped exactly at total');
+                break;
             }
-            console.log(`Total detected: ${totalEntries}`);
+            if (pageEntries.length < hitsPerPage) break;
+
+            offset += hitsPerPage;
+            page++;
         }
+        console.log(`Raw fetched: ${list.length}`);
+        return list;
+    })();
 
-        // EXACT row parser from the versions that worked
-        const table = doc.querySelector('table[cellspacing="2"][cellpadding="2"][border="0"]');
-        const rows = table ? table.querySelectorAll('tr[bgcolor="#eeeeee"], tr[bgcolor="#ffffff"]') : [];
-        console.log(`Page ${page} - found ${rows.length} data rows`);
+    const cleaned = collector.cleanEntries(entries);
 
-        const pageEntries = [];
-        rows.forEach(row => {
-            const cells = row.querySelectorAll('td');
-            if (cells.length < 10) return;
-
-            const ts0 = cells[0].textContent.trim();
-            const ts1 = cells[1].textContent.trim();
-            const statusText = cells[3].textContent.trim();
-
-            if (!ts0 || !ts1) return;
-
-            const timestamp = `${ts0} ${ts1}`;
-            const dateObj = new Date(timestamp);
-            if (isNaN(dateObj.getTime())) return;
-
-            const status = statusText.toLowerCase().includes('start') ? 'Start' : 'Stop';
-
-            pageEntries.push({ timestamp, status, dateObj });
-        });
-
-        entries.push(...pageEntries);
-        console.log(`Page ${page} → ${pageEntries.length} parsed → total now ${entries.length}`);
-
-        if (totalEntries && entries.length >= totalEntries) break;
-        if (pageEntries.length < hitsPerPage) break;
-
-        offset += hitsPerPage;
-        page++;
-    }
-
-    console.log(`\n=== RAW RESULT ===`);
-    console.log(`Raw fetched: ${entries.length}`);
-
-    // Clean: keep only ONE of any consecutive identical status
-    const cleaned = entries.length ? [entries[0]] : [];
-    for (let i = 1; i < entries.length; i++) {
-        if (entries[i].status === entries[i-1].status) {
-            cleaned[cleaned.length-1] = entries[i];
-        } else {
-            cleaned.push(entries[i]);
-        }
-    }
-
-    console.log(`After cleanEntries: ${cleaned.length} entries`);
+    console.log('\n=== FINAL RESULT ===');
+    console.log(`Raw entries fetched : ${entries.length}`);
+    console.log(`After cleanEntries  : ${cleaned.length}`);
     if (cleaned.length) {
-        console.log('First:', cleaned[0].timestamp);
-        console.log('Last :', cleaned[cleaned.length-1].timestamp);
+        console.log('First :', cleaned[0].timestamp);
+        console.log('Last  :', cleaned[cleaned.length-1].timestamp);
     }
 })();
