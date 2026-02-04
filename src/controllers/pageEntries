@@ -297,11 +297,11 @@ async paginateReportLogs(username, startDate = null, endDate = null, onProgress 
         
         // Before each break
         if (pageEntries.length < hitsPerPage) {
-            console.log(`Stopping: partial page (${pageEntries.length} < 100)`);
+            //console.log(`Stopping: partial page (${pageEntries.length} < 100)`);
             break;
         }
         if (totalPages !== null && page >= totalPages) {
-            console.log(`Stopping: reached calculated total pages (${totalPages})`);
+           //console.log(`Stopping: reached calculated total pages (${totalPages})`);
             break;
         }
 
