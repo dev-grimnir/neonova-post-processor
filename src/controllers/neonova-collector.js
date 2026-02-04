@@ -48,37 +48,26 @@ class NeonovaCollector {
         return false;
     }
 
-cleanEntries(entries) {
-    if (!entries || entries.length === 0) {
-        return [];
+    cleanEntries(rawEntries) {
+        if (!rawEntries || rawEntries.length === 0) return [];
+    
+        const cleaned = [rawEntries[0]];   // always keep the first one
+    
+        for (let i = 1; i < rawEntries.length; i++) {
+            const prev = rawEntries[i - 1];
+            const curr = rawEntries[i];
+    
+            // Keep everything EXCEPT consecutive identical status
+            if (prev.status !== curr.status) {
+                cleaned.push(curr);
+            } else {
+                console.log(`[CLEAN] Removed consecutive ${curr.status} @ ${curr.timestamp}`);
+            }
+        }
+    
+        console.log(`cleanEntries: ${rawEntries.length} raw → ${cleaned.length} kept`);
+        return cleaned;
     }
-
-    // Map to standardized format (use getTime() for numeric date)
-    let allEntries = entries.map(entry => {
-        const date = entry.dateObj.getTime();  // Unix ms (numeric, unique)
-        if (isNaN(date)) {
-            return null;
-        }
-        return { date, status: entry.status, dateObj: entry.dateObj };
-    }).filter(entry => entry !== null);  // Remove invalids
-
-    // Sort ascending by date (oldest to newest)
-    allEntries.sort((a, b) => a.date - b.date);
-
-    // De-dupe: Keep unique by date + status
-    const seen = new Set();
-    const cleaned = [];
-    allEntries.forEach(entry => {
-        const key = `${entry.date}_${entry.status}`;
-        if (!seen.has(key)) {
-            seen.add(key);
-            cleaned.push(entry);
-        } else {
-        }
-    });
-
-    return cleaned;
-}
 
     getPages() {
         return this.pages;
