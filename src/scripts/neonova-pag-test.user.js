@@ -1,46 +1,49 @@
 // ==UserScript==
-// @name         NeoNova Pagination Test (Console Only)
+// @name         NeoNova Pagination Tester (Console Only)
 // @namespace    http://tampermonkey.net/
 // @version      0.0.1
-// @description  Pure pagination tester – no GUI, full logging
+// @description  Minimal, non-blocking pagination test
 // @match        https://admin.neonova.net/*
 // @grant        none
 // @run-at       document-end
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/controllers/base-neonova-controller.js
+// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/controllers/neonova-collector.js
 // ==/UserScript==
 
 (async function () {
     'use strict';
 
+    // Only run in the MAIN frame where cookies live
+    if (window.name !== 'MAIN') return;
+
     console.clear();
-    console.log('=== Pagination Test Started ===');
+    console.log('=== Pagination Tester Started ===');
 
-    // === CONFIGURE HERE ===
-    const username = 'kandkpepper';                    // ← change if you want a different customer
-    const startDate = new Date('2025-03-01T00:00:00'); // inclusive
-    const endDate   = new Date('2026-02-03T23:59:59'); // ← full end of day
+    const username = 'kandkpepper';                    // ← change if you want
+    const startDate = new Date('2025-03-01T00:00:00');
+    const endDate   = new Date('2026-02-03T23:59:59'); // full end-of-day
 
-    const controller = new BaseNeonovaController();    // the only class we need
+    const controller = new BaseNeonovaController();
 
-    console.log(`Testing ${username} from ${startDate.toISOString()} to ${endDate.toISOString()}`);
+    console.log(`Fetching ${username} from ${startDate.toISOString()} to ${endDate.toISOString()}`);
 
     try {
         const entries = await controller.paginateReportLogs(username, startDate, endDate, (count, page, total) => {
-            const pct = total ? Math.round(count / total * 100) : 0;
+            const pct = total ? Math.round(count / total * 100) : '?';
             console.log(`  Page ${page} → ${count} entries (${pct}%)`);
         });
 
-        console.log('=== RAW PAGINATION RESULT ===');
-        console.log(`Total raw entries fetched: ${entries.length}`);
-        console.log(`First entry: ${entries[0]?.timestamp}`);
-        console.log(`Last entry:  ${entries[entries.length-1]?.timestamp}`);
+        console.log('\n=== PAGINATION COMPLETE ===');
+        console.log(`Raw entries fetched : ${entries.length}`);
+        console.log(`First timestamp     : ${entries[0]?.timestamp || 'none'}`);
+        console.log(`Last timestamp      : ${entries[entries.length-1]?.timestamp || 'none'}`);
 
-        // Also run the collector so we can see if cleaning is dropping rows
-        const collector = new NeonovaCollector();               // needs the collector too
+        // Optional: see what cleanEntries does
+        const collector = new NeonovaCollector();
         const cleaned = collector.cleanEntries(entries);
-        console.log(`After cleanEntries: ${cleaned.length} entries`);
+        console.log(`After cleanEntries  : ${cleaned.length} entries`);
 
     } catch (err) {
-        console.error('Pagination failed:', err);
+        console.error('Pagination crashed:', err);
     }
 })();
