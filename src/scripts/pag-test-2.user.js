@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         NeoNova Pagination FINAL (Exact Match)
+// @name         NeoNova Exact Raw Match
 // @match        https://admin.neonova.net/*
 // @grant        none
 // @run-at       document-end
@@ -12,18 +12,18 @@
     if (window.name !== 'MAIN') return;
 
     console.clear();
-    console.log('=== EXACT MATCH TEST ===');
+    console.log('=== EXACT RAW MATCH TEST ===');
 
     const username = 'kandkpepper';
     const startDate = new Date('2025-03-01T00:00:00');
-    const endDate   = new Date();   // today, full end-of-day
+    const endDate   = new Date();                 // today
     endDate.setHours(23,59,59,999);
 
     const controller = new BaseNeonovaController();
 
     console.log(`Range: ${startDate.toISOString()} → ${endDate.toISOString()}`);
 
-    // Force stop exactly at total (no extra page)
+    // === Override pagination to STOP exactly at the total (no extra page) ===
     controller.paginateReportLogs = async function (username, startDate, endDate, onProgress) {
         const entries = [];
         let page = 1;
@@ -53,7 +53,7 @@
 
             if (page === 1) {
                 totalEntries = this._parseTotalEntries(doc);
-                console.log(`Total detected: ${totalEntries}`);
+                console.log(`Total on page 1: ${totalEntries}`);
             }
 
             const pageEntries = this.parsePageRows(doc);
@@ -61,7 +61,7 @@
 
             if (typeof onProgress === 'function') onProgress(entries.length, page, totalEntries);
 
-            // STOP EXACTLY at total — no extra page
+            // === STOP exactly when we reach the total ===
             if (totalEntries && entries.length >= totalEntries) break;
             if (pageEntries.length < hitsPerPage) break;
 
@@ -69,7 +69,7 @@
             page++;
         }
 
-        console.log(`Raw fetched: ${entries.length}`);
+        console.log(`Raw fetched: ${entries.length} (stopped at total)`);
         return entries;
     };
 
