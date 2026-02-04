@@ -173,125 +173,141 @@ parsePageRows(doc) {
     
         return `https://admin.neonova.net/rat/index.php?${params.toString()}`;
     }
+
+    // 1. Normalize dates so we always search the full last day
+    _normalizeDateRange(startDate, endDate) {
+        const now = new Date();
+        let sDate = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
+        let eDate = endDate ? new Date(endDate) : now;
     
-    /**
-     * Fetches all available RADIUS log pages for a user using predictable offset pagination.
-     * Uses location=0,50,100,... with direction=0 (forward).
-     * Parses total entry count from the "Entry: X-Y of Z" header table on page 1.
-     * Stops precisely at calculated total pages or when last page has < hitsPerPage rows.
-     * Returns all entries sorted newest-first.
-     * @param {string} username
-     * @param {Date|null} startDate - Optional start date for the search range (defaults to start of current month).
-     * @param {Date|null} endDate - Optional end date for the search range (defaults to now).
-     * @param {Function|null} onProgress - Optional callback (totalEntriesSoFar, currentPage)
-     * @returns {Promise<Array<{timestamp: string, status: string, sessionTime: string, dateObj: Date}>>}
-     */
-        async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
-            // Legacy support
-            if (typeof startDate === 'function') { onProgress = startDate; startDate = null; endDate = null; }
-            else if (typeof endDate === 'function') { onProgress = endDate; endDate = null; }
-        
-            const entries = [];
-            let page = 1;
-            let offset = 0;
-            const hitsPerPage = 100;
-        
-            let totalEntries = null;
-            let totalPages = null;
-        
-            const now = new Date();
-        
-            // === FORCE FULL INCLUSIVE DAYS (fixes the 8-row cutoff) ===
-            let sDate = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
-            let eDate = endDate ? new Date(endDate) : now;
-        
-            sDate.setHours(0, 0, 0, 0);
-            eDate.setHours(23, 59, 59, 999);   // ← this line was missing the full end-of-day
-        
-            while (true) {
-                const params = new URLSearchParams({
-                    acctsearch: '2', sd: 'fairpoint.net', iuserid: username,
-                    ip: '', session: '', nasip: '', statusview: 'both',
-                    syear: sDate.getFullYear().toString(),
-                    smonth: (sDate.getMonth() + 1).toString().padStart(2, '0'),
-                    sday: sDate.getDate().toString().padStart(2, '0'),
-                    shour: '00', smin: '00',
-                    eyear: eDate.getFullYear().toString(),
-                    emonth: (eDate.getMonth() + 1).toString().padStart(2, '0'),
-                    eday: eDate.getDate().toString().padStart(2, '0'),
-                    ehour: '23', emin: '59',
-                    order: 'date', hits: hitsPerPage.toString(),
-                    location: offset.toString(), direction: '0', dump: ''
-                });
-        
-                const url = `https://admin.neonova.net/rat/index.php?${params.toString()}`;
-        
-                const res = await fetch(url, {
-                    credentials: 'include',
-                    cache: 'no-cache',
-                    headers: {
-                        'Referer': url,
-                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                        'Accept-Language': 'en-US,en;q=0.5',
-                        'Sec-Fetch-Dest': 'document',
-                        'Sec-Fetch-Mode': 'navigate',
-                        'Sec-Fetch-Site': 'same-origin',
-                        'Upgrade-Insecure-Requests': '1'
-                    }
-                });
-        
-                if (!res.ok) { console.warn(`Fetch failed page ${page}`); break; }
-        
-                const html = await res.text();
-                const doc = new DOMParser().parseFromString(html, 'text/html');
-        
-                // === ROBUST TOTAL PARSER ===
-                if (page === 1) {
-                    console.log('Attempting total-entries parse (page 1)');
-                    let ofText = '';
-        
-                    let headerRow = doc.querySelector('table[cellspacing="2"][cellpadding="2"][border="0"] tr[bgcolor="gray"]');
-                    if (headerRow) {
-                        const cells = headerRow.querySelectorAll('td');
-                        if (cells.length >= 5) ofText = cells[4].textContent.trim();
-                    }
-                    if (!ofText) {
-                        const match = (doc.body.textContent || '').match(/of\s*([\d,]+)/i);
-                        if (match) ofText = match[0];
-                    }
-        
-                    if (ofText) {
-                        const num = ofText.match(/[\d,]+/);
-                        if (num) {
-                            totalEntries = parseInt(num[0].replace(/,/g, ''), 10);
-                            if (!isNaN(totalEntries) && totalEntries > 0) {
-                                totalPages = Math.ceil(totalEntries / hitsPerPage);
-                                console.log(`Total entries detected: ${totalEntries} → ${totalPages} pages`);
-                            }
-                        }
-                    }
-                }
-        
-                const pageEntries = this.parsePageRows(doc);
-                entries.push(...pageEntries);
-        
-                if (typeof onProgress === 'function') {
-                    const percent = totalEntries ? Math.round((entries.length / totalEntries) * 100) : 0;
-                    onProgress(entries.length, page, totalEntries, percent);
-                }
-        
-                if (pageEntries.length < hitsPerPage) break;
-                if (totalPages !== null && page >= totalPages) break;
-                if (page > 1000) break;
-        
-                offset += hitsPerPage;
-                page++;
+        sDate.setHours(0, 0, 0, 0);           // start of day
+        eDate.setHours(23, 59, 59, 999);      // end of day (fixes the missing rows)
+    
+        return { sDate, eDate };
+    }
+    
+    // 2. Build the exact search parameters
+    _buildSearchParams(sDate, eDate, offset) {
+        return new URLSearchParams({
+            acctsearch: '2', sd: 'fairpoint.net', iuserid: this.username || '', // if you ever pass username here
+            ip: '', session: '', nasip: '', statusview: 'both',
+            syear: sDate.getFullYear().toString(),
+            smonth: (sDate.getMonth() + 1).toString().padStart(2, '0'),
+            sday: sDate.getDate().toString().padStart(2, '0'),
+            shour: '00', smin: '00',
+            eyear: eDate.getFullYear().toString(),
+            emonth: (eDate.getMonth() + 1).toString().padStart(2, '0'),
+            eday: eDate.getDate().toString().padStart(2, '0'),
+            ehour: '23', emin: '59',
+            order: 'date', hits: '100',
+            location: offset.toString(), direction: '0', dump: ''
+        });
+    }
+    
+    // 3. Fetch + parse HTML (single responsibility)
+    async _fetchAndParsePage(url) {
+        const res = await fetch(url, {
+            credentials: 'include',
+            cache: 'no-cache',
+            headers: {
+                'Referer': url,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'same-origin',
+                'Upgrade-Insecure-Requests': '1'
             }
-        
-            entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
-            console.log(`Pagination finished with ${entries.length} raw entries`);
-            return entries;
+        });
+    
+        if (!res.ok) throw new Error(`HTTP ${res.status} on ${url}`);
+        const html = await res.text();
+        return new DOMParser().parseFromString(html, 'text/html');
+    }
+    
+    // 4. Robust total-entries parser (the one that was flaky)
+    _parseTotalEntries(doc) {
+        let ofText = '';
+    
+        // Exact match
+        const headerRow = doc.querySelector('table[cellspacing="2"][cellpadding="2"][border="0"] tr[bgcolor="gray"]');
+        if (headerRow) {
+            const cells = headerRow.querySelectorAll('td');
+            if (cells.length >= 5) ofText = cells[4].textContent.trim();
         }
+    
+        // Fallback: search whole page
+        if (!ofText) {
+            const match = (doc.body.textContent || '').match(/of\s*([\d,]+)/i);
+            if (match) ofText = match[0];
+        }
+    
+        const numMatch = ofText.match(/[\d,]+/);
+        if (numMatch) {
+            const total = parseInt(numMatch[0].replace(/,/g, ''), 10);
+            if (!isNaN(total) && total > 0) return total;
+        }
+        return null;
+    }
+    
+    // 5. Simple wrapper (easy to extend later)
+    _parsePageEntries(doc) {
+        return this.parsePageRows(doc);   // your existing method
+    }
+    
+    // 6. All stop conditions in one place
+    _shouldContinue(pageEntries, page, totalEntries) {
+        if (pageEntries.length < 100) return false;                    // partial page = end
+        if (totalEntries !== null && page >= Math.ceil(totalEntries / 100)) return false;
+        if (page > 1000) return false;                                 // safety
+        return true;
+    }
+    
+    async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
+        if (typeof startDate === 'function') { onProgress = startDate; startDate = null; endDate = null; }
+        else if (typeof endDate === 'function') { onProgress = endDate; endDate = null; }
+    
+        const entries = [];
+        let page = 1;
+        let offset = 0;
+        const hitsPerPage = 100;
+    
+        let totalEntries = null;
+    
+        const { sDate, eDate } = this._normalizeDateRange(startDate, endDate);
+    
+        while (true) {
+            const params = this._buildSearchParams(sDate, eDate, offset);
+            const url = `https://admin.neonova.net/rat/index.php?${params.toString()}`;
+    
+            const doc = await this._fetchAndParsePage(url);
+    
+            if (page === 1) {
+                totalEntries = this._parseTotalEntries(doc);
+                console.log(`Total entries detected: ${totalEntries || 'unknown'} → ${totalEntries ? Math.ceil(totalEntries / 100) : '?'} pages`);
+            }
+    
+            const pageEntries = this._parsePageEntries(doc);
+            entries.push(...pageEntries);
+    
+            if (typeof onProgress === 'function') {
+                const percent = totalEntries ? Math.round((entries.length / totalEntries) * 100) : 0;
+                onProgress(entries.length, page, totalEntries, percent);
+            }
+    
+            if (!this._shouldContinue(pageEntries, page, totalEntries)) {
+                console.log(`Stopped after page ${page} with ${entries.length} entries`);
+                break;
+            }
+    
+            offset += hitsPerPage;
+            page++;
+        }
+    
+        entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+        console.log(`Pagination finished with ${entries.length} raw entries`);
+        return entries;
+    }
 
     
 /**
