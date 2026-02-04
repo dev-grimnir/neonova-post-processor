@@ -1,81 +1,80 @@
 // ==UserScript==
-// @name         NeoNova Full Search (Forced Correct URL + Robust Parser)
-// @match        https://admin.neonova.net/*
+// @name         NeoNova Real Search (POST like the normal UI)
+// @match        https://admin.neonova.net/index.php
 // @grant        none
 // @run-at       document-end
 // ==/UserScript==
 
 (async function () {
     'use strict';
-    if (window.name !== 'MAIN') return;
 
     console.clear();
-    console.log('=== FULL SEARCH (Forced URL + Robust Parser) ===');
+    console.log('=== REAL POST SEARCH (mimics normal UI) ===');
 
-    const username = 'kandkpepper';
+    // Find the search form (the one with user/date fields)
+    const form = Array.from(document.forms).find(f => 
+        f.innerHTML.includes('iuserid') || f.querySelector('input[name="iuserid"]')
+    );
 
-    // Exact parameters that the normal search UI uses
-    const params = new URLSearchParams({
-        acctsearch: '2',
-        sd: 'fairpoint.net',
-        iuserid: username,
-        syear: '2025', smonth: '03', sday: '01', shour: '00', smin: '00',
-        eyear: '2026', emonth: '02', eday: '04', ehour: '23', emin: '59',
-        order: 'date',
-        hits: '100',
-        location: '0',
-        direction: '0'
-    });
+    if (!form) {
+        console.error('Search form not found on this page');
+        return;
+    }
 
-    const baseUrl = 'https://admin.neonova.net/rat/index.php';
+    const action = form.action || location.href;
+    console.log('Using real form action:', action);
 
-    console.log('Using forced search URL:', baseUrl + '?' + params.toString());
+    // Build the exact data the normal search sends
+    const fd = new FormData(form);
+    fd.set('iuserid', 'kandkpepper');
+    fd.set('syear', '2025'); fd.set('smonth', '03'); fd.set('sday', '01'); fd.set('shour', '00'); fd.set('smin', '00');
+    fd.set('eyear', '2026'); fd.set('emonth', '02'); fd.set('eday', '04'); fd.set('ehour', '23'); fd.set('emin', '59');
+    fd.set('hits', '100');
+    fd.set('order', 'date');
+    fd.set('location', '0');
 
     let allRows = [];
     let page = 1;
-    let offset = 0;
+    let location = 0;
 
     while (true) {
-        params.set('location', offset.toString());
-        const url = baseUrl + '?' + params.toString();
+        fd.set('location', location.toString());
 
-        const res = await fetch(url, {credentials: 'include', cache: 'no-cache'});
+        const res = await fetch(action, {
+            method: 'POST',
+            body: fd,
+            credentials: 'include'
+        });
+
         const html = await res.text();
         const doc = new DOMParser().parseFromString(html, 'text/html');
 
-        // Robust parser: look for the real data table (skip any summary/header rows)
-        const tables = doc.querySelectorAll('table');
-        let rows = [];
-        for (const table of tables) {
-            const trs = table.querySelectorAll('tr');
-            for (const tr of trs) {
-                const tds = tr.querySelectorAll('td');
-                if (tds.length >= 5) {
-                    const timestamp = tds[0]?.textContent.trim();
-                    const status = tds[1]?.textContent.trim();
-                    if (timestamp && timestamp !== 'Search Results' && timestamp !== 'Entry:') {
-                        rows.push({timestamp, status});
-                    }
+        // Parse real rows (skip junk header rows)
+        const rows = [];
+        doc.querySelectorAll('table tr').forEach(tr => {
+            const tds = tr.querySelectorAll('td');
+            if (tds.length >= 5) {
+                const ts = tds[0].textContent.trim();
+                const status = tds[1].textContent.trim();
+                if (ts && ts.length > 10 && !ts.includes('Search Results')) {
+                    rows.push({timestamp: ts, status});
                 }
             }
-        }
+        });
 
         allRows.push(...rows);
         console.log(`Page ${page} → ${rows.length} rows (total now ${allRows.length})`);
 
-        if (rows.length < 100) {
-            console.log('No more rows → stopping');
-            break;
-        }
+        if (rows.length < 100) break;
 
-        offset += 100;
+        location += 100;
         page++;
     }
 
-    // Clean duplicates (exact timestamp + status)
+    // Clean exact duplicates
     const seen = new Set();
-    const cleaned = allRows.filter(row => {
-        const key = `${row.timestamp}_${row.status}`;
+    const cleaned = allRows.filter(r => {
+        const key = `${r.timestamp}_${r.status}`;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
@@ -84,14 +83,8 @@
     console.log('\n=== FINAL RESULT ===');
     console.log(`Raw fetched          : ${allRows.length}`);
     console.log(`After cleaning       : ${cleaned.length}`);
-    console.log(`Unique timestamps    : ${new Set(cleaned.map(r => r.timestamp)).size}`);
-
     if (cleaned.length) {
         console.log('First :', cleaned[0].timestamp, cleaned[0].status);
         console.log('Last  :', cleaned[cleaned.length-1].timestamp, cleaned[cleaned.length-1].status);
     }
-
-    // Optional: copy to clipboard for easy pasting
-    const json = JSON.stringify(cleaned, null, 2);
-    navigator.clipboard.writeText(json).then(() => console.log('Cleaned data copied to clipboard'));
 })();
