@@ -7,19 +7,29 @@ class NeonovaReportView {
         this.longDisconnects = longDisconnects;
     }
 
+    // Show only the WORST 200 long disconnects in the table (still plenty useful)
+    // Full list stays available in CSV export
     generateLongDisconnectsHTML() {
         if (this.longDisconnects.length === 0) {
             return '<p style="font-style:italic; color:#666;">No disconnects longer than 30 minutes.</p>';
         }
+    
+        // Limit to top 200 longest (already sorted worst-first by analyzer)
+        const displayed = this.longDisconnects.slice(0, 200);
+    
         let html = `
             <div id="longDisconnectsContainer" style="display:block; margin-top:20px;">
+                <p style="font-size:14px; color:#666; margin-bottom:10px;">
+                    Showing ${displayed.length} longest disconnects (of ${this.longDisconnects.length} total)
+                </p>
                 <table style="width:100%; font-size:16px; border-collapse:collapse;">
                     <tr style="background:#fcc;">
                         <th style="padding:12px; text-align:left;">Disconnected At</th>
                         <th style="padding:12px; text-align:left;">Reconnected At</th>
                         <th style="padding:12px; text-align:right;">Duration</th>
                     </tr>`;
-        this.longDisconnects.forEach(ld => {
+    
+        displayed.forEach(ld => {
             const durationStr = formatDuration(ld.durationSec);
             html += `
                 <tr style="background:#fee;">
@@ -28,9 +38,8 @@ class NeonovaReportView {
                     <td style="padding:12px; text-align:right;"><b>${durationStr}</b></td>
                 </tr>`;
         });
-        html += `
-                </table>
-            </div>`;
+    
+        html += `</table></div>`;
         return html;
     }
 
@@ -46,6 +55,7 @@ class NeonovaReportView {
         return '<p style="font-style:italic; color:#666;">No disconnects longer than 30 minutes.</p>';
     }
 
+    // CSV still includes ALL disconnects (fast enough once we avoid the huge HTML table)
     generateCsvContent() {
         let csv = 'Metric,Value\n';
         csv += `Total Disconnects,${this.metrics.disconnects || 0}\n`;
@@ -57,7 +67,9 @@ class NeonovaReportView {
         csv += `Time Since Last Disconnect,${this.metrics.timeSinceLastStr || 'N/A'}\n`;
         csv += `Peak Disconnect Hour,${this.metrics.peakHourStr || 'None'}\n`;
         csv += `Peak Disconnect Day,${this.metrics.peakDayStr || 'None'}\n`;
-        // Add more if needed, e.g., long disconnects as separate section
+        csv += `Longest Session,${this.metrics.longestSessionMin ? formatDuration(this.metrics.longestSessionMin * 60) : 'N/A'}\n`;
+        csv += `Shortest Session,${this.metrics.shortestSessionMin ? formatDuration(this.metrics.shortestSessionMin * 60) : 'N/A'}\n`;
+    
         csv += '\nLong Disconnects\nDisconnected At,Reconnected At,Duration\n';
         this.longDisconnects.forEach(ld => {
             csv += `${ld.stopDate.toLocaleString()},${ld.startDate.toLocaleString()},${formatDuration(ld.durationSec)}\n`;
