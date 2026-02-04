@@ -263,51 +263,114 @@ parsePageRows(doc) {
         return true;
     }
     
-    async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
-        if (typeof startDate === 'function') { onProgress = startDate; startDate = null; endDate = null; }
-        else if (typeof endDate === 'function') { onProgress = endDate; endDate = null; }
-    
-        const entries = [];
-        let page = 1;
-        let offset = 0;
-        const hitsPerPage = 100;
-    
-        let totalEntries = null;
-    
-        const { sDate, eDate } = this._normalizeDateRange(startDate, endDate);
-    
-        while (true) {
-            const params = this._buildSearchParams(sDate, eDate, offset);
-            const url = `https://admin.neonova.net/rat/index.php?${params.toString()}`;
-    
-            const doc = await this._fetchAndParsePage(url);
-    
-            if (page === 1) {
-                totalEntries = this._parseTotalEntries(doc);
-                console.log(`Total entries detected: ${totalEntries || 'unknown'} → ${totalEntries ? Math.ceil(totalEntries / 100) : '?'} pages`);
-            }
-    
-            const pageEntries = this._parsePageEntries(doc);
-            entries.push(...pageEntries);
-    
-            if (typeof onProgress === 'function') {
-                const percent = totalEntries ? Math.round((entries.length / totalEntries) * 100) : 0;
-                onProgress(entries.length, page, totalEntries, percent);
-            }
-    
-            if (!this._shouldContinue(pageEntries, page, totalEntries)) {
-                console.log(`Stopped after page ${page} with ${entries.length} entries`);
-                break;
-            }
-    
-            offset += hitsPerPage;
-            page++;
+async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
+    console.log(`[PAGINATE] Starting for ${username}`);
+
+    if (typeof startDate === 'function') { onProgress = startDate; startDate = null; endDate = null; }
+    else if (typeof endDate === 'function') { onProgress = endDate; endDate = null; }
+
+    const entries = [];
+    let page = 1;
+    let offset = 0;
+    const hitsPerPage = 100;
+    let totalEntries = null;
+
+    const now = new Date();
+    let sDate = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
+    let eDate = endDate ? new Date(endDate) : now;
+    sDate.setHours(0, 0, 0, 0);
+    eDate.setHours(23, 59, 59, 999);
+
+    console.log(`[PAGINATE] Date range: ${sDate.toISOString()} → ${eDate.toISOString()}`);
+
+    while (true) {
+        console.log(`[PAGINATE] Fetching page ${page}, offset ${offset}`);
+
+        const params = new URLSearchParams({
+            acctsearch: '2', sd: 'fairpoint.net', iuserid: username,
+            ip: '', session: '', nasip: '', statusview: 'both',
+            syear: sDate.getFullYear().toString(),
+            smonth: (sDate.getMonth() + 1).toString().padStart(2, '0'),
+            sday: sDate.getDate().toString().padStart(2, '0'),
+            shour: '00', smin: '00',
+            eyear: eDate.getFullYear().toString(),
+            emonth: (eDate.getMonth() + 1).toString().padStart(2, '0'),
+            eday: eDate.getDate().toString().padStart(2, '0'),
+            ehour: '23', emin: '59',
+            order: 'date', hits: hitsPerPage.toString(),
+            location: offset.toString(), direction: '0', dump: ''
+        });
+
+        const url = `https://admin.neonova.net/rat/index.php?${params.toString()}`;
+        console.log(`[PAGINATE] URL: ${url}`);
+
+        let doc;
+        try {
+            const res = await fetch(url, {
+                credentials: 'include',
+                cache: 'no-cache',
+                headers: {
+                    'Referer': url,
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.5',
+                    'Sec-Fetch-Dest': 'document',
+                    'Sec-Fetch-Mode': 'navigate',
+                    'Sec-Fetch-Site': 'same-origin',
+                    'Upgrade-Insecure-Requests': '1'
+                }
+            });
+
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const html = await res.text();
+            doc = new DOMParser().parseFromString(html, 'text/html');
+            console.log(`[PAGINATE] Page ${page} fetched OK`);
+        } catch (err) {
+            console.error(`[PAGINATE] Fetch failed on page ${page}:`, err);
+            break;
         }
-    
-        entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
-        console.log(`Pagination finished with ${entries.length} raw entries`);
-        return entries;
+
+        // Total on first page
+        if (page === 1) {
+            totalEntries = this._parseTotalEntries ? this._parseTotalEntries(doc) : null; // if you have the helper
+            if (!totalEntries) {
+                // fallback parser
+                let ofText = (doc.body.textContent || '').match(/of\s*([\d,]+)/i);
+                totalEntries = ofText ? parseInt(ofText[1].replace(/,/g,''), 10) : null;
+            }
+            console.log(`[PAGINATE] Total detected: ${totalEntries || 'unknown'}`);
+        }
+
+        const pageEntries = this.parsePageRows(doc);
+        console.log(`[PAGINATE] Page ${page} returned ${pageEntries.length} rows`);
+
+        entries.push(...pageEntries);
+
+        if (typeof onProgress === 'function') {
+            const percent = totalEntries ? Math.round((entries.length / totalEntries) * 100) : 0;
+            onProgress(entries.length, page, totalEntries, percent);
+        }
+
+        if (pageEntries.length < hitsPerPage) {
+            console.log(`[PAGINATE] Partial page → stopping`);
+            break;
+        }
+        if (totalEntries && page >= Math.ceil(totalEntries / hitsPerPage)) {
+            console.log(`[PAGINATE] Reached calculated total pages → stopping`);
+            break;
+        }
+        if (page > 1000) {
+            console.warn(`[PAGINATE] Safety cap hit`);
+            break;
+        }
+
+        offset += hitsPerPage;
+        page++;
     }
+
+    entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+    console.log(`[PAGINATE] Finished with ${entries.length} raw entries`);
+    return entries;
+}
 
     
 /**
