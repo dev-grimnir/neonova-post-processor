@@ -78,14 +78,12 @@ class NeonovaDashboardView {
                 <tbody>${rows}</tbody>
             </table>
             <button class="refresh-btn">Refresh Now</button>
-            <button id="poll-toggle-btn">${this.controller.isPolling ? 'Stop Polling' : 'Start Polling'}</button>
+            <button id="poll-toggle-btn">${this.controller.isPollingPaused ? 'Stop Polling' : 'Start Polling'}</button>
         `;
     
         // === Event listeners ===
         const pollBtn = this.panel.querySelector('#poll-toggle-btn');
         if (pollBtn) {
-            console.log("Button found");
-            console.log("Polling status is " + this.controller.isPollingPaused);
             pollBtn.addEventListener('click', () => {
                 if (this.controller.isPollingPaused) {           // ← whatever flag your controller actually uses
                     this.controller.togglePolling();
