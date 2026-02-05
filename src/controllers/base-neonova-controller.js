@@ -252,82 +252,68 @@ parsePageRows(doc) {
     }
 
     async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
-        const entries = [];
-        let doc = null;
-        let page = 1;
-    
-        const now = new Date();
-    
-        // === BULLETPROOF DATE FIX (kept for logging only) ===
-        let sDate = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
-        let eDate = endDate ? new Date(endDate) : now;
-    
-        if (sDate.getTime() > eDate.getTime() || isNaN(sDate.getTime()) || isNaN(eDate.getTime())) {
-            console.warn('❌ Caller passed invalid/swapped dates — forcing last 30 days for logging');
-            sDate = new Date(now);
-            sDate.setDate(sDate.getDate() - 30);
-            eDate = now;
-        }
-    
-        const exclusiveEnd = new Date(eDate);
-        exclusiveEnd.setDate(exclusiveEnd.getDate() + 1);
-        exclusiveEnd.setHours(0, 0, 0, 0);
-    
-        sDate.setHours(0, 0, 0, 0);
-    
-        console.log(`🔧 Date range passed by caller → Start: ${sDate.toISOString().split('T')[0]}, End: ${eDate.toISOString().split('T')[0]}`);
-    
-        // === ONLY CHANGE: use submitSearch with the corrected date range ===
-        const overrides = {
+    const entries = [];
+    let page = 1;
+    let doc = null;
+
+    const now = new Date();
+    let sDate = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
+    let eDate = endDate ? new Date(endDate) : now;
+
+    // Force sensible range if caller gave nonsense
+    if (sDate.getTime() > eDate.getTime()) [sDate, eDate] = [eDate, sDate];
+
+    sDate.setHours(0, 0, 0, 0);
+    eDate.setHours(23, 59, 59, 999);
+
+    console.log(`Paginating ${username} from ${sDate.toISOString().split('T')[0]} to ${eDate.toISOString().split('T')[0]}`);
+
+    while (true) {
+        const offset = (page - 1) * 100;
+
+        const params = new URLSearchParams({
+            acctsearch: '2',
+            sd: 'fairpoint.net',
+            iuserid: username,
             syear: sDate.getFullYear().toString(),
             smonth: (sDate.getMonth() + 1).toString().padStart(2, '0'),
             sday: sDate.getDate().toString().padStart(2, '0'),
-            eyear: exclusiveEnd.getFullYear().toString(),
-            emonth: (exclusiveEnd.getMonth() + 1).toString().padStart(2, '0'),
-            eday: exclusiveEnd.getDate().toString().padStart(2, '0'),
-            ehour: '00',
-            emin: '00'
-        };
-    
-        console.log('🔄 Using submitSearch with corrected overrides:', overrides);
-    
-        doc = await this.submitSearch(username, overrides);
-    
-        let totalEntries = this._parseTotalEntries(doc);
-        console.log(`Total entries detected: ${totalEntries}`);
-    
-        while (doc) {
-            const pageEntries = this.parsePageRows(doc);
-            entries.push(...pageEntries);
-    
-            if (typeof onProgress === 'function') {
-                const percent = totalEntries ? Math.round((entries.length / totalEntries) * 100) : 0;
-                onProgress(entries.length, page, totalEntries, percent);
-            }
-    
-            console.log(`Page ${page} → ${pageEntries.length} rows (total now ${entries.length})`);
-    
-            if (pageEntries.length < 100) break;
-    
-            const nextLink = this.findNextPageLink(doc);
-            if (!nextLink) {
-                console.log('No more NEXT link → stopping');
-                break;
-            }
-    
-            const nextUrl = nextLink.href;
-            const nextRes = await fetch(nextUrl, { credentials: 'include', cache: 'no-cache' });
-            if (!nextRes.ok) break;
-    
-            const nextHtml = await nextRes.text();
-            doc = new DOMParser().parseFromString(nextHtml, 'text/html');
-            page++;
-        }
-    
-        entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
-        console.log(`Pagination finished with ${entries.length} raw entries`);
-        return entries;
+            eyear: eDate.getFullYear().toString(),
+            emonth: (eDate.getMonth() + 1).toString().padStart(2, '0'),
+            eday: eDate.getDate().toString().padStart(2, '0'),
+            ehour: '23',
+            emin: '59',
+            hits: '100',
+            order: 'date',
+            location: offset.toString(),
+            direction: '0',
+            dump: ''
+        });
+
+        const url = `https://admin.neonova.net/rat/index.php?${params.toString()}`;
+        console.log(`Fetching page ${page} → ${url}`);
+
+        const res = await fetch(url, { credentials: 'include', cache: 'no-cache' });
+        if (!res.ok) break;
+
+        const html = await res.text();
+        doc = new DOMParser().parseFromString(html, 'text/html');
+
+        const pageEntries = this.parsePageRows(doc);
+        entries.push(...pageEntries);
+
+        if (typeof onProgress === 'function') onProgress(entries.length, page, null, 0);
+
+        console.log(`Page ${page} → ${pageEntries.length} rows`);
+
+        if (pageEntries.length < 100) break;   // last page
+        page++;
     }
+
+    entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+    console.log(`Pagination finished with ${entries.length} raw entries`);
+    return entries;
+}
     
     /**
      * Gets the most recent RADIUS log entry for the user.
