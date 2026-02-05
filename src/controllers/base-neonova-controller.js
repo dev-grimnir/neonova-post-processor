@@ -258,29 +258,36 @@ parsePageRows(doc) {
     
         const now = new Date();
     
-        // === FORCE SANITY: end date must always be after start date ===
+        // === FORCE CORRECT DATES — this is the fix ===
         let sDate = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
         let eDate = endDate ? new Date(endDate) : now;
     
-        // If end is before start (or same day but earlier time), push end to tomorrow
-        if (eDate.getTime() <= sDate.getTime()) {
-            eDate = new Date(sDate);
-            eDate.setDate(eDate.getDate() + 1);
+        // If caller swapped them (very common bug now), swap back
+        if (sDate.getTime() > eDate.getTime()) {
+            console.warn('Dates were swapped — fixing automatically');
+            [sDate, eDate] = [eDate, sDate];
         }
     
-        sDate.setHours(0, 0, 0, 0);
-        eDate.setHours(23, 59, 59, 999);
+        // Make end date exclusive (tomorrow at 00:00) — Neonova treats it as "up to but not including"
+        const exclusiveEnd = new Date(eDate);
+        exclusiveEnd.setDate(exclusiveEnd.getDate() + 1);
+        exclusiveEnd.setHours(0, 0, 0, 0);
     
-        // === FIRST PAGE: real POST exactly like the normal UI ===
+        sDate.setHours(0, 0, 0, 0);
+        exclusiveEnd.setHours(0, 0, 0, 0);
+    
+        console.log(`Using date range → Start: ${sDate.toISOString().split('T')[0]}, End (exclusive): ${exclusiveEnd.toISOString().split('T')[0]}`);
+    
+        // === FIRST PAGE ===
         const overrides = {
             syear: sDate.getFullYear().toString(),
             smonth: (sDate.getMonth() + 1).toString().padStart(2, '0'),
             sday: sDate.getDate().toString().padStart(2, '0'),
-            eyear: eDate.getFullYear().toString(),
-            emonth: (eDate.getMonth() + 1).toString().padStart(2, '0'),
-            eday: eDate.getDate().toString().padStart(2, '0'),
-            ehour: '23',
-            emin: '59'
+            eyear: exclusiveEnd.getFullYear().toString(),
+            emonth: (exclusiveEnd.getMonth() + 1).toString().padStart(2, '0'),
+            eday: exclusiveEnd.getDate().toString().padStart(2, '0'),
+            ehour: '00',
+            emin: '00'
         };
     
         doc = await this.submitSearch(username, overrides);
@@ -302,7 +309,10 @@ parsePageRows(doc) {
             if (pageEntries.length < 100) break;
     
             const nextLink = this.findNextPageLink(doc);
-            if (!nextLink) break;
+            if (!nextLink) {
+                console.log('No more NEXT link → stopping');
+                break;
+            }
     
             const nextUrl = nextLink.href;
             const res = await fetch(nextUrl, { credentials: 'include', cache: 'no-cache' });
