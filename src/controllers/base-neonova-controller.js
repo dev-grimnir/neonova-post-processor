@@ -252,46 +252,40 @@ parsePageRows(doc) {
     }
     
     async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
-        console.log('=== PAGINATE CALLED WITH ===', { startDate, endDate, username });
         const entries = [];
         let doc = null;
         let page = 1;
     
         const now = new Date();
     
-        // === FORCE CORRECT DATES — this is the fix ===
+        // === BULLETPROOF DATE FIX (kept for logging only) ===
         let sDate = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
         let eDate = endDate ? new Date(endDate) : now;
     
-        // If caller swapped them (very common bug now), swap back
-        if (sDate.getTime() > eDate.getTime()) {
-            console.warn('Dates were swapped — fixing automatically');
-            [sDate, eDate] = [eDate, sDate];
+        if (sDate.getTime() > eDate.getTime() || isNaN(sDate.getTime()) || isNaN(eDate.getTime())) {
+            console.warn('❌ Caller passed invalid/swapped dates — forcing last 30 days for logging');
+            sDate = new Date(now);
+            sDate.setDate(sDate.getDate() - 30);
+            eDate = now;
         }
     
-        // Make end date exclusive (tomorrow at 00:00) — Neonova treats it as "up to but not including"
         const exclusiveEnd = new Date(eDate);
         exclusiveEnd.setDate(exclusiveEnd.getDate() + 1);
         exclusiveEnd.setHours(0, 0, 0, 0);
     
         sDate.setHours(0, 0, 0, 0);
-        exclusiveEnd.setHours(0, 0, 0, 0);
     
-        console.log(`Using date range → Start: ${sDate.toISOString().split('T')[0]}, End (exclusive): ${exclusiveEnd.toISOString().split('T')[0]}`);
+        console.log(`🔧 Date range passed by caller → Start: ${sDate.toISOString().split('T')[0]}, End: ${eDate.toISOString().split('T')[0]}`);
     
-        // === FIRST PAGE ===
-        const overrides = {
-            syear: sDate.getFullYear().toString(),
-            smonth: (sDate.getMonth() + 1).toString().padStart(2, '0'),
-            sday: sDate.getDate().toString().padStart(2, '0'),
-            eyear: exclusiveEnd.getFullYear().toString(),
-            emonth: (exclusiveEnd.getMonth() + 1).toString().padStart(2, '0'),
-            eday: exclusiveEnd.getDate().toString().padStart(2, '0'),
-            ehour: '00',
-            emin: '00'
-        };
+        // === FIRST PAGE: ONLY CHANGE — use the old reliable getSearchUrl ===
+        const searchUrl = this.getSearchUrl(username);
+        console.log('🔄 Using old reliable search URL (ignores caller dates):', searchUrl);
     
-        doc = await this.submitSearch(username, overrides);
+        const res = await fetch(searchUrl, { credentials: 'include', cache: 'no-cache' });
+        if (!res.ok) throw new Error(`First page failed: ${res.status}`);
+    
+        const html = await res.text();
+        doc = new DOMParser().parseFromString(html, 'text/html');
     
         let totalEntries = this._parseTotalEntries(doc);
         console.log(`Total entries detected: ${totalEntries}`);
@@ -316,11 +310,11 @@ parsePageRows(doc) {
             }
     
             const nextUrl = nextLink.href;
-            const res = await fetch(nextUrl, { credentials: 'include', cache: 'no-cache' });
-            if (!res.ok) break;
+            const nextRes = await fetch(nextUrl, { credentials: 'include', cache: 'no-cache' });
+            if (!nextRes.ok) break;
     
-            const html = await res.text();
-            doc = new DOMParser().parseFromString(html, 'text/html');
+            const nextHtml = await nextRes.text();
+            doc = new DOMParser().parseFromString(nextHtml, 'text/html');
             page++;
         }
     
