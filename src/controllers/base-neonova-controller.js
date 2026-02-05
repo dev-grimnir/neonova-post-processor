@@ -277,15 +277,21 @@ parsePageRows(doc) {
     
         console.log(`🔧 Date range passed by caller → Start: ${sDate.toISOString().split('T')[0]}, End: ${eDate.toISOString().split('T')[0]}`);
     
-        // === FIRST PAGE: ONLY CHANGE — use the old reliable getSearchUrl ===
-        const searchUrl = this.getSearchUrl(username);
-        console.log('🔄 Using old reliable search URL (ignores caller dates):', searchUrl);
+        // === FIRST PAGE: use submitSearch with the corrected date range ===
+        const overrides = {
+            syear: sDate.getFullYear().toString(),
+            smonth: (sDate.getMonth() + 1).toString().padStart(2, '0'),
+            sday: sDate.getDate().toString().padStart(2, '0'),
+            eyear: exclusiveEnd.getFullYear().toString(),
+            emonth: (exclusiveEnd.getMonth() + 1).toString().padStart(2, '0'),
+            eday: exclusiveEnd.getDate().toString().padStart(2, '0'),
+            ehour: '00',
+            emin: '00'
+        };
     
-        const res = await fetch(searchUrl, { credentials: 'include', cache: 'no-cache' });
-        if (!res.ok) throw new Error(`First page failed: ${res.status}`);
+        console.log('🔄 Using submitSearch with corrected overrides:', overrides);
     
-        const html = await res.text();
-        doc = new DOMParser().parseFromString(html, 'text/html');
+        doc = await this.submitSearch(username, overrides);
     
         let totalEntries = this._parseTotalEntries(doc);
         console.log(`Total entries detected: ${totalEntries}`);
