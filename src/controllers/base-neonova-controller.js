@@ -267,16 +267,20 @@ parsePageRows(doc) {
         sDate.setHours(0, 0, 0, 0);
         eDate.setHours(23, 59, 59, 999);
 
-        // === FIRST PAGE: real POST exactly like the normal UI ===
+        // Force end date to tomorrow 00:00 (Neonova treats end date as exclusive)
+        const tomorrow = new Date(eDate);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0);
+        
         const overrides = {
             syear: sDate.getFullYear().toString(),
             smonth: (sDate.getMonth() + 1).toString().padStart(2, '0'),
             sday: sDate.getDate().toString().padStart(2, '0'),
-            eyear: eDate.getFullYear().toString(),
-            emonth: (eDate.getMonth() + 1).toString().padStart(2, '0'),
-            eday: eDate.getDate().toString().padStart(2, '0'),
-            ehour: '23',
-            emin: '59'
+            eyear: tomorrow.getFullYear().toString(),
+            emonth: (tomorrow.getMonth() + 1).toString().padStart(2, '0'),
+            eday: tomorrow.getDate().toString().padStart(2, '0'),
+            ehour: '00',
+            emin: '00'
         };
 
         doc = await this.submitSearch(username, overrides);
