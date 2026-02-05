@@ -227,16 +227,16 @@ parsePageRows(doc) {
     
     // 4. Robust total-entries parser (the one that was flaky)
     _parseTotalEntries(doc) {
-    // Exact match to the table you showed me
-    let cell = doc.querySelector('table[cellspacing="2"][cellpadding="2"][border="0"] tr[bgcolor="gray"] td:last-child');
-    if (cell) {
-        const m = cell.textContent.match(/[\d,]+/);
-        if (m) return parseInt(m[0].replace(/,/g, ''), 10);
+        // Exact match to the table you showed me
+        let cell = doc.querySelector('table[cellspacing="2"][cellpadding="2"][border="0"] tr[bgcolor="gray"] td:last-child');
+        if (cell) {
+            const m = cell.textContent.match(/[\d,]+/);
+            if (m) return parseInt(m[0].replace(/,/g, ''), 10);
+        }
+        // Fallback
+        const m = (doc.body.textContent || '').match(/of\s*([\d,]+)/i);
+        return m ? parseInt(m[1].replace(/,/g, ''), 10) : null;
     }
-    // Fallback
-    const m = (doc.body.textContent || '').match(/of\s*([\d,]+)/i);
-    return m ? parseInt(m[1].replace(/,/g, ''), 10) : null;
-}
     
     // 5. Simple wrapper (easy to extend later)
     _parsePageEntries(doc) {
@@ -251,98 +251,93 @@ parsePageRows(doc) {
         return true;
     }
     
-// src/controllers/BaseNeonovaController.js
-// Replace ONLY the paginateReportLogs method with this version.
-// Everything else in your class stays exactly as you have it.
-
     async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
         const entries = [];
         let doc = null;
         let page = 1;
-
+    
         const now = new Date();
+    
+        // === FORCE SANITY: end date must always be after start date ===
         let sDate = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
         let eDate = endDate ? new Date(endDate) : now;
-
+    
+        // If end is before start (or same day but earlier time), push end to tomorrow
+        if (eDate.getTime() <= sDate.getTime()) {
+            eDate = new Date(sDate);
+            eDate.setDate(eDate.getDate() + 1);
+        }
+    
         sDate.setHours(0, 0, 0, 0);
         eDate.setHours(23, 59, 59, 999);
-
-        // Force end date to tomorrow 00:00 (Neonova treats end date as exclusive)
-        const tomorrow = new Date(eDate);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(0, 0, 0, 0);
-        
+    
+        // === FIRST PAGE: real POST exactly like the normal UI ===
         const overrides = {
             syear: sDate.getFullYear().toString(),
             smonth: (sDate.getMonth() + 1).toString().padStart(2, '0'),
             sday: sDate.getDate().toString().padStart(2, '0'),
-            eyear: tomorrow.getFullYear().toString(),
-            emonth: (tomorrow.getMonth() + 1).toString().padStart(2, '0'),
-            eday: tomorrow.getDate().toString().padStart(2, '0'),
-            ehour: '00',
-            emin: '00'
+            eyear: eDate.getFullYear().toString(),
+            emonth: (eDate.getMonth() + 1).toString().padStart(2, '0'),
+            eday: eDate.getDate().toString().padStart(2, '0'),
+            ehour: '23',
+            emin: '59'
         };
-
+    
         doc = await this.submitSearch(username, overrides);
-
+    
         let totalEntries = this._parseTotalEntries(doc);
         console.log(`Total entries detected: ${totalEntries}`);
-
+    
         while (doc) {
             const pageEntries = this.parsePageRows(doc);
             entries.push(...pageEntries);
-
+    
             if (typeof onProgress === 'function') {
                 const percent = totalEntries ? Math.round((entries.length / totalEntries) * 100) : 0;
                 onProgress(entries.length, page, totalEntries, percent);
             }
-
+    
             console.log(`Page ${page} → ${pageEntries.length} rows (total now ${entries.length})`);
-
+    
             if (pageEntries.length < 100) break;
-
-            // === FOLLOW THE SERVER'S OWN "NEXT" LINK (this is the magic) ===
+    
             const nextLink = this.findNextPageLink(doc);
-            if (!nextLink) {
-                console.log('No more NEXT link → stopping');
-                break;
-            }
-
+            if (!nextLink) break;
+    
             const nextUrl = nextLink.href;
             const res = await fetch(nextUrl, { credentials: 'include', cache: 'no-cache' });
             if (!res.ok) break;
-
+    
             const html = await res.text();
             doc = new DOMParser().parseFromString(html, 'text/html');
             page++;
         }
-
+    
         entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
         console.log(`Pagination finished with ${entries.length} raw entries`);
         return entries;
     }
-
     
-/**
- * Gets the most recent RADIUS log entry for the user.
- * Fetches all pages and returns the newest (most recent timestamp).
- * 
- * @param {string} username
- * @returns {Promise<Object|null>} Newest entry or null
- */
-async getLatestEntry(username) {
-        try {
-            const entries = await this.paginateReportLogs(username);
-            if (entries.length === 0) {
+    /**
+     * Gets the most recent RADIUS log entry for the user.
+     * Fetches all pages and returns the newest (most recent timestamp).
+     * 
+     * @param {string} username
+     * @returns {Promise<Object|null>} Newest entry or null
+     */
+    async getLatestEntry(username) {
+            try {
+                const entries = await this.paginateReportLogs(username);
+                if (entries.length === 0) {
+                    return null;
+                }
+        
+                // Already sorted newest-first in paginateReportLogs
+                const newest = entries[0];
+        
+                return newest;
+            } catch (err) {
                 return null;
             }
-    
-            // Already sorted newest-first in paginateReportLogs
-            const newest = entries[0];
-    
-            return newest;
-        } catch (err) {
-            return null;
         }
-    }
 }
