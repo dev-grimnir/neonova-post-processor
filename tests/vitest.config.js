@@ -1,21 +1,19 @@
-// vitest.config.js
 import { defineConfig } from 'vitest/config';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default defineConfig({
   test: {
-    // Enables DOM environment (document, DOMParser, window, etc.)
     environment: 'jsdom',
-
-    // Makes describe, it, expect, beforeEach global (no imports needed)
     globals: true,
-
-    // Where to look for test files
     include: ['tests/**/*.test.js', 'tests/**/*.spec.js'],
-
-    // Optional: if you want coverage reports later
-    // coverage: {
-    //   provider: 'v8',
-    //   reporter: ['text', 'json', 'html'],
-    // },
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
   },
 });
