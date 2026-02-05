@@ -85,12 +85,12 @@ class NeonovaDashboardView {
         const pollBtn = this.panel.querySelector('#poll-toggle-btn');
         if (pollBtn) {
             console.log("Button found");
-            console.log("Polling status is " + this.controller.isPolling);
+            console.log("Polling status is " + this.controller.isPollingPaused);
             pollBtn.addEventListener('click', () => {
-                if (this.controller.isPolling) {           // ← whatever flag your controller actually uses
-                    this.controller.stopPolling();
+                if (this.controller.isPollingPaused) {           // ← whatever flag your controller actually uses
+                    this.controller.togglePolling();
                 } else {
-                    this.controller.startPolling();
+                    this.controller.togglePolling();
                 }
                 this.render();                             // re-render so button text updates
             });
@@ -284,14 +284,6 @@ class NeonovaDashboardView {
                 };
             });
         });
-    }
-
-    updatePollingButton() {
-        const btn = this.panel.querySelector('#poll-toggle-btn');
-        if (btn) {
-            btn.textContent = this.controller.isPollingPaused ? 'Resume Polling' : 'Pause Polling';
-            btn.style.backgroundColor = this.controller.isPollingPaused ? '#c00' : '#060';
-        }
     }
     
     update() {
