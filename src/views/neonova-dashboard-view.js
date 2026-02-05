@@ -78,19 +78,20 @@ class NeonovaDashboardView {
                 <tbody>${rows}</tbody>
             </table>
             <button class="refresh-btn">Refresh Now</button>
-            <button id="poll-toggle-btn">${this.controller.isPollingPaused ? 'Stop Polling' : 'Start Polling'}</button>
+            <button id="poll-toggle-btn">${this.controller.isPollingPaused ? 'Resume Polling' : 'Pause Polling'}</button>
         `;
     
         // === Event listeners ===
+        // Poll toggle button
         const pollBtn = this.panel.querySelector('#poll-toggle-btn');
         if (pollBtn) {
             pollBtn.addEventListener('click', () => {
-                if (this.controller.isPollingPaused) {           // ← whatever flag your controller actually uses
-                    this.controller.togglePolling();
-                } else {
-                    this.controller.togglePolling();
-                }
-                this.render();                             // re-render so button text updates
+                console.log('Poll button clicked – current paused:', this.controller.isPollingPaused);
+                
+                this.controller.togglePolling();   // ← just toggle, no if/else needed
+                
+                console.log('After toggle – now paused:', this.controller.isPollingPaused);
+                this.render();                     // forces fresh button text
             });
         }
         
