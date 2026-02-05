@@ -1,12 +1,4 @@
-// tests/controllers/base-neonova-controller.test.js
-
 import { BaseNeonovaController } from '@/controllers/base-neonova-controller.js';
-
-// For browser-like environment in Node (we'll set this up next)
-const { JSDOM } = require('jsdom');
-const dom = new JSDOM('<!DOCTYPE html>');
-global.document = dom.window.document;
-global.DOMParser = dom.window.DOMParser;
 
 describe('BaseNeonovaController', () => {
   let ctrl;
@@ -19,14 +11,16 @@ describe('BaseNeonovaController', () => {
     it('includes username and current month start', () => {
       const url = ctrl.getSearchUrl('testuser123');
       expect(url).toContain('iuserid=testuser123');
-      expect(url).toContain('sday=01'); // 1st of month
+      expect(url).toContain('sday=01');
+      expect(url).toContain('smonth=');
+      expect(url).toContain('syear=');
     });
   });
 
   describe('parsePageRows', () => {
     it('parses valid Stop + Start rows', () => {
       const html = `
-        <table>
+        <table cellspacing="2" cellpadding="2">
           <tr><td>2025-02-03 14:30:00</td><td></td><td></td><td></td><td>Stop</td><td></td><td>00:12:45</td></tr>
           <tr><td>2025-02-03 14:17:15</td><td></td><td></td><td></td><td>Start</td><td></td><td></td></tr>
         </table>`;
@@ -46,6 +40,4 @@ describe('BaseNeonovaController', () => {
       expect(ctrl.parsePageRows(doc)).toHaveLength(0);
     });
   });
-
-  // ... more tests
 });
