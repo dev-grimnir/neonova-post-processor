@@ -1,6 +1,6 @@
 // tests/controllers/base-neonova-controller.test.js
 
-import { BaseNeonovaController } from '../../src/controllers/base-neonova-controller.js';
+import { BaseNeonovaController } from '/src/controllers/base-neonova-controller.js';
 
 // For browser-like environment in Node (we'll set this up next)
 const { JSDOM } = require('jsdom');
