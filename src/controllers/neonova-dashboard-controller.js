@@ -17,7 +17,7 @@ class NeonovaDashboardController extends BaseNeonovaController{
         } else {
             this.poll(); // immediate update when resuming
         }
-        if (this.view) this.view.updatePollingButton(); // optional: refresh button text
+        //if (this.view) this.view.updatePollingButton(); // optional: refresh button text
     }
 
     togglePanel() {
