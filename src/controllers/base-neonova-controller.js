@@ -252,6 +252,7 @@ parsePageRows(doc) {
     }
     
     async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
+        console.log('=== PAGINATE CALLED WITH ===', { startDate, endDate, username });
         const entries = [];
         let doc = null;
         let page = 1;
