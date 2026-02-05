@@ -84,6 +84,8 @@ class NeonovaDashboardView {
         // === Event listeners ===
         const pollBtn = this.panel.querySelector('#poll-toggle-btn');
         if (pollBtn) {
+            console.log("Button found");
+            console.log("Polling status is " + this.controller.isPolling);
             pollBtn.addEventListener('click', () => {
                 if (this.controller.isPolling) {           // ← whatever flag your controller actually uses
                     this.controller.stopPolling();
