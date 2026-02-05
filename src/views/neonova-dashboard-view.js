@@ -82,10 +82,9 @@ class NeonovaDashboardView {
         `;
     
         // === Event listeners ===
-
-        this.panel.querySelector('.poll-toggle-btn').addEventListener('click, () => {
-            this.updatePollingButton()
-            });
+        this.panel.querySelector('.poll-toggle-btn').addEventListener('click', () => {
+            this.updatePollingButton();
+        });
         
         this.panel.querySelector('.add-btn').addEventListener('click', () => {
             const id = this.panel.querySelector('#radiusId').value.trim();
