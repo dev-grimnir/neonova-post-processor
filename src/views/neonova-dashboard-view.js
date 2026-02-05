@@ -78,10 +78,15 @@ class NeonovaDashboardView {
                 <tbody>${rows}</tbody>
             </table>
             <button class="refresh-btn">Refresh Now</button>
-            <button id="poll-toggle-btn">${this.updatePollingButton()}</button>
+            <button id="poll-toggle-btn">Stop Polling</button>
         `;
     
         // === Event listeners ===
+
+        this.panel.querySelector('.poll-toggle-btn').addEventListener('click, () => {
+            this.updatePollingButton()
+            });
+        
         this.panel.querySelector('.add-btn').addEventListener('click', () => {
             const id = this.panel.querySelector('#radiusId').value.trim();
             const name = this.panel.querySelector('#friendlyName').value.trim();
