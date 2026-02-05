@@ -78,7 +78,7 @@ class NeonovaDashboardView {
                 <tbody>${rows}</tbody>
             </table>
             <button class="refresh-btn">Refresh Now</button>
-            <button id="poll-toggle-btn">${this.controller.isPollingPaused ? 'Resume Polling' : 'Pause Polling'}</button>
+            <button id="poll-toggle-btn">${this.updatePollingButton()}</button>
         `;
     
         // === Event listeners ===
