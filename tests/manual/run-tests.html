@@ -3,59 +3,73 @@
 <head>
   <meta charset="UTF-8">
   <title>Neonova Post-Processor - Manual Tests</title>
-  <style>body { font-family: system-ui, sans-serif; padding: 2rem; } .pass { color: green; } .fail { color: red; }</style>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 2rem; max-width: 800px; margin: auto; }
+    .pass { color: green; font-weight: bold; }
+    .fail { color: red; font-weight: bold; }
+    h1, h2 { text-align: center; }
+  </style>
 </head>
 <body>
   <h1>BaseNeonovaController Tests (Browser)</h1>
   <div id="results"></div>
 
-  <script type="module">
-    // Load your source code (use raw.githubusercontent URLs)
-    import { BaseNeonovaController } from 'https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/controllers/base-neonova-controller.js';
+  <!-- Load the controller as a classic script (global scope) -->
+  <script src="https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/controllers/base-neonova-controller.js"></script>
 
+  <!-- Run the tests -->
+  <script>
     const resultsDiv = document.getElementById('results');
-    let passCount = 0, total = 0;
+    let passCount = 0;
+    let total = 0;
 
     function assert(condition, message) {
       total++;
-      const el = document.createElement('p');
-      el.textContent = message;
-      el.className = condition ? 'pass' : 'fail';
-      el.textContent = (condition ? '✓ ' : '✗ ') + message;
-      resultsDiv.appendChild(el);
+      const p = document.createElement('p');
+      p.textContent = (condition ? '✓ ' : '✗ ') + message;
+      p.className = condition ? 'pass' : 'fail';
+      resultsDiv.appendChild(p);
       if (condition) passCount++;
     }
 
-    // Tests
-    const ctrl = new BaseNeonovaController();
+    // Wait a tiny bit for the script to load and define the class
+    setTimeout(() => {
+      if (typeof BaseNeonovaController === 'undefined') {
+        resultsDiv.innerHTML += '<p class="fail">✗ BaseNeonovaController class not defined — check if the src script loaded.</p>';
+        return;
+      }
 
-    // Test 1: getSearchUrl
-    const url = ctrl.getSearchUrl('testuser123');
-    assert(url.includes('iuserid=testuser123'), 'getSearchUrl includes username');
-    assert(url.includes('sday=01'), 'getSearchUrl starts on 1st of month');
+      const ctrl = new BaseNeonovaController();
 
-    // Test 2: parsePageRows - valid data
-    const htmlValid = `
-      <table>
-        <tr><td>2025-02-03 14:30:00</td><td></td><td></td><td></td><td>Stop</td><td></td><td>00:12:45</td></tr>
-        <tr><td>2025-02-03 14:17:15</td><td></td><td></td><td></td><td>Start</td><td></td><td></td></tr>
-      </table>`;
-    const docValid = new DOMParser().parseFromString(htmlValid, 'text/html');
-    const entries = ctrl.parsePageRows(docValid);
-    assert(entries.length === 2, 'parses 2 entries');
-    assert(entries[0].status === 'Stop', 'first is Stop');
-    assert(entries[1].status === 'Start', 'second is Start');
+      // Test 1: getSearchUrl
+      const url = ctrl.getSearchUrl('testuser123');
+      assert(url.includes('iuserid=testuser123'), 'includes username in query');
+      assert(url.includes('sday=01'), 'starts on 1st of current month');
+      assert(url.includes('smonth=') && url.includes('syear='), 'includes month and year');
 
-    // Test 3: invalid date skipped
-    const htmlInvalid = `<table><tr><td>bad</td><td></td><td></td><td></td><td>Stop</td><td></td><td>00:00:00</td></tr></table>`;
-    const docInvalid = new DOMParser().parseFromString(htmlInvalid, 'text/html');
-    assert(ctrl.parsePageRows(docInvalid).length === 0, 'skips invalid dates');
+      // Test 2: parsePageRows - valid rows
+      const htmlValid = `
+<table cellspacing="2" cellpadding="2">
+  <tr><td>2025-07-15 09:45:00</td><td></td><td></td><td></td><td>Stop</td><td></td><td>01:23:45</td></tr>
+  <tr><td>2025-07-15 08:20:15</td><td></td><td></td><td></td><td>Start</td><td></td><td></td></tr>
+</table>`;
+      const docValid = new DOMParser().parseFromString(htmlValid, 'text/html');
+      const entries = ctrl.parsePageRows(docValid);
+      assert(entries.length === 2, 'parses exactly 2 entries');
+      assert(entries[0].status === 'Stop' && entries[1].status === 'Start', 'correct order and statuses');
+      assert(entries[0].dateObj instanceof Date && !isNaN(entries[0].dateObj), 'Stop has valid dateObj');
 
-    // Summary
-    const summary = document.createElement('h2');
-    summary.textContent = `${passCount}/${total} tests passed`;
-    summary.style.color = passCount === total ? 'green' : 'red';
-    resultsDiv.prepend(summary);
+      // Test 3: skips invalid date
+      const htmlInvalid = `<table><tr><td>not-a-date</td><td>x</td><td>x</td><td>x</td><td>Stop</td><td>x</td><td>00:00:00</td></tr></table>`;
+      const docInvalid = new DOMParser().parseFromString(htmlInvalid, 'text/html');
+      assert(ctrl.parsePageRows(docInvalid).length === 0, 'skips rows with invalid dates');
+
+      // Summary at top
+      const summary = document.createElement('h2');
+      summary.textContent = `${passCount} / ${total} tests passed`;
+      summary.style.color = passCount === total ? 'green' : 'red';
+      resultsDiv.prepend(summary);
+    }, 500);  // small delay to ensure script loaded
   </script>
 </body>
 </html>
