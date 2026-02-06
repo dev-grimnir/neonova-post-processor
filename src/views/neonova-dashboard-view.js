@@ -7,28 +7,47 @@ class NeonovaDashboardView {
     }
 
     createElements() {
-        // Minimize bar (shown when minimized)
+        // Tailwind (one-time)
+        if (!document.getElementById('tailwind-css')) {
+            const s = document.createElement('script');
+            s.id = 'tailwind-css';
+            s.src = 'https://cdn.tailwindcss.com';
+            document.head.appendChild(s);
+        }
+
+        // ────── MINIMIZED BAR (slim header at bottom) ──────
         this.minimizeBar = document.createElement('div');
         this.minimizeBar.style.cssText = `
             position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-            background: #444; color: white; padding: 6px 12px; border-radius: 6px 6px 0 0;
-            cursor: pointer; z-index: 9999; font-family: Arial; display: none;
+            background: #18181b; color: white; padding: 14px 32px; border-radius: 16px 16px 0 0;
+            cursor: pointer; z-index: 10000; font-family: system-ui; display: none;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.6); border: 1px solid #27272a;
         `;
-        this.minimizeBar.textContent = 'Dashboard (click to show)';
-        this.minimizeBar.addEventListener('click', () => this.controller.togglePanel());
+        this.minimizeBar.innerHTML = `
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-emerald-500 rounded-2xl flex items-center justify-center text-black font-bold text-xl">N</div>
+                <h1 class="text-xl font-semibold" style="text-shadow: 0 0 15px #22ff88;">Neonova</h1>
+                <span class="text-emerald-400 text-xs font-mono tracking-widest">DASHBOARD</span>
+            </div>
+            <button class="ml-auto px-5 py-1.5 text-sm font-medium bg-zinc-800 hover:bg-zinc-700 rounded-2xl flex items-center gap-2 transition">
+                <i class="fas fa-chevron-up"></i> Maximize
+            </button>
+        `;
+        this.minimizeBar.addEventListener('click', () => this.controller.toggleMinimize());
         document.body.appendChild(this.minimizeBar);
-        
-        // Main panel
+
+        // ────── MAIN PANEL ──────
         this.panel = document.createElement('div');
         this.panel.style.cssText = `
             position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-            width: 90%; max-width: 900px; max-height: 50vh; overflow-y: auto;
-            background: #fff; border: 1px solid #999; border-bottom: none;
-            border-radius: 8px 8px 0 0; box-shadow: 0 -4px 12px rgba(0,0,0,0.3);
-            padding: 12px; font-family: Arial; z-index: 9998; display: none;
-            `;
+            width: 90%; max-width: 1100px; max-height: 75vh; overflow-y: auto;
+            background: #09090b; border: 1px solid #27272a; border-bottom: none;
+            border-radius: 24px 24px 0 0; box-shadow: 0 -8px 30px rgba(0,0,0,0.7);
+            padding: 0; font-family: system-ui; z-index: 9999; display: none;
+            transition: all 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+        `;
         document.body.appendChild(this.panel);
-        
+
         this.render();
     }
 
@@ -41,53 +60,104 @@ class NeonovaDashboardView {
     
             const durationText = c.getDurationStr();
     
-            rows += `
-                <tr>
-                    <td class="friendly-name" data-username="${c.radiusUsername}" data-editable="false">${c.friendlyName || c.radiusUsername}</td>
-                    <td>${c.radiusUsername}</td>
-                    <td style="color:${statusColor};">${c.status}</td>
-                    <td style="color:${durationColor};">${durationText}</td>
-                    <td>
-                        <button class="remove-btn" data-username="${c.radiusUsername}">Remove</button>
-                        <button class="report-btn" data-username="${c.radiusUsername}">Generate Report</button>
-                    </td>
-                </tr>
-            `;
+                        rows += `
+                            <tr class="hover:bg-zinc-800 transition group">
+                                <td class="friendly-name px-8 py-5 font-medium" data-username="${c.radiusUsername}" data-editable="false">${c.friendlyName || c.radiusUsername}</td>
+                                <td class="px-8 py-5 font-mono text-zinc-400">${c.radiusUsername}</td>
+                                <td class="px-8 py-5">
+                                    <span class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-2xl text-xs font-semibold ${isConnected ? 'bg-emerald-500' : 'bg-red-500'} text-white">
+                                        <span class="w-2 h-2 rounded-full bg-current"></span>
+                                        ${c.status}
+                                    </span>
+                                </td>
+                                <td class="px-8 py-5 font-mono ${durationColor === '#c00' ? 'text-red-400' : 'text-emerald-400'}">
+                                    ${durationText}
+                                </td>
+                                <td class="px-8 py-5 text-right">
+                                    <button class="remove-btn text-zinc-400 hover:text-red-400 px-3 py-1 text-sm">Remove</button>
+                                    <button class="report-btn ml-3 bg-zinc-800 hover:bg-zinc-700 px-5 py-2 rounded-2xl text-xs font-medium">Report</button>
+                                </td>
+                            </tr>
+                        `;
         });
     
-        this.panel.innerHTML = `
-            <h3>Dashboard</h3>
-            <button class="close-btn">Close</button>
-            <button class="minimize-btn">${this.controller.minimized ? 'Restore' : 'Minimize'}</button>
-            <span>Last update: ${new Date().toLocaleTimeString()}</span>
-            <div>
-                <input id="radiusId" type="text" placeholder="RADIUS Username">
-                <input id="friendlyName" type="text" placeholder="Friendly Name (optional)">
-                <button class="add-btn">Add</button>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Friendly Name</th>
-                        <th>RADIUS Username</th>
-                        <th>Status</th>
-                        <th>Duration</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-            </table>
-            <button class="refresh-btn">Refresh Now</button>
-            <button id="poll-toggle-btn">${this.controller.isPollingPaused ? 'Resume Polling' : 'Pause Polling'}</button>
-            <div style="margin: 12px 0; padding: 8px; background: #f8f8f8; border-radius: 6px; position: relative;">
-                <label style="font-size: 14px;">
-                Polling interval: 
-                <span id="interval-value">${this.controller.pollingIntervalMinutes}</span> minutes</label><br>
-                <input type="range" id="polling-interval-slider" 
-                min="1" max="60" value="${this.controller.pollingIntervalMinutes}"
-                style="width: 100%; accent-color: #006400;">
-            </div>
-        `;
+                this.panel.innerHTML = `
+                    <!-- HEADER -->
+                    <div class="flex items-center justify-between px-8 py-5 border-b border-zinc-800 bg-zinc-900">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 bg-emerald-500 rounded-2xl flex items-center justify-center text-black font-bold text-xl">N</div>
+                            <h1 class="text-2xl font-semibold" style="text-shadow: 0 0 15px #22ff88;">Neonova</h1>
+                            <span class="text-emerald-400 text-sm font-mono tracking-widest">DASHBOARD</span>
+                        </div>
+                        <button class="minimize-btn px-6 py-2.5 text-sm font-medium bg-zinc-800 hover:bg-zinc-700 rounded-2xl flex items-center gap-2 transition">
+                            <i class="fas fa-minus"></i> Minimize
+                        </button>
+                    </div>
+        
+                    <!-- MAIN CONTENT -->
+                    <div class="p-8">
+        
+                        <!-- ADD BAR -->
+                        <div class="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 mb-8">
+                            <div class="grid grid-cols-12 gap-4">
+                                <div class="col-span-5">
+                                    <input id="radiusId" type="text" placeholder="RADIUS Username" 
+                                           class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-5 py-4 focus:outline-none focus:border-emerald-500">
+                                </div>
+                                <div class="col-span-5">
+                                    <input id="friendlyName" type="text" placeholder="Friendly Name (optional)" 
+                                           class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-5 py-4 focus:outline-none focus:border-emerald-500">
+                                </div>
+                                <div class="col-span-2">
+                                    <button class="add-btn w-full h-full bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl transition">ADD</button>
+                                </div>
+                            </div>
+                        </div>
+        
+                        <!-- TABLE -->
+                        <div class="bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="border-b border-zinc-800 text-xs uppercase tracking-widest text-zinc-500">
+                                        <th class="px-8 py-5 text-left">Friendly Name</th>
+                                        <th class="px-8 py-5 text-left">RADIUS Username</th>
+                                        <th class="px-8 py-5 text-left">Status</th>
+                                        <th class="px-8 py-5 text-left">Duration</th>
+                                        <th class="px-8 py-5 text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rows}</tbody>
+                            </table>
+                        </div>
+        
+                        <!-- BOTTOM BAR -->
+                        <div class="mt-8 flex items-center justify-between bg-zinc-900 border border-zinc-700 rounded-3xl px-8 py-5">
+                            <div class="flex items-center gap-8">
+                                <!-- Slider -->
+                                <div class="flex items-center gap-4">
+                                    <span class="text-xs uppercase tracking-widest text-zinc-500">Polling</span>
+                                    <input type="range" id="polling-interval-slider" min="1" max="60" value="${this.controller.pollingIntervalMinutes}" class="w-64 accent-emerald-500">
+                                    <span id="interval-value" class="font-mono text-emerald-400 w-12">${this.controller.pollingIntervalMinutes} min</span>
+                                </div>
+        
+                                <!-- Pause button -->
+                                <button id="poll-toggle-btn" 
+                                        class="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition">
+                                    ${this.controller.isPollingPaused ? '<i class="fas fa-play"></i> Resume Polling' : '<i class="fas fa-pause"></i> Pause Polling'}
+                                </button>
+                            </div>
+        
+                            <div class="flex items-center gap-6 text-sm">
+                                <button class="refresh-btn flex items-center gap-2 text-emerald-400 hover:text-emerald-300">
+                                    <i class="fas fa-sync-alt"></i> Refresh Now
+                                </button>
+                                <div class="text-zinc-500 text-xs">
+                                    Last update: <span class="font-mono text-zinc-400">${new Date().toLocaleTimeString()}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
 
         // === Polling interval slider + live tooltip ===
         const slider = this.panel.querySelector('#polling-interval-slider');
@@ -361,9 +431,40 @@ class NeonovaDashboardView {
     }
 
     toggleMinimize() {
-        this.controller.toggleMinimize();
+        this.controller.toggleMinimize();   // still calls controller
+
+        const dash = this.panel;
+        const minBar = this.minimizeBar;
+
+        if (this.controller.minimized) {
+            // Minimize
+            dash.style.transition = 'all 0.45s cubic-bezier(0.4, 0, 0.2, 1)';
+            dash.style.transform = 'translate(-50%, 85%)';
+            setTimeout(() => {
+                dash.style.display = 'none';
+                minBar.style.display = 'flex';
+            }, 450);
+        } else {
+            // Maximize
+            minBar.style.display = 'none';
+            dash.style.display = 'block';
+            setTimeout(() => {
+                dash.style.transform = 'translateX(-50%)';
+            }, 10);
+        }
     }
 
+    show() {
+        this.panel.style.display = 'block';
+        this.panel.style.transform = 'translateX(-50%)';
+        this.minimizeBar.style.display = 'none';
+    }
+
+    hide() {
+        this.panel.style.display = 'none';
+        this.minimizeBar.style.display = 'none';
+    }
+    
     toggle() {
         if (this.panel) {
             const isVisible = this.panel.style.display !== 'none';
@@ -375,29 +476,5 @@ class NeonovaDashboardView {
                 this.minimizeBar.style.display = 'none';
             }
         }
-    }
-
-    updateMinimize() {
-        if (this.controller.minimized) {
-            this.panel.style.width = '50px';
-            this.panel.style.height = '30px';
-            this.panel.innerHTML = '<div style="text-align:center;">▼</div>';
-        } else {
-            this.render();  // re-render full panel
-        }
-    }
-    
-    show() {
-        if (this.panel) {
-            this.panel.style.display = 'block';
-        }
-        this.updateMinimize();
-    }
-
-    hide() {
-        if (this.panel) {
-            this.panel.style.display = 'none';
-        }
-        this.updateMinimize();
     }
 }
