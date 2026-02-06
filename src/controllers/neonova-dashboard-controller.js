@@ -5,6 +5,8 @@ class NeonovaDashboardController extends BaseNeonovaController{
         this.panelVisible = false;
         this.minimized = false;
         this.pollingIntervalMinutes = 5;
+        this.pollIntervalMs = 5 * 60 * 1000;
+        this.pollInterval = null;  
         this.view = new NeonovaDashboardView(this);
         this.isPollingPaused = false;
         
@@ -17,17 +19,25 @@ class NeonovaDashboardController extends BaseNeonovaController{
         console.log(`Polling timer started – every ${this.pollingIntervalMinutes} min`);
     }
 
+    stopPolling() {
+        if (this.pollInterval) {
+            clearInterval(this.pollInterval);
+            this.pollInterval = null;
+            console.log('Polling stopped');
+        }
+    }
+
     setPollingInterval(minutes) {
         minutes = Math.max(1, Math.min(60, parseInt(minutes) || 5));
         this.pollingIntervalMinutes = minutes;
         this.pollIntervalMs = minutes * 60 * 1000;
     
-        console.log(`Slider changed interval to ${minutes} min`);
+        console.log(`Slider → ${minutes} min (${this.pollIntervalMs} ms)`);
     
-        // ← ONLY place that ever replaces the timer
         if (this.pollInterval) {
             clearInterval(this.pollInterval);
             this.pollInterval = setInterval(() => this.poll(), this.pollIntervalMs);
+            console.log('Interval restarted with new value');
         }
     }
 
