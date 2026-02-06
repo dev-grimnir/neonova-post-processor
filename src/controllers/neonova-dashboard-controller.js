@@ -13,7 +13,6 @@ class NeonovaDashboardController extends BaseNeonovaController{
     startPolling() {
         if (this.pollInterval) return;
         this.poll();                                      
-        //this.pollInterval = setInterval(() => this.poll(), this.pollIntervalMs);
         console.log(`Polling timer created – every ${this.pollingIntervalMinutes} min`);
     }
 
@@ -103,7 +102,7 @@ class NeonovaDashboardController extends BaseNeonovaController{
     }
 
     async poll() {
-        console.log("NeonovaDashboardController.poll - polling now with interval" + this.pollInterval);
+        console.log("NeonovaDashboardController.poll - polling now with interval" + this.pollIntervalMinutes);
         if (this.isPollingPaused) {
             return;
         }
