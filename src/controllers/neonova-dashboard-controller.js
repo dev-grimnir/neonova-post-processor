@@ -127,6 +127,7 @@ class NeonovaDashboardController extends BaseNeonovaController{
     }
 
     async poll() {
+        console.log("NeonovaDashboardController.poll - polling now");
         if (this.isPollingPaused) {
             return;
         }
