@@ -105,13 +105,6 @@ class NeonovaDashboardController extends BaseNeonovaController{
         //if (this.view) this.view.updateMinimize();
     }
 
-
-    startPolling() {
-        if (this.pollInterval) return;
-        this.poll();
-        this.pollInterval = setInterval(() => this.poll(), 60000); // 1 min - adjust later
-    }
-
     stopPolling() {
         if (this.pollInterval) {
             clearInterval(this.pollInterval);
@@ -120,7 +113,7 @@ class NeonovaDashboardController extends BaseNeonovaController{
     }
 
     async poll() {
-        console.log("NeonovaDashboardController.poll - polling now");
+        console.log("NeonovaDashboardController.poll - polling now with interval" + this.pollInterval);
         if (this.isPollingPaused) {
             return;
         }
