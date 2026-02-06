@@ -5,9 +5,6 @@ class NeonovaDashboardController extends BaseNeonovaController{
         this.panelVisible = false;
         this.minimized = false;
         this.pollingIntervalMinutes = 5;
-        this.pollIntervalMs = this.pollingIntervalMinutes * 60 * 1000;
-        this.pollInterval = null;
-        this.pollIntervalMs = 10000;
         this.view = new NeonovaDashboardView(this);
         this.isPollingPaused = false;
         
@@ -17,8 +14,10 @@ class NeonovaDashboardController extends BaseNeonovaController{
         minutes = Math.max(1, Math.min(60, parseInt(minutes) || 5));
         this.pollingIntervalMinutes = minutes;
         this.pollIntervalMs = minutes * 60 * 1000;
-        console.log("NeonovaDashboardController.setPollingInterval - Polling interval set to " + this.pollIntervalMs);
-        // If the dashboard is open and polling is active → restart immediately
+
+        console.log(`Polling interval set to ${minutes} minutes (${this.pollIntervalMs} ms)`);
+
+        
         if (this.pollInterval) {
             this.restartPolling();
         }
@@ -27,31 +26,25 @@ class NeonovaDashboardController extends BaseNeonovaController{
     restartPolling() {
         this.stopPolling();
         this.startPolling();
+        console.log('Polling restarted with new interval');
     }
 
     startPolling() {
         if (this.pollInterval) return;
-        this.poll();
+        this.poll();  // immediate poll
         this.pollInterval = setInterval(() => this.poll(), this.pollIntervalMs);
+        console.log(`Polling started – every ${this.pollingIntervalMinutes} minutes`);
     }
-
-    togglePolling() {
-        const wasPaused = this.isPollingPaused;
-        this.isPollingPaused = !this.isPollingPaused;
-
-        if (!this.isPollingPaused) {                     // resuming
-            this.poll();                                 // immediate update
-            if (wasPaused) this.restartPolling();        // pick up new interval if changed while paused
-        }
-    }
-
+    
     togglePolling() {
         this.isPollingPaused = !this.isPollingPaused;
-        if (this.isPollingPaused) {
-        } else {
-            this.poll(); // immediate update when resuming
+
+        if (!this.isPollingPaused) {              
+            this.poll();                         
+            this.restartPolling();                 
         }
-        //if (this.view) this.view.updatePollingButton(); // optional: refresh button text
+
+        this.view?.update();                       
     }
 
     togglePanel() {
