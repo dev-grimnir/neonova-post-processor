@@ -88,8 +88,6 @@ class NeonovaDashboardView {
                 style="width: 100%; accent-color: #006400;">
             </div>
         `;
-    
-        // === Event listeners ===
 
         // === Polling interval slider + live tooltip ===
         const slider = this.panel.querySelector('#polling-interval-slider');
@@ -153,7 +151,8 @@ class NeonovaDashboardView {
                 if (e.touches.length) showTooltip(e.touches[0]);
             });
         }
-        
+
+        // === Event listeners ===
         // Poll toggle button
         const pollBtn = this.panel.querySelector('#poll-toggle-btn');
         if (pollBtn) {
