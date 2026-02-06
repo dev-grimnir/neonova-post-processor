@@ -102,7 +102,7 @@ class NeonovaDashboardController extends BaseNeonovaController{
     }
 
     async poll() {
-        console.log("NeonovaDashboardController.poll - polling now with interval" + this.pollIntervalMinutes);
+        console.log("NeonovaDashboardController.poll - polling now with interval" + this.pollingIntervalMinutes);
         if (this.isPollingPaused) {
             return;
         }
