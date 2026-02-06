@@ -100,6 +100,7 @@ class NeonovaDashboardView {
                 const minutes = parseInt(slider.value);
                 display.textContent = minutes;
                 this.controller.setPollingInterval(minutes);
+                console.log("NeonovaDashboardView setting poll interval to " + minutes);
             });
         }
         
