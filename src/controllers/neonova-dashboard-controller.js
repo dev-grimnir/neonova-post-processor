@@ -10,41 +10,31 @@ class NeonovaDashboardController extends BaseNeonovaController{
         
     }
 
-    setPollingInterval(minutes) {
+        setPollingInterval(minutes) {
         minutes = Math.max(1, Math.min(60, parseInt(minutes) || 5));
         this.pollingIntervalMinutes = minutes;
         this.pollIntervalMs = minutes * 60 * 1000;
 
-        console.log(`Polling interval set to ${minutes} minutes (${this.pollIntervalMs} ms)`);
+        console.log(`Polling interval → ${minutes} min (${this.pollIntervalMs} ms)`);
 
-        
+        // If currently running → apply new interval immediately
         if (this.pollInterval) {
-            this.restartPolling();
+            this.togglePolling();   // pause
+            this.togglePolling();   // resume with new ms
         }
     }
 
-    restartPolling() {
-        this.stopPolling();
-        this.startPolling();
-        console.log('Polling restarted with new interval');
-    }
-
-    startPolling() {
-        if (this.pollInterval) return;
-        this.poll();  // immediate poll
-        this.pollInterval = setInterval(() => this.poll(), this.pollIntervalMs);
-        console.log(`Polling started – every ${this.pollingIntervalMinutes} minutes`);
-    }
-    
     togglePolling() {
-        this.isPollingPaused = !this.isPollingPaused;
-
-        if (!this.isPollingPaused) {              
-            this.poll();                         
-            this.restartPolling();                 
+        if (!this.isPollingPaused) {
+            this.isPollingPaused = true;
+            console.log('togglePolling → now paused');
+        } else {
+            this.isPollingPaused = false;
+            this.poll();
+            console.log('togglePolling → now unpaused');
         }
 
-        this.view?.update();                       
+        this.view?.update();                 // refresh button text
     }
 
     togglePanel() {
@@ -103,13 +93,6 @@ class NeonovaDashboardController extends BaseNeonovaController{
     toggleMinimize() {
         this.minimized = !this.minimized;
         //if (this.view) this.view.updateMinimize();
-    }
-
-    stopPolling() {
-        if (this.pollInterval) {
-            clearInterval(this.pollInterval);
-            this.pollInterval = null;
-        }
     }
 
     async poll() {
