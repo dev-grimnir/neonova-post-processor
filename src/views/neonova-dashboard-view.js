@@ -91,18 +91,6 @@ class NeonovaDashboardView {
     
         // === Event listeners ===
 
-        //Poll interval slider
-        const slider = this.panel.querySelector('#polling-interval-slider');
-        const display = this.panel.querySelector('#interval-value');
-        if (slider && display) {
-            slider.addEventListener('input', () => {
-                const minutes = parseInt(slider.value);
-                display.textContent = minutes;
-                this.controller.setPollingInterval(minutes);
-                console.log("NeonovaDashboardView setting poll interval to " + minutes);
-            });
-        }
-
         // === Polling interval slider + live tooltip ===
         const slider = this.panel.querySelector('#polling-interval-slider');
         const display = this.panel.querySelector('#interval-value');
