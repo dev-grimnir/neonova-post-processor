@@ -82,6 +82,19 @@ class NeonovaDashboardView {
         `;
     
         // === Event listeners ===
+        // Poll toggle button
+        const pollBtn = this.panel.querySelector('#poll-toggle-btn');
+        if (pollBtn) {
+            pollBtn.addEventListener('click', () => {
+                console.log('Poll button clicked – current paused:', this.controller.isPollingPaused);
+                
+                this.controller.togglePolling();   // ← just toggle, no if/else needed
+                
+                console.log('After toggle – now paused:', this.controller.isPollingPaused);
+                this.render();                     // forces fresh button text
+            });
+        }
+        
         this.panel.querySelector('.add-btn').addEventListener('click', () => {
             const id = this.panel.querySelector('#radiusId').value.trim();
             const name = this.panel.querySelector('#friendlyName').value.trim();
@@ -270,14 +283,6 @@ class NeonovaDashboardView {
                 };
             });
         });
-    }
-
-    updatePollingButton() {
-        const btn = this.panel.querySelector('#poll-toggle-btn');
-        if (btn) {
-            btn.textContent = this.controller.isPollingPaused ? 'Resume Polling' : 'Pause Polling';
-            btn.style.backgroundColor = this.controller.isPollingPaused ? '#c00' : '#060';
-        }
     }
     
     update() {
