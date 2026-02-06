@@ -3,7 +3,7 @@ class NeonovaDashboardController extends BaseNeonovaController{
         super();
         this.customers = this.load();
         this.panelVisible = false;
-        this.minimized = false;
+        this.minimized = true;
         this.pollingIntervalMinutes = 5;
         this.pollIntervalMs = 5 * 60 * 1000;
         this.pollInterval = null;  
