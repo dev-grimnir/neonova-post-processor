@@ -248,10 +248,6 @@ class NeonovaDashboardView {
             }
         });
     
-        this.panel.querySelector('.close-btn').addEventListener('click', () => {
-            this.controller.togglePanel();
-        });
-    
         this.panel.querySelector('.minimize-btn').addEventListener('click', () => {
             this.controller.toggleMinimize();
         });
