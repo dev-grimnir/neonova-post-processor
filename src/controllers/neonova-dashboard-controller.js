@@ -17,7 +17,7 @@ class NeonovaDashboardController extends BaseNeonovaController{
         minutes = Math.max(1, Math.min(60, parseInt(minutes) || 5));
         this.pollingIntervalMinutes = minutes;
         this.pollIntervalMs = minutes * 60 * 1000;
-        console.log("Polling interval set to " + this.pollIntervalMs)
+        console.log("NeonovaDashboardController.setPollingInterval - Polling interval set to " + this.pollIntervalMs);
         // If the dashboard is open and polling is active → restart immediately
         if (this.pollInterval) {
             this.restartPolling();
