@@ -41,10 +41,10 @@ class NeonovaDashboardView {
         // ────── MAIN PANEL ──────
         this.panel = document.createElement('div');
         this.panel.style.cssText = `
-        position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
-        width: 90%; max-width: 1100px; height: calc(100vh - 140px);
+        position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+        width: 92%; max-width: 1100px; max-height: 78vh;
         background: #09090b; border: 1px solid #27272a; border-bottom: none;
-        border-radius: 24px 24px 0 0; box-shadow: 0 -8px 30px rgba(0,0,0,0.7);
+        border-radius: 24px 24px 0 0; box-shadow: 0 -12px 40px rgba(0,0,0,0.8);
         padding: 0; font-family: system-ui; z-index: 9999; display: none;
         overflow-y: auto;
         `;
@@ -434,27 +434,26 @@ class NeonovaDashboardView {
     }
 
         toggleMinimize() {
-        // Flip the flag
         this.controller.minimized = !this.controller.minimized;
 
         const dash = this.panel;
         const minBar = this.minimizeBar;
 
         if (this.controller.minimized) {
-            // === MINIMIZE ===
-            dash.style.transition = 'all 0.45s cubic-bezier(0.4, 0, 0.2, 1)';
-            dash.style.transform = 'translate(-50%, 90%)';
+            // Slide down
+            dash.style.transition = 'transform 0.45s cubic-bezier(0.4, 0.0, 0.2, 1)';
+            dash.style.transform = 'translate(-50%, 85%)';
             setTimeout(() => {
                 dash.style.display = 'none';
                 minBar.style.display = 'flex';
-            }, 450);
+            }, 420);
         } else {
-            // === MAXIMIZE ===
+            // Slide up
             minBar.style.display = 'none';
             dash.style.display = 'block';
             setTimeout(() => {
                 dash.style.transform = 'translateX(-50%)';
-            }, 20);
+            }, 10);
         }
     }
 
