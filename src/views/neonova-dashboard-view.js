@@ -79,8 +79,79 @@ class NeonovaDashboardView {
             </table>
             <button class="refresh-btn">Refresh Now</button>
             <button id="poll-toggle-btn">${this.controller.isPollingPaused ? 'Resume Polling' : 'Pause Polling'}</button>
+            <div style="margin: 12px 0; padding: 8px; background: #f8f8f8; border-radius: 6px; position: relative;">
+                <label style="font-size: 14px;">
+                Polling interval: 
+                <span id="interval-value">${this.controller.pollingIntervalMinutes}</span> minutes</label><br>
+                <input type="range" id="polling-interval-slider" 
+                min="1" max="60" value="${this.controller.pollingIntervalMinutes}"
+                style="width: 100%; accent-color: #006400;">
+            </div>
         `;
-    
+
+        // === Polling interval slider + live tooltip ===
+        const slider = this.panel.querySelector('#polling-interval-slider');
+        const display = this.panel.querySelector('#interval-value');
+
+        if (slider && display) {
+            // Existing listener (keep this)
+            slider.addEventListener('input', () => {
+                const minutes = parseInt(slider.value);
+                display.textContent = minutes;
+                this.controller.setPollingInterval(minutes);
+            });
+
+            // ────── Tooltip setup ──────
+            let tooltip = document.getElementById('poll-tooltip');
+            if (!tooltip) {
+                tooltip = document.createElement('div');
+                tooltip.id = 'poll-tooltip';
+                tooltip.style.cssText = `
+                    position: absolute;
+                    background: #222;
+                    color: #fff;
+                    padding: 6px 10px;
+                    border-radius: 4px;
+                    font-size: 13px;
+                    font-family: Arial, sans-serif;
+                    white-space: nowrap;
+                    pointer-events: none;
+                    opacity: 0;
+                    transition: opacity .15s, transform .15s;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+                    z-index: 10001;
+                `;
+                document.body.appendChild(tooltip);
+            }
+
+            const showTooltip = (e) => {
+                const rect = slider.getBoundingClientRect();
+                const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                const value = Math.round(+slider.min + percent * (+slider.max - +slider.min));
+
+                tooltip.textContent = `${value} minute${value === 1 ? '' : 's'}`;
+
+                // Position tooltip above the thumb
+                const thumbX = rect.left + percent * rect.width;
+                tooltip.style.left = `${thumbX - tooltip.offsetWidth / 2}px`;
+                tooltip.style.top = `${rect.top - 34}px`;
+                tooltip.style.opacity = '1';
+                tooltip.style.transform = 'translateY(-4px)';
+            };
+
+            const hideTooltip = () => {
+                tooltip.style.opacity = '0';
+                tooltip.style.transform = 'translateY(0)';
+            };
+
+            slider.addEventListener('mousemove', showTooltip);
+            slider.addEventListener('input', showTooltip);   // also update while dragging
+            slider.addEventListener('mouseleave', hideTooltip);
+            slider.addEventListener('touchmove', (e) => {    // optional mobile support
+                if (e.touches.length) showTooltip(e.touches[0]);
+            });
+        }
+
         // === Event listeners ===
         // Poll toggle button
         const pollBtn = this.panel.querySelector('#poll-toggle-btn');

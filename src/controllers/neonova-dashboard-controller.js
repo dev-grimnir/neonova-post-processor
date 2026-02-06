@@ -4,20 +4,54 @@ class NeonovaDashboardController extends BaseNeonovaController{
         this.customers = this.load();
         this.panelVisible = false;
         this.minimized = false;
-        this.pollInterval = null;
-        this.pollIntervalMs = 10000;
+        this.pollingIntervalMinutes = 5;
+        this.pollIntervalMs = 5 * 60 * 1000;
+        this.pollInterval = null;  
         this.view = new NeonovaDashboardView(this);
         this.isPollingPaused = false;
         
     }
 
-    togglePolling() {
-        this.isPollingPaused = !this.isPollingPaused;
-        if (this.isPollingPaused) {
-        } else {
-            this.poll(); // immediate update when resuming
+    startPolling() {
+        if (this.pollInterval) return;                     // ← guard (good)
+        this.poll();                                       // first poll now
+        this.pollInterval = setInterval(() => this.poll(), this.pollIntervalMs);  // ← use variable, not 60000
+        console.log(`Polling timer started – every ${this.pollingIntervalMinutes} min`);
+    }
+
+    stopPolling() {
+        if (this.pollInterval) {
+            clearInterval(this.pollInterval);
+            this.pollInterval = null;
+            console.log('Polling stopped');
         }
-        //if (this.view) this.view.updatePollingButton(); // optional: refresh button text
+    }
+
+    setPollingInterval(minutes) {
+        minutes = Math.max(1, Math.min(60, parseInt(minutes) || 5));
+        this.pollingIntervalMinutes = minutes;
+        this.pollIntervalMs = minutes * 60 * 1000;
+    
+        console.log(`Slider → ${minutes} min (${this.pollIntervalMs} ms)`);
+    
+        if (this.pollInterval) {
+            clearInterval(this.pollInterval);
+            this.pollInterval = setInterval(() => this.poll(), this.pollIntervalMs);
+            console.log('Interval restarted with new value');
+        }
+    }
+
+    togglePolling() {
+        if (!this.isPollingPaused) {
+            this.isPollingPaused = true;
+            console.log('togglePolling → now paused');
+        } else {
+            this.isPollingPaused = false;
+            this.poll();
+            console.log('togglePolling → now unpaused');
+        }
+
+        this.view?.update();                 // refresh button text
     }
 
     togglePanel() {
@@ -78,21 +112,8 @@ class NeonovaDashboardController extends BaseNeonovaController{
         //if (this.view) this.view.updateMinimize();
     }
 
-
-    startPolling() {
-        if (this.pollInterval) return;
-        this.poll();
-        this.pollInterval = setInterval(() => this.poll(), 60000); // 1 min - adjust later
-    }
-
-    stopPolling() {
-        if (this.pollInterval) {
-            clearInterval(this.pollInterval);
-            this.pollInterval = null;
-        }
-    }
-
     async poll() {
+        console.log("NeonovaDashboardController.poll - polling now with interval " + this.pollingIntervalMinutes);
         if (this.isPollingPaused) {
             return;
         }
