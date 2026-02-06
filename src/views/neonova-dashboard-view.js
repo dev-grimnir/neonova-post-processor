@@ -39,15 +39,17 @@ class NeonovaDashboardView {
         // ────── MAIN PANEL ──────
         this.panel = document.createElement('div');
         this.panel.style.cssText = `
-            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-            width: 90%; max-width: 1100px; max-height: 75vh; overflow-y: auto;
-            background: #09090b; border: 1px solid #27272a; border-bottom: none;
-            border-radius: 24px 24px 0 0; box-shadow: 0 -8px 30px rgba(0,0,0,0.7);
-            padding: 0; font-family: system-ui; z-index: 9999; display: none;
-            transition: all 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+        position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+        width: 90%; max-width: 1100px; height: calc(100vh - 140px);
+        background: #09090b; border: 1px solid #27272a; border-bottom: none;
+        border-radius: 24px 24px 0 0; box-shadow: 0 -8px 30px rgba(0,0,0,0.7);
+        padding: 0; font-family: system-ui; z-index: 9999; display: none;
+        overflow-y: auto;
         `;
         document.body.appendChild(this.panel);
-
+        // Start minimized
+        this.minimizeBar.style.display = 'flex';
+        this.panel.style.display = 'none';
         this.render();
     }
 
@@ -60,25 +62,28 @@ class NeonovaDashboardView {
     
             const durationText = c.getDurationStr();
     
-                        rows += `
-                            <tr class="hover:bg-zinc-800 transition group">
-                                <td class="friendly-name px-8 py-5 font-medium" data-username="${c.radiusUsername}" data-editable="false">${c.friendlyName || c.radiusUsername}</td>
-                                <td class="px-8 py-5 font-mono text-zinc-400">${c.radiusUsername}</td>
-                                <td class="px-8 py-5">
-                                    <span class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-2xl text-xs font-semibold ${isConnected ? 'bg-emerald-500' : 'bg-red-500'} text-white">
-                                        <span class="w-2 h-2 rounded-full bg-current"></span>
-                                        ${c.status}
-                                    </span>
-                                </td>
-                                <td class="px-8 py-5 font-mono ${durationColor === '#c00' ? 'text-red-400' : 'text-emerald-400'}">
-                                    ${durationText}
-                                </td>
-                                <td class="px-8 py-5 text-right">
-                                    <button class="remove-btn text-zinc-400 hover:text-red-400 px-3 py-1 text-sm">Remove</button>
-                                    <button class="report-btn ml-3 bg-zinc-800 hover:bg-zinc-700 px-5 py-2 rounded-2xl text-xs font-medium">Report</button>
-                                </td>
-                            </tr>
-                        `;
+            rows += `
+                <tr class="hover:bg-zinc-800 transition group">
+                    <td class="friendly-name px-8 py-5 font-medium text-zinc-100" 
+                        data-username="${c.radiusUsername}" data-editable="false">
+                        ${c.friendlyName || c.radiusUsername}
+                    </td>
+                    <td class="px-8 py-5 font-mono text-zinc-400">${c.radiusUsername}</td>
+                    <td class="px-8 py-5">
+                        <span class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-2xl text-xs font-semibold ${isConnected ? 'bg-emerald-500' : 'bg-red-500'} text-white">
+                            <span class="w-2 h-2 rounded-full bg-current"></span>
+                            ${c.status}
+                        </span>
+                    </td>
+                    <td class="px-8 py-5 font-mono ${isConnected ? 'text-emerald-400' : 'text-red-400'}">
+                        ${durationText}
+                    </td>
+                    <td class="px-8 py-5 text-right">
+                        <button class="remove-btn text-zinc-400 hover:text-red-400 px-3 py-1 text-sm">Remove</button>
+                        <button class="report-btn ml-3 bg-emerald-600 hover:bg-emerald-500 px-5 py-2 rounded-2xl text-xs font-medium text-white">Report</button>
+                    </td>
+                </tr>
+            `;
         });
     
                 this.panel.innerHTML = `
@@ -318,7 +323,7 @@ class NeonovaDashboardView {
                 const username = btn.dataset.username;
                 const customer = this.controller.customers.find(c => c.radiusUsername === username);
                 if (!customer) return;
-    
+
                 const friendlyName = customer.friendlyName || username;
     
                 // Create overlay for order modal
