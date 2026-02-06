@@ -10,7 +10,14 @@ class NeonovaDashboardController extends BaseNeonovaController{
         
     }
 
-        setPollingInterval(minutes) {
+    startPolling() {
+        if (this.pollInterval) return;
+        this.poll();                                      
+        //this.pollInterval = setInterval(() => this.poll(), this.pollIntervalMs);
+        console.log(`Polling timer created – every ${this.pollingIntervalMinutes} min`);
+    }
+
+    setPollingInterval(minutes) {
         minutes = Math.max(1, Math.min(60, parseInt(minutes) || 5));
         this.pollingIntervalMinutes = minutes;
         this.pollIntervalMs = minutes * 60 * 1000;
