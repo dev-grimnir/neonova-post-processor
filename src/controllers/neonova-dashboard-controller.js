@@ -4,11 +4,45 @@ class NeonovaDashboardController extends BaseNeonovaController{
         this.customers = this.load();
         this.panelVisible = false;
         this.minimized = false;
+        this.pollingIntervalMinutes = 5;
+        this.pollIntervalMs = this.pollingIntervalMinutes * 60 * 1000;
         this.pollInterval = null;
         this.pollIntervalMs = 10000;
         this.view = new NeonovaDashboardView(this);
         this.isPollingPaused = false;
         
+    }
+
+    setPollingInterval(minutes) {
+        minutes = Math.max(1, Math.min(60, parseInt(minutes) || 5));
+        this.pollingIntervalMinutes = minutes;
+        this.pollIntervalMs = minutes * 60 * 1000;
+
+        // If the dashboard is open and polling is active → restart immediately
+        if (this.pollInterval) {
+            this.restartPolling();
+        }
+    }
+
+    restartPolling() {
+        this.stopPolling();
+        this.startPolling();
+    }
+
+    startPolling() {
+        if (this.pollInterval) return;
+        this.poll();
+        this.pollInterval = setInterval(() => this.poll(), this.pollIntervalMs);
+    }
+
+    togglePolling() {
+        const wasPaused = this.isPollingPaused;
+        this.isPollingPaused = !this.isPollingPaused;
+
+        if (!this.isPollingPaused) {                     // resuming
+            this.poll();                                 // immediate update
+            if (wasPaused) this.restartPolling();        // pick up new interval if changed while paused
+        }
     }
 
     togglePolling() {
