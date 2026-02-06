@@ -79,9 +79,30 @@ class NeonovaDashboardView {
             </table>
             <button class="refresh-btn">Refresh Now</button>
             <button id="poll-toggle-btn">${this.controller.isPollingPaused ? 'Resume Polling' : 'Pause Polling'}</button>
+                        <div style="margin: 12px 0; padding: 8px; background: #f8f8f8; border-radius: 6px;">
+                <label style="font-size: 14px;">
+                    Polling interval: 
+                    <span id="interval-value">${this.controller.pollingIntervalMinutes}</span> minutes
+                </label><br>
+                <input type="range" id="polling-interval-slider" 
+                       min="1" max="60" value="${this.controller.pollingIntervalMinutes}"
+                       style="width: 100%; accent-color: #006400;">
+            </div>
         `;
     
         // === Event listeners ===
+
+        //Poll interval slider
+        const slider = this.panel.querySelector('#polling-interval-slider');
+        const display = this.panel.querySelector('#interval-value');
+        if (slider && display) {
+            slider.addEventListener('input', () => {
+                const minutes = parseInt(slider.value);
+                display.textContent = minutes;
+                this.controller.setPollingInterval(minutes);
+            });
+        }
+        
         // Poll toggle button
         const pollBtn = this.panel.querySelector('#poll-toggle-btn');
         if (pollBtn) {
