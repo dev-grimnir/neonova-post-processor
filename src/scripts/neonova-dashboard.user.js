@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         NovaSubscriber - Dashboard (Live Monitoring)
+// @name         NovaSubscriber - Dashboard
 // @namespace    http://tampermonkey.net/
 // @version      0.1.0
 // @description  Real-time customer modem connection dashboard (separate script)
