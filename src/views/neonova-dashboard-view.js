@@ -433,7 +433,7 @@ class NeonovaDashboardView {
         this.render();
     }
 
-        toggleMinimize() {
+    toggleMinimize() {
         this.controller.minimized = !this.controller.minimized;
 
         const dash = this.panel;
