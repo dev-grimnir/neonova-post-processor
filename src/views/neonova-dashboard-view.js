@@ -95,8 +95,8 @@ class NeonovaDashboardView {
                             <div class="w-8 h-8 bg-emerald-500 rounded-2xl flex items-center justify-center text-black font-bold text-xl">N</div>
                             <h1 class="text-2xl font-semibold" style="text-shadow: 0 0 15px #22ff88;">Neonova</h1>
                             <span class="text-emerald-400 text-sm font-mono tracking-widest">DASHBOARD</span>
-                        </div>
-                        <button class="minimize-btn px-6 py-2.5 text-sm font-medium bg-zinc-800 hover:bg-zinc-700 rounded-2xl flex items-center gap-2 transition">
+                    </div>
+                        <button class="minimize-btn px-6 py-2.5 text-sm font-medium bg-emerald-500 hover:bg-emerald-600 text-black rounded-2xl flex items-center gap-2 transition">
                             <i class="fas fa-minus"></i> Minimize
                         </button>
                     </div>
