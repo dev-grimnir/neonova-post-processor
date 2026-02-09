@@ -174,6 +174,12 @@ class NeonovaDashboardView {
 
         console.log('Button clicked →', btn.className);
 
+        if (btn.classList.contains('remove-btn')) {
+            const username = btn.dataset.username;
+            console.log('REMOVE clicked - username =', username);   // ← add this line
+            if (username) this.controller.remove(username);
+        }
+        
         if (btn.classList.contains('report-btn') || btn.className.includes('report-btn')) {
             const username = btn.dataset.username;
             if (!username) return;
