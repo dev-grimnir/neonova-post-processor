@@ -50,6 +50,7 @@ class NeonovaDashboardView {
         this.minimizeBar.style.display = 'flex';
         this.panel.style.display = 'none';
         this.render();
+        setTimeout(() => this.render(), 80);
     }
 
     render() {
@@ -57,28 +58,28 @@ class NeonovaDashboardView {
         this.controller.customers.forEach(c => {
             const isConnected = c.status === 'Connected';
             const durationText = c.getDurationStr();
-            rows += `
-                <tr class="hover:bg-zinc-800 transition group">
-                    <td class="friendly-name px-8 py-5 font-medium text-zinc-100" data-username="${c.radiusUsername}" data-editable="false">
-                        ${c.friendlyName || c.radiusUsername}
-                    </td>
-                    <td class="px-8 py-5 font-mono text-zinc-400">${c.radiusUsername}</td>
-                    <td class="px-8 py-5">
-                        <span class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-2xl text-xs font-semibold ${isConnected ? 'bg-emerald-500' : 'bg-red-500'} text-white">
-                            <span class="w-2 h-2 rounded-full bg-current"></span>
-                            ${c.status}
-                        </span>
-                    </td>
-                    <td class="px-8 py-5 font-mono ${isConnected ? 'text-emerald-400' : 'text-red-400'}">
-                        ${durationText}
-                    </td>
-                    <td class="px-8 py-5 text-right">
-                        <button class="remove-btn text-zinc-400 hover:text-red-400 px-3 py-1 text-sm">Remove</button>
-                        <button class="report-btn ml-3 bg-emerald-600 hover:bg-emerald-500 px-5 py-2 rounded-2xl text-xs font-medium text-white">Report</button>
-                    </td>
-                </tr>
-            `;
-        });
+                        rows += `
+                            <tr class="hover:bg-zinc-800 transition group">
+                                <td class="friendly-name px-8 py-5 font-medium text-zinc-100" data-username="${c.radiusUsername}" data-editable="false">
+                                    ${c.friendlyName || c.radiusUsername}
+                                </td>
+                                <td class="px-8 py-5 font-mono text-zinc-400">${c.radiusUsername}</td>
+                                <td class="px-8 py-5">
+                                    <span class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-2xl text-xs font-semibold ${isConnected ? 'bg-emerald-500' : 'bg-red-500'} text-white">
+                                        <span class="w-2 h-2 rounded-full bg-current"></span>
+                                        ${c.status}
+                                    </span>
+                                </td>
+                                <td class="px-8 py-5 font-mono ${isConnected ? 'text-emerald-400' : 'text-red-400'}">
+                                    ${durationText}
+                                </td>
+                                <td class="px-8 py-5 text-right">
+                                    <button class="remove-btn text-zinc-400 hover:text-red-400 px-3 py-1 text-sm" data-username="${c.radiusUsername}">Remove</button>
+                                    <button class="report-btn ml-3 bg-emerald-600 hover:bg-emerald-500 px-5 py-2 rounded-2xl text-xs font-medium text-white" data-username="${c.radiusUsername}">Report</button>
+                                </td>
+                            </tr>
+                        `;
+            });
 
         this.panel.innerHTML = `
             <div class="flex items-center justify-between px-8 py-5 border-b border-zinc-800 bg-zinc-900">
@@ -173,18 +174,11 @@ class NeonovaDashboardView {
 
         console.log('Button clicked →', btn.className);
 
-        if (btn.classList.contains('remove-btn')) {
-            console.log('Calling remove for', btn.dataset.username);
-            this.controller.remove(btn.dataset.username);
-        }
-
-        if (btn.classList.contains('report-btn')) {
+        if (btn.classList.contains('report-btn') || btn.className.includes('report-btn')) {
             const username = btn.dataset.username;
+            if (!username) return;
             const customer = this.controller.customers.find(c => c.radiusUsername === username);
-            if (customer) {
-                console.log('Calling openReportModal for', username);
-                this.openReportModal(username, customer.friendlyName || username);
-            }
+            if (customer) this.openReportModal(username, customer.friendlyName || username);
         }
 
         if (btn.classList.contains('add-btn')) { /* your add code */ }
