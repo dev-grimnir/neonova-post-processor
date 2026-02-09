@@ -150,15 +150,26 @@ class NeonovaDashboardView {
                 display.textContent = minutes;
                 this.controller.setPollingInterval(minutes);
             });
-            // tooltip code (unchanged) — keep your existing tooltip block here
+            // (your tooltip code here – unchanged)
+            let tooltip = document.getElementById('poll-tooltip');
+            if (!tooltip) {
+                tooltip = document.createElement('div');
+                tooltip.id = 'poll-tooltip';
+                tooltip.style.cssText = `position:absolute;background:#222;color:#fff;padding:6px 10px;border-radius:4px;font-size:13px;font-family:Arial,sans-serif;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s,transform .15s;box-shadow:0 2px 8px rgba(0,0,0,0.4);z-index:10001;`;
+                document.body.appendChild(tooltip);
+            }
+            const show = (e) => { /* your showTooltip function */ };
+            const hide = () => { tooltip.style.opacity = '0'; };
+            slider.addEventListener('mousemove', show);
+            slider.addEventListener('input', show);
+            slider.addEventListener('mouseleave', hide);
+            slider.addEventListener('touchmove', e => e.touches.length && show(e.touches[0]));
         }
 
-        // ────── SINGLE CLICK DELEGATION (THIS IS WHAT MAKES BUTTONS WORK) ──────
+        // ────── SINGLE CLICK DELEGATION ──────
         this.panel.onclick = (e) => {
             const btn = e.target.closest('button');
             if (!btn) return;
-
-            console.log('Button clicked → class:', btn.className);   // ← remove after testing
 
             if (btn.classList.contains('add-btn')) {
                 const id = this.panel.querySelector('#radiusId').value.trim();
@@ -197,12 +208,39 @@ class NeonovaDashboardView {
             cell.title = 'Click to edit friendly name';
 
             cell.addEventListener('click', () => {
-                // your existing editing code (unchanged)
+                if (cell.querySelector('input')) return;
+                const username = cell.dataset.username;
+                const current = cell.textContent.trim();
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = current;
+                input.style.cssText = 'width:100%; box-sizing:border-box; padding:2px 4px; font-size:inherit;';
+                cell.innerHTML = '';
+                cell.appendChild(input);
+                input.focus();
+                input.select();
+
+                const save = () => {
+                    const newName = input.value.trim();
+                    const cust = this.controller.customers.find(c => c.radiusUsername === username);
+                    if (cust) {
+                        cust.friendlyName = newName || null;
+                        cell.textContent = cust.friendlyName || cust.radiusUsername;
+                    }
+                };
+
+                input.addEventListener('blur', save);
+                input.addEventListener('keydown', e => {
+                    if (e.key === 'Enter') { e.preventDefault(); save(); }
+                    if (e.key === 'Escape') cell.textContent = current;
+                });
             });
         });
     }
 
     openReportModal(username, friendlyName) {
+        // === YOUR ORIGINAL REPORT MODAL CODE (fully restored) ===
         const overlay = document.createElement('div');
         overlay.style.cssText = `
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
