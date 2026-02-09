@@ -150,7 +150,6 @@ class NeonovaDashboardView {
                 display.textContent = minutes;
                 this.controller.setPollingInterval(minutes);
             });
-
             let tooltip = document.getElementById('poll-tooltip');
             if (!tooltip) {
                 tooltip = document.createElement('div');
@@ -158,101 +157,60 @@ class NeonovaDashboardView {
                 tooltip.style.cssText = `position:absolute;background:#222;color:#fff;padding:6px 10px;border-radius:4px;font-size:13px;font-family:Arial,sans-serif;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s,transform .15s;box-shadow:0 2px 8px rgba(0,0,0,0.4);z-index:10001;`;
                 document.body.appendChild(tooltip);
             }
-
-            const showTooltip = (e) => {
-                const rect = slider.getBoundingClientRect();
-                const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-                const value = Math.round(+slider.min + percent * (+slider.max - +slider.min));
-                tooltip.textContent = `${value} minute${value === 1 ? '' : 's'}`;
-                tooltip.style.left = `${rect.left + percent * rect.width - tooltip.offsetWidth / 2}px`;
-                tooltip.style.top = `${rect.top - 34}px`;
+            const show = (e) => {
+                const r = slider.getBoundingClientRect();
+                const p = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+                const v = Math.round(+slider.min + p * (+slider.max - +slider.min));
+                tooltip.textContent = `${v} minute${v === 1 ? '' : 's'}`;
+                tooltip.style.left = `${r.left + p * r.width - tooltip.offsetWidth / 2}px`;
+                tooltip.style.top = `${r.top - 34}px`;
                 tooltip.style.opacity = '1';
                 tooltip.style.transform = 'translateY(-4px)';
             };
-            const hideTooltip = () => {
-                tooltip.style.opacity = '0';
-                tooltip.style.transform = 'translateY(0)';
-            };
-
-            slider.addEventListener('mousemove', showTooltip);
-            slider.addEventListener('input', showTooltip);
-            slider.addEventListener('mouseleave', hideTooltip);
-            slider.addEventListener('touchmove', e => e.touches.length && showTooltip(e.touches[0]));
+            const hide = () => { tooltip.style.opacity = '0'; };
+            slider.addEventListener('mousemove', show);
+            slider.addEventListener('input', show);
+            slider.addEventListener('mouseleave', hide);
+            slider.addEventListener('touchmove', e => e.touches.length && show(e.touches[0]));
         }
 
-        // SINGLE CLICK DELEGATION - THIS MAKES REMOVE/REPORT WORK
-        this.panel.onclick = (e) => {
-            const btn = e.target.closest('button');
-            if (!btn) return;
+        // Global click delegation
+        document.body.addEventListener('click', this.handleGlobalClick.bind(this), true);
+    }
 
-            console.log('Button clicked:', btn.className);   // ← THIS WILL SHOW IN CONSOLE
+    handleGlobalClick(e) {
+        const btn = e.target.closest('button');
+        if (!btn) return;
 
-            if (btn.classList.contains('add-btn')) {
-                const id = this.panel.querySelector('#radiusId').value.trim();
-                const name = this.panel.querySelector('#friendlyName').value.trim();
-                if (id) this.controller.add(id, name);
-                else alert('RADIUS username required');
-                this.panel.querySelector('#radiusId').value = '';
-                this.panel.querySelector('#friendlyName').value = '';
-            }
+        console.log('Button clicked:', btn.className);   // ← you will see this
 
-            if (btn.classList.contains('remove-btn')) {
-                this.controller.remove(btn.dataset.username);
-            }
+        if (btn.classList.contains('add-btn')) {
+            const id = this.panel.querySelector('#radiusId').value.trim();
+            const name = this.panel.querySelector('#friendlyName').value.trim();
+            if (id) this.controller.add(id, name);
+            else alert('RADIUS username required');
+            this.panel.querySelector('#radiusId').value = '';
+            this.panel.querySelector('#friendlyName').value = '';
+        }
 
-            if (btn.classList.contains('report-btn')) {
-                const username = btn.dataset.username;
-                const customer = this.controller.customers.find(c => c.radiusUsername === username);
-                if (customer) this.openReportModal(username, customer.friendlyName || username);
-            }
+        if (btn.classList.contains('remove-btn')) {
+            this.controller.remove(btn.dataset.username);
+        }
 
-            if (btn.classList.contains('refresh-btn')) this.controller.poll();
+        if (btn.classList.contains('report-btn')) {
+            const username = btn.dataset.username;
+            const customer = this.controller.customers.find(c => c.radiusUsername === username);
+            if (customer) this.openReportModal(username, customer.friendlyName || username);
+        }
 
-            if (btn.classList.contains('minimize-btn')) this.toggleMinimize();
+        if (btn.classList.contains('refresh-btn')) this.controller.poll();
 
-            if (btn.id === 'poll-toggle-btn') {
-                this.controller.togglePolling();
-                this.render();
-            }
-        };
+        if (btn.classList.contains('minimize-btn')) this.toggleMinimize();
 
-        // Friendly name editing
-        this.panel.querySelectorAll('.friendly-name').forEach(cell => {
-            if (cell.dataset.editable === 'true') return;
-            cell.dataset.editable = 'true';
-            cell.style.cursor = 'pointer';
-            cell.title = 'Click to edit friendly name';
-
-            cell.addEventListener('click', () => {
-                if (cell.querySelector('input')) return;
-                const username = cell.dataset.username;
-                const current = cell.textContent.trim();
-
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.value = current;
-                input.style.cssText = 'width:100%; box-sizing:border-box; padding:2px 4px; font-size:inherit;';
-                cell.innerHTML = '';
-                cell.appendChild(input);
-                input.focus();
-                input.select();
-
-                const save = () => {
-                    const newName = input.value.trim();
-                    const cust = this.controller.customers.find(c => c.radiusUsername === username);
-                    if (cust) {
-                        cust.friendlyName = newName || null;
-                        cell.textContent = cust.friendlyName || cust.radiusUsername;
-                    }
-                };
-
-                input.addEventListener('blur', save);
-                input.addEventListener('keydown', e => {
-                    if (e.key === 'Enter') { e.preventDefault(); save(); }
-                    if (e.key === 'Escape') cell.textContent = current;
-                });
-            });
-        });
+        if (btn.id === 'poll-toggle-btn') {
+            this.controller.togglePolling();
+            this.render();
+        }
     }
 
     openReportModal(username, friendlyName) {
