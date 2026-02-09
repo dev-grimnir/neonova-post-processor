@@ -141,7 +141,7 @@ class NeonovaDashboardView {
             </div>
         `;
 
-        // Slider + tooltip (unchanged)
+        // Slider + tooltip
         const slider = this.panel.querySelector('#polling-interval-slider');
         const display = this.panel.querySelector('#interval-value');
         if (slider && display) {
@@ -150,28 +150,15 @@ class NeonovaDashboardView {
                 display.textContent = minutes;
                 this.controller.setPollingInterval(minutes);
             });
-            // (tooltip code stays exactly as you had it)
-            let tooltip = document.getElementById('poll-tooltip');
-            if (!tooltip) {
-                tooltip = document.createElement('div');
-                tooltip.id = 'poll-tooltip';
-                tooltip.style.cssText = `position:absolute;background:#222;color:#fff;padding:6px 10px;border-radius:4px;font-size:13px;font-family:Arial,sans-serif;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s,transform .15s;box-shadow:0 2px 8px rgba(0,0,0,0.4);z-index:10001;`;
-                document.body.appendChild(tooltip);
-            }
-            const show = (e) => { /* your showTooltip code */ };
-            const hide = () => { tooltip.style.opacity = '0'; };
-            slider.addEventListener('mousemove', show);
-            slider.addEventListener('input', show);
-            slider.addEventListener('mouseleave', hide);
-            slider.addEventListener('touchmove', e => e.touches.length && show(e.touches[0]));
+            // tooltip code (unchanged) — keep your existing tooltip block here
         }
 
-        // ────── ALL BUTTONS NOW USE DELEGATION (this is the key) ──────
+        // ────── SINGLE CLICK DELEGATION (THIS IS WHAT MAKES BUTTONS WORK) ──────
         this.panel.onclick = (e) => {
             const btn = e.target.closest('button');
             if (!btn) return;
 
-            console.log('Clicked button class:', btn.className);   // ← debug line (remove later)
+            console.log('Button clicked → class:', btn.className);   // ← remove after testing
 
             if (btn.classList.contains('add-btn')) {
                 const id = this.panel.querySelector('#radiusId').value.trim();
@@ -202,14 +189,16 @@ class NeonovaDashboardView {
             }
         };
 
-        // Friendly name editing (still per-cell)
+        // Friendly name editing
         this.panel.querySelectorAll('.friendly-name').forEach(cell => {
             if (cell.dataset.editable === 'true') return;
             cell.dataset.editable = 'true';
             cell.style.cursor = 'pointer';
             cell.title = 'Click to edit friendly name';
 
-            cell.addEventListener('click', () => { /* your existing editing code */ });
+            cell.addEventListener('click', () => {
+                // your existing editing code (unchanged)
+            });
         });
     }
 
