@@ -226,22 +226,29 @@ class NeonovaDashboardView {
             const idInput = this.panel.querySelector('#radiusId');
             const nameInput = this.panel.querySelector('#friendlyName');
         
-            const idRaw = idInput.value;
-            const id = idRaw.trim();
+            if (!idInput) {
+                console.error('ID input not found');
+                return;
+            }
         
-            // Debug: show exactly what was entered
-            console.log('Raw input:', JSON.stringify(idRaw));
-            console.log('Trimmed ID:', JSON.stringify(id));
+            const rawValue = idInput.value;
+            const trimmedId = rawValue.trim();
         
-            if (id.length > 0) {
-                const name = nameInput.value.trim();
-                this.controller.add(id, name);
+            // Debug logs - this will show EXACTLY what was entered
+            console.log('ADD clicked - Raw value:', JSON.stringify(rawValue));
+            console.log('ADD clicked - Trimmed ID:', JSON.stringify(trimmedId));
+            console.log('ADD clicked - Length after trim:', trimmedId.length);
+        
+            if (trimmedId.length > 0) {
+                const name = nameInput ? nameInput.value.trim() : '';
+                console.log('Calling controller.add with ID:', trimmedId, 'Name:', name);
+                this.controller.add(trimmedId, name);
                 idInput.value = '';
-                nameInput.value = '';
+                if (nameInput) nameInput.value = '';
             } else {
                 alert('RADIUS username required');
-                idInput.focus();  // helpful UX: focus back on the field
-                idInput.select(); // select all text so user can retype easily
+                idInput.focus();
+                idInput.select();  // highlight the text so user can fix it easily
             }
         }
         if (btn.classList.contains('refresh-btn')) this.controller.poll();
