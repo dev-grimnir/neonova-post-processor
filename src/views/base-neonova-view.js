@@ -1,7 +1,7 @@
 class BaseNeonovaView {
     constructor() {
+        this.createBaseElements();  // create panel FIRST
         this.ensureTailwind();
-        this.panel = null;            // main container
         this.isVisible = false;
         this.createBaseElements();
     }
