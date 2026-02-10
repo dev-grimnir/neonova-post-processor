@@ -3,6 +3,7 @@ class NeonovaDashboardView {
         this.controller = controller;
         this.panel = null;
         this.minimizeBar = null;
+        this.isMinimized = true;
         this.createElements();
     }
 
@@ -451,12 +452,12 @@ document.body.appendChild(this.minimizeBar);
     }
 
     toggleMinimize() {
-        console.log('toggleMinimize called - was minimized:', this.controller.minimized);
-        this.controller.minimized = !this.controller.minimized;
+        console.log('toggleMinimize called - was minimized:', this.isMinimized);
+        this.isMinimized = !this.isMinimized;
         const dash = this.panel;
         const bar = this.minimizeBar;
 
-        if (this.controller.minimized) {
+        if (this.isMinimized) {
             dash.style.transition = 'transform 0.45s cubic-bezier(0.4, 0, 0.2, 1)';
             dash.style.transform = 'translate(-50%, 85%)';
             setTimeout(() => { dash.style.display = 'none'; bar.style.display = 'flex'; }, 420);
