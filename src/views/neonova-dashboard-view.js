@@ -287,9 +287,6 @@ document.body.appendChild(this.minimizeBar);
         return;
     }
 
-    const btn = e.target.closest('button');
-    if (!btn) return;
-
     console.log('Button clicked:', btn.className);
 
         // Friendly name editing (on click of .friendly-name cell)
