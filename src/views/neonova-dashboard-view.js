@@ -224,34 +224,37 @@ class NeonovaDashboardView {
 
         if (btn.classList.contains('add-btn')) {
             const idInput = this.panel.querySelector('#radiusId');
+            const nameInput = this.panel.querySelector('#friendlyName');
+        
             if (!idInput) {
-                console.error('radiusId input not found');
+                console.error('radiusId input missing');
                 return;
             }
         
-            // Force a read right now, before any re-render can interfere
-            const rawValue = idInput.value || '';
-            const cleanedId = rawValue.trim().replace(/\s+/g, '').replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '');
+            // Small delay to let autofill finish writing the value
+            setTimeout(() => {
+                const rawValue = idInput.value || '';
+                const cleanedId = rawValue.trim().replace(/\s+/g, '').replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '');
         
-            console.log('ADD - Raw value:', JSON.stringify(rawValue));
-            console.log('ADD - Cleaned ID:', JSON.stringify(cleanedId));
-            console.log('ADD - Cleaned length:', cleanedId.length);
+                console.log('ADD - Raw value:', JSON.stringify(rawValue));
+                console.log('ADD - Cleaned ID:', JSON.stringify(cleanedId));
+                console.log('ADD - Cleaned length:', cleanedId.length);
         
-            if (cleanedId.length > 0) {
-                const nameInput = this.panel.querySelector('#friendlyName');
-                const name = nameInput ? nameInput.value.trim() : '';
-                console.log('Calling add with:', cleanedId, name);
-                this.controller.add(cleanedId, name);
+                if (cleanedId.length > 0) {
+                    const name = nameInput ? nameInput.value.trim() : '';
+                    console.log('Adding customer:', cleanedId, name);
+                    this.controller.add(cleanedId, name);
         
-                // Clear AFTER add succeeds
-                idInput.value = '';
-                if (nameInput) nameInput.value = '';
-                idInput.focus();
-            } else {
-                alert('RADIUS username required');
-                idInput.focus();
-                idInput.select();
-            }
+                    // Clear after success
+                    idInput.value = '';
+                    if (nameInput) nameInput.value = '';
+                    idInput.focus();
+                } else {
+                    alert('RADIUS username required');
+                    idInput.focus();
+                    idInput.select();
+                }
+            }, 50);  // 50ms delay — enough for autofill to settle, not noticeable
         }
         if (btn.classList.contains('refresh-btn')) this.controller.poll();
         if (btn.classList.contains('minimize-btn')) this.toggleMinimize();
