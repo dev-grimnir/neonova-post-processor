@@ -14,6 +14,8 @@ class NeonovaDashboardView {
             document.head.appendChild(s);
         }
 
+        this.minimizeBar.id = 'minimize-bar';
+
         this.minimizeBar = document.createElement('div');
         // Minimized bar – matches dashboard width exactly
         this.minimizeBar = document.createElement('div');
