@@ -38,12 +38,12 @@ class NeonovaDashboardView {
 
         this.panel = document.createElement('div');
         this.panel.style.cssText = `
-            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-            width: 92%; max-width: 1100px; max-height: 78vh;
-            background: #09090b; border: 1px solid #27272a; border-bottom: none;
-            border-radius: 24px 24px 0 0; box-shadow: 0 -12px 40px rgba(0,0,0,0.8);
-            padding: 0; font-family: system-ui; z-index: 9999; display: none;
-            overflow-y: auto;
+        position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+        width: 92%; max-width: 1100px; height: calc(100vh - 80px);
+        background: #09090b; border: 1px solid #27272a;
+        border-radius: 24px; box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+        padding: 0; font-family: system-ui; z-index: 9999; display: none;
+        overflow: hidden;  /* important for internal scrolling */
         `;
         document.body.appendChild(this.panel);
 
@@ -80,64 +80,76 @@ class NeonovaDashboardView {
                         `;
             });
 
-        this.panel.innerHTML = `
-            <div class="flex items-center justify-between px-8 py-5 border-b border-zinc-800 bg-zinc-900">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 bg-emerald-500 rounded-2xl flex items-center justify-center text-black font-bold text-xl">N</div>
-                    <h1 class="text-2xl font-semibold" style="text-shadow: 0 0 15px #22ff88;">Neonova</h1>
-                    <span class="text-emerald-400 text-sm font-mono tracking-widest">DASHBOARD</span>
-                </div>
-                <button class="minimize-btn px-6 py-2.5 text-sm font-medium bg-emerald-500 hover:bg-emerald-600 text-black rounded-2xl flex items-center gap-2 transition">
-                    <i class="fas fa-minus"></i> Minimize
-                </button>
-            </div>
-
-            <div class="p-8">
-                <div class="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 mb-8">
-                    <div class="grid grid-cols-12 gap-4">
-                        <div class="col-span-5"><input id="radiusId" type="text" placeholder="RADIUS Username" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-5 py-4 focus:outline-none focus:border-emerald-500"></div>
-                        <div class="col-span-5"><input id="friendlyName" type="text" placeholder="Friendly Name (optional)" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-5 py-4 focus:outline-none focus:border-emerald-500"></div>
-                        <div class="col-span-2"><button class="add-btn w-full h-full bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl transition">ADD</button></div>
-                    </div>
-                </div>
-
-                <div class="bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden">
-                    <table class="w-full">
-                        <thead>
-                            <tr class="border-b border-zinc-800 text-xs uppercase tracking-widest text-zinc-500">
-                                <th class="px-8 py-5 text-left">Friendly Name</th>
-                                <th class="px-8 py-5 text-left">RADIUS Username</th>
-                                <th class="px-8 py-5 text-left">Status</th>
-                                <th class="px-8 py-5 text-left">Duration</th>
-                                <th class="px-8 py-5 text-right">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>${rows}</tbody>
-                    </table>
-                </div>
-
-                <div class="mt-8 flex items-center justify-between bg-zinc-900 border border-zinc-700 rounded-3xl px-8 py-5">
-                    <div class="flex items-center gap-8">
-                        <div class="flex items-center gap-4">
-                            <span class="text-xs uppercase tracking-widest text-zinc-500">Polling</span>
-                            <input type="range" id="polling-interval-slider" min="1" max="60" value="${this.controller.pollingIntervalMinutes}" class="w-64 accent-emerald-500">
-                            <span id="interval-value" class="font-mono text-emerald-400 w-12">${this.controller.pollingIntervalMinutes} min</span>
+            this.panel.innerHTML = `
+                <div class="flex flex-col h-full">
+            
+                    <!-- HEADER (fixed) -->
+                    <div class="flex items-center justify-between px-8 py-5 border-b border-zinc-800 bg-zinc-900 shrink-0">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 bg-emerald-500 rounded-2xl flex items-center justify-center text-black font-bold text-xl">N</div>
+                            <h1 class="text-2xl font-semibold" style="text-shadow: 0 0 15px #22ff88;">Neonova</h1>
+                            <span class="text-emerald-400 text-sm font-mono tracking-widest">DASHBOARD</span>
                         </div>
-                        <button id="poll-toggle-btn" class="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition">
-                            ${this.controller.isPollingPaused ? '<i class="fas fa-play"></i> Resume Polling' : '<i class="fas fa-pause"></i> Pause Polling'}
+                        <button class="minimize-btn px-6 py-2.5 text-sm font-medium bg-emerald-500 hover:bg-emerald-600 text-black rounded-2xl flex items-center gap-2 transition">
+                            <i class="fas fa-minus"></i> Minimize
                         </button>
                     </div>
-                    <div class="flex items-center gap-6 text-sm">
-                        <button class="refresh-btn flex items-center gap-2 text-emerald-400 hover:text-emerald-300">
-                            <i class="fas fa-sync-alt"></i> Refresh Now
-                        </button>
-                        <div class="text-zinc-500 text-xs">
-                            Last update: <span class="font-mono text-zinc-400">${new Date().toLocaleTimeString()}</span>
+            
+                    <!-- SCROLLABLE CONTENT AREA -->
+                    <div class="flex-1 overflow-hidden flex flex-col">
+                        <!-- Add bar (fixed at top of scroll area) -->
+                        <div class="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 mx-8 mt-8 mb-8 shrink-0">
+                            <div class="grid grid-cols-12 gap-4">
+                                <div class="col-span-5"><input id="radiusId" type="text" placeholder="RADIUS Username" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-5 py-4 focus:outline-none focus:border-emerald-500"></div>
+                                <div class="col-span-5"><input id="friendlyName" type="text" placeholder="Friendly Name (optional)" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-5 py-4 focus:outline-none focus:border-emerald-500"></div>
+                                <div class="col-span-2"><button class="add-btn w-full h-full bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl transition">ADD</button></div>
+                            </div>
+                        </div>
+            
+                        <!-- SCROLLABLE TABLE -->
+                        <div class="flex-1 overflow-y-auto px-8 pb-8">
+                            <div class="bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden">
+                                <table class="w-full">
+                                    <thead class="sticky top-0 bg-zinc-900 z-10">
+                                        <tr class="border-b border-zinc-800 text-xs uppercase tracking-widest text-zinc-500">
+                                            <th class="px-8 py-5 text-left">Friendly Name</th>
+                                            <th class="px-8 py-5 text-left">RADIUS Username</th>
+                                            <th class="px-8 py-5 text-left">Status</th>
+                                            <th class="px-8 py-5 text-left">Duration</th>
+                                            <th class="px-8 py-5 text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>${rows}</tbody>
+                                </table>
+                            </div>
+                        </div>
+            
+                        <!-- BOTTOM BAR (fixed at bottom) -->
+                        <div class="bg-zinc-900 border border-zinc-700 rounded-3xl px-8 py-5 mx-8 mb-8 shrink-0">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-8">
+                                    <div class="flex items-center gap-4">
+                                        <span class="text-xs uppercase tracking-widest text-zinc-500">Polling</span>
+                                        <input type="range" id="polling-interval-slider" min="1" max="60" value="${this.controller.pollingIntervalMinutes}" class="w-64 accent-emerald-500">
+                                        <span id="interval-value" class="font-mono text-emerald-400 w-12">${this.controller.pollingIntervalMinutes} min</span>
+                                    </div>
+                                    <button id="poll-toggle-btn" class="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition">
+                                        ${this.controller.isPollingPaused ? '<i class="fas fa-play"></i> Resume Polling' : '<i class="fas fa-pause"></i> Pause Polling'}
+                                    </button>
+                                </div>
+                                <div class="flex items-center gap-6 text-sm">
+                                    <button class="refresh-btn flex items-center gap-2 text-emerald-400 hover:text-emerald-300">
+                                        <i class="fas fa-sync-alt"></i> Refresh Now
+                                    </button>
+                                    <div class="text-zinc-500 text-xs">
+                                        Last update: <span class="font-mono text-zinc-400">${new Date().toLocaleTimeString()}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        `;
+            `;
 
         // Slider + tooltip
         const slider = this.panel.querySelector('#polling-interval-slider');
