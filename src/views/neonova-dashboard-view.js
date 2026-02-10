@@ -451,6 +451,7 @@ document.body.appendChild(this.minimizeBar);
     }
 
     toggleMinimize() {
+        console.log('toggleMinimize called - was minimized:', this.controller.minimized);
         this.controller.minimized = !this.controller.minimized;
         const dash = this.panel;
         const bar = this.minimizeBar;
