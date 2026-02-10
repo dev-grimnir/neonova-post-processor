@@ -1,41 +1,49 @@
-class NeonovaReportOrderView {
+class NeonovaReportOrderView extends BaseNeonovaView {
     constructor(container, username, friendlyName) {
+        super();
         this.container = container;
         this.username = username;
         this.friendlyName = friendlyName || username;
         this.onGenerateRequested = null;
     }
 
-    renderOrderForm() {
+       render() {
         this.container.innerHTML = `
-            <h1>Report Request - ${this.friendlyName} (${this.username})</h1>
-    
-            <div class="quick-buttons">
-                <button class="quick-btn" data-hours="24">Last 24 hours</button>
-                <button class="quick-btn" data-hours="48">Last 48 hours</button>
-                <button class="quick-btn" data-hours="72">Last 72 hours</button>
-            </div>
-    
-            <div class="quick-buttons">
-                <button class="quick-btn" data-days="7">Last 1 week</button>
-                <button class="quick-btn" data-days="30">Last 30 days</button>
-                <button class="quick-btn" data-days="90">Last 90 days</button>
-            </div>
-    
-            <div class="custom-range">
-                <label>Custom Start Date:</label>
-                <select id="start-month"></select>
-                <select id="start-day"></select>
-                <select id="start-year"></select>
-    
-                <label>Custom End Date:</label>
-                <select id="end-month"></select>
-                <select id="end-day"></select>
-                <select id="end-year"></select>
-    
-                <button id="generate-custom">Generate Custom Report</button>
+            <div class="p-6">
+                <h2 class="text-2xl font-bold mb-6" style="color: ${BaseNeonovaView.THEME.accent}; text-shadow: ${BaseNeonovaView.THEME.neonGlow}">
+                    Generate Report for ${this.friendlyName || this.username}
+                </h2>
+
+                <!-- Your existing form fields, date pickers, etc. -->
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-300 mb-2">Start Date</label>
+                        <input type="date" id="startDate" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-300 mb-2">End Date</label>
+                        <input type="date" id="endDate" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:border-emerald-500">
+                    </div>
+                    <!-- ... other fields ... -->
+                    <button id="generateBtn" class="w-full bg-emerald-500 hover:bg-emerald-600 text-black font-semibold py-3 rounded-xl transition">
+                        Generate Report
+                    </button>
+                </div>
             </div>
         `;
+
+        // Attach event listeners
+        this.container.querySelector('#generateBtn').addEventListener('click', () => {
+            const start = this.container.querySelector('#startDate').value;
+            const end = this.container.querySelector('#endDate').value;
+            if (start && end) {
+                if (this.onGenerateRequested) {
+                    this.onGenerateRequested(start, end);
+                }
+            } else {
+                alert('Please select both start and end dates');
+            }
+        });
     
         // Populate dropdowns
         const today = new Date();
