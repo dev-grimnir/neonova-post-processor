@@ -226,29 +226,27 @@ class NeonovaDashboardView {
             const idInput = this.panel.querySelector('#radiusId');
             const nameInput = this.panel.querySelector('#friendlyName');
         
-            if (!idInput) {
-                console.error('ID input not found');
-                return;
-            }
+            if (!idInput) return;
         
             const rawValue = idInput.value;
-            const trimmedId = rawValue.trim();
+            // Aggressive clean: remove ALL whitespace (including non-breaking, zero-width, etc.)
+            const cleanedId = rawValue.replace(/\s+/g, '').replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '');
         
-            // Debug logs - this will show EXACTLY what was entered
-            console.log('ADD clicked - Raw value:', JSON.stringify(rawValue));
-            console.log('ADD clicked - Trimmed ID:', JSON.stringify(trimmedId));
-            console.log('ADD clicked - Length after trim:', trimmedId.length);
+            console.log('ADD - Raw value:', JSON.stringify(rawValue));
+            console.log('ADD - Cleaned ID:', JSON.stringify(cleanedId));
+            console.log('ADD - Cleaned length:', cleanedId.length);
         
-            if (trimmedId.length > 0) {
+            if (cleanedId.length > 0) {
                 const name = nameInput ? nameInput.value.trim() : '';
-                console.log('Calling controller.add with ID:', trimmedId, 'Name:', name);
-                this.controller.add(trimmedId, name);
+                console.log('Calling add with clean ID:', cleanedId);
+                this.controller.add(cleanedId, name);
                 idInput.value = '';
                 if (nameInput) nameInput.value = '';
+                idInput.focus();
             } else {
                 alert('RADIUS username required');
                 idInput.focus();
-                idInput.select();  // highlight the text so user can fix it easily
+                idInput.select();
             }
         }
         if (btn.classList.contains('refresh-btn')) this.controller.poll();
