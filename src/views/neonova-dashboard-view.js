@@ -243,11 +243,7 @@ class NeonovaDashboardView {
                     idInput.value = '';
                     if (nameInput) nameInput.value = '';
                     idInput.focus();
-                } else {
-                    alert('RADIUS username required');
-                    idInput.focus();
-                    idInput.select();
-                }
+                } 
             }, 100);  // 100 ms is usually enough for autofill to settle
         }
         if (btn.classList.contains('refresh-btn')) this.controller.poll();
