@@ -140,7 +140,7 @@ class NeonovaDashboardView {
             </div>
         `;
 
-        // Slider + tooltip (unchanged)
+        // Slider + tooltip
         const slider = this.panel.querySelector('#polling-interval-slider');
         const display = this.panel.querySelector('#interval-value');
         if (slider && display) {
@@ -149,19 +149,54 @@ class NeonovaDashboardView {
                 display.textContent = minutes;
                 this.controller.setPollingInterval(minutes);
             });
+
             let tooltip = document.getElementById('poll-tooltip');
             if (!tooltip) {
                 tooltip = document.createElement('div');
                 tooltip.id = 'poll-tooltip';
-                tooltip.style.cssText = `position:absolute;background:#222;color:#fff;padding:6px 10px;border-radius:4px;font-size:13px;font-family:Arial,sans-serif;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s,transform .15s;box-shadow:0 2px 8px rgba(0,0,0,0.4);z-index:10001;`;
+                tooltip.style.cssText = `
+                    position: absolute;
+                    background: #222;
+                    color: #fff;
+                    padding: 6px 10px;
+                    border-radius: 4px;
+                    font-size: 13px;
+                    font-family: Arial, sans-serif;
+                    white-space: nowrap;
+                    pointer-events: none;
+                    opacity: 0;
+                    transition: opacity .15s, transform .15s;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+                    z-index: 10001;
+                `;
                 document.body.appendChild(tooltip);
             }
-            const show = (e) => { /* your showTooltip code */ };
-            const hide = () => { tooltip.style.opacity = '0'; };
-            slider.addEventListener('mousemove', show);
-            slider.addEventListener('input', show);
-            slider.addEventListener('mouseleave', hide);
-            slider.addEventListener('touchmove', e => e.touches.length && show(e.touches[0]));
+
+            const showTooltip = (e) => {
+                const rect = slider.getBoundingClientRect();
+                const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                const value = Math.round(+slider.min + percent * (+slider.max - +slider.min));
+
+                tooltip.textContent = `${value} minute${value === 1 ? '' : 's'}`;
+
+                const thumbX = rect.left + percent * rect.width;
+                tooltip.style.left = `${thumbX - tooltip.offsetWidth / 2}px`;
+                tooltip.style.top = `${rect.top - 34}px`;
+                tooltip.style.opacity = '1';
+                tooltip.style.transform = 'translateY(-4px)';
+            };
+
+            const hideTooltip = () => {
+                tooltip.style.opacity = '0';
+                tooltip.style.transform = 'translateY(0)';
+            };
+
+            slider.addEventListener('mousemove', showTooltip);
+            slider.addEventListener('input', showTooltip);  // update while dragging
+            slider.addEventListener('mouseleave', hideTooltip);
+            slider.addEventListener('touchmove', (e) => {
+                if (e.touches.length) showTooltip(e.touches[0]);
+            });
         }
 
         // Global delegation
@@ -187,7 +222,17 @@ class NeonovaDashboardView {
             if (customer) this.openReportModal(username, customer.friendlyName || username);
         }
 
-        if (btn.classList.contains('add-btn')) { /* your add code */ }
+        if (btn.classList.contains('add-btn')) {
+            const id = this.panel.querySelector('#radiusId').value.trim();
+                const name = this.panel.querySelector('#friendlyName').value.trim();
+                if (id) {
+                    this.controller.add(id, name);
+                    this.panel.querySelector('#radiusId').value = '';
+                    this.panel.querySelector('#friendlyName').value = '';
+                } else {
+                    alert('RADIUS username required');
+                }
+        }
         if (btn.classList.contains('refresh-btn')) this.controller.poll();
         if (btn.classList.contains('minimize-btn')) this.toggleMinimize();
         if (btn.id === 'poll-toggle-btn') {
