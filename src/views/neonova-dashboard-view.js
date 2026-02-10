@@ -53,8 +53,8 @@ class NeonovaDashboardView {
                 <i class="fas fa-chevron-up"></i> Maximize
             </button>
         `;
-this.minimizeBar.addEventListener('click', () => this.toggleMinimize());
-document.body.appendChild(this.minimizeBar);
+//this.minimizeBar.addEventListener('click', () => this.toggleMinimize());
+//document.body.appendChild(this.minimizeBar);
         this.minimizeBar.addEventListener('click', () => this.toggleMinimize());
         document.body.appendChild(this.minimizeBar);
 
