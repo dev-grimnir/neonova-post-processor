@@ -8,14 +8,19 @@ class NeonovaDashboardView {
     }
 
     createElements() {
+        // Load Tailwind and wait for it
         if (!document.getElementById('tailwind-css')) {
             const s = document.createElement('script');
             s.id = 'tailwind-css';
             s.src = 'https://cdn.tailwindcss.com';
+            s.onload = () => {
+                console.log('Tailwind loaded');
+                this.render();
+            };
             document.head.appendChild(s);
+        } else {
+            this.render();
         }
-
-        //this.minimizeBar.id = 'minimize-bar';
 
         this.minimizeBar = document.createElement('div');
         // Minimized bar – matches dashboard width exactly
