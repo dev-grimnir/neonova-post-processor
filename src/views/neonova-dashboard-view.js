@@ -1,4 +1,4 @@
-class NeonovaDashboardView {
+class NeonovaDashboardView extends BaseNeonovaView{
     constructor(controller) {
         this.controller = controller;
         this.panel = null;
