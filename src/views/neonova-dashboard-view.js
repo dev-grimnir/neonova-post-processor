@@ -14,7 +14,7 @@ class NeonovaDashboardView {
             document.head.appendChild(s);
         }
 
-        this.minimizeBar.id = 'minimize-bar';
+        //this.minimizeBar.id = 'minimize-bar';
 
         this.minimizeBar = document.createElement('div');
         // Minimized bar – matches dashboard width exactly
@@ -281,6 +281,16 @@ document.body.appendChild(this.minimizeBar);
     handleGlobalClick(e) {
         const btn = e.target.closest('button');
         if (!btn) return;
+
+        // Ignore clicks on the minimized bar itself (prevents loop)
+        if (e.target.closest('#minimize-bar') || this.minimizeBar.contains(e.target)) {
+        return;
+    }
+
+    const btn = e.target.closest('button');
+    if (!btn) return;
+
+    console.log('Button clicked:', btn.className);
 
         // Friendly name editing (on click of .friendly-name cell)
         if (e.target.classList.contains('friendly-name')) {
