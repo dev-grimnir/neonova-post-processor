@@ -88,7 +88,6 @@ class NeonovaDashboardController extends BaseNeonovaController{
 
     add(radiusUsername, friendlyName) {
         if (!radiusUsername?.trim()) {
-            alert('RADIUS username required');
             return;
         }
         if (this.customers.some(c => c.radiusUsername === radiusUsername.trim())) {
