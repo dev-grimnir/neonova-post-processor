@@ -50,7 +50,6 @@ class NeonovaDashboardView {
         this.minimizeBar.style.display = 'flex';
         this.panel.style.display = 'none';
         this.render();
-        setTimeout(() => this.render(), 80);
     }
 
     render() {
@@ -201,6 +200,49 @@ class NeonovaDashboardView {
 
         // Global delegation
         document.body.addEventListener('click', this.handleGlobalClick.bind(this), true);
+
+                // Friendly name editing
+        this.panel.querySelectorAll('.friendly-name').forEach(cell => {
+            if (cell.dataset.editable === 'true') return;
+            cell.dataset.editable = 'true';
+            cell.style.cursor = 'pointer';
+            cell.title = 'Click to edit friendly name (blank to reset to username)';
+
+            cell.addEventListener('click', () => {
+                if (cell.querySelector('input')) return;
+
+                const username = cell.dataset.username;
+                const currentDisplay = cell.textContent.trim();
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = currentDisplay;
+                input.style.cssText = 'width:100%; box-sizing:border-box; padding:2px 4px; font-size:inherit;';
+                cell.innerHTML = '';
+                cell.appendChild(input);
+                input.focus();
+                input.select();
+
+                const save = () => {
+                    const newName = input.value.trim();
+                    const customer = this.controller.customers.find(c => c.radiusUsername === username);
+                    if (customer) {
+                        customer.friendlyName = newName || null;
+                        cell.textContent = customer.friendlyName || customer.radiusUsername;
+                    }
+                };
+
+                input.addEventListener('blur', save);
+                input.addEventListener('keydown', e => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        save();
+                    } else if (e.key === 'Escape') {
+                        cell.textContent = currentDisplay;
+                    }
+                });
+            });
+        });
     }
 
     handleGlobalClick(e) {
