@@ -207,6 +207,50 @@ class NeonovaDashboardView {
         const btn = e.target.closest('button');
         if (!btn) return;
 
+        // Friendly name editing (on click of .friendly-name cell)
+        if (e.target.classList.contains('friendly-name')) {
+            const cell = e.target;
+            if (cell.dataset.editable === 'true') return; // already set up
+        
+            cell.dataset.editable = 'true';
+            cell.style.cursor = 'pointer';
+            cell.title = 'Click to edit friendly name (blank to reset)';
+        
+            // We don't need to add the listener again — just run the editing logic here
+            if (cell.querySelector('input')) return;
+        
+            const username = cell.dataset.username;
+            const currentDisplay = cell.textContent.trim();
+        
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentDisplay;
+            input.style.cssText = 'width:100%; box-sizing:border-box; padding:2px 4px; font-size:inherit;';
+            cell.innerHTML = '';
+            cell.appendChild(input);
+            input.focus();
+            input.select();
+        
+            const save = () => {
+                const newName = input.value.trim();
+                const customer = this.controller.customers.find(c => c.radiusUsername === username);
+                if (customer) {
+                    customer.friendlyName = newName || null;
+                    cell.textContent = customer.friendlyName || customer.radiusUsername;
+                }
+            };
+        
+            input.addEventListener('blur', save);
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    save();
+                } else if (e.key === 'Escape') {
+                    cell.textContent = currentDisplay;
+                }
+            });
+        }
+
         console.log('Button clicked →', btn.className);
 
         if (btn.classList.contains('remove-btn')) {
