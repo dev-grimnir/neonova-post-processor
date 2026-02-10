@@ -15,25 +15,43 @@ class NeonovaDashboardView {
         }
 
         this.minimizeBar = document.createElement('div');
+        // Minimized bar – matches dashboard width exactly
+        this.minimizeBar = document.createElement('div');
         this.minimizeBar.style.cssText = `
-        position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-        width: 92%; max-width: 1100px;
-        background: #18181b; color: white; padding: 12px 28px; border-radius: 20px 20px 0 0;
-        cursor: pointer; z-index: 10000; font-family: system-ui; display: none;
-        box-shadow: 0 -10px 30px rgba(34, 255, 136, 0.25);
-        border: 1px solid #22ff88; border-bottom: none;
-        display: flex; align-items: center; justify-content: space-between; gap: 16px;
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 92%;
+            max-width: 1100px;
+            background: #18181b;
+            color: white;
+            padding: 12px 32px;                /* same horizontal padding as dashboard content */
+            border-radius: 24px 24px 0 0;      /* match dashboard's big radius */
+            cursor: pointer;
+            z-index: 10000;
+            font-family: system-ui;
+            display: none;
+            box-shadow: 0 -12px 40px rgba(0,0,0,0.8);
+            border: 1px solid #22ff88;
+            border-bottom: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
         `;
         this.minimizeBar.innerHTML = `
-        <div class="flex items-center gap-3">
-            <div class="w-8 h-8 bg-emerald-500 rounded-2xl flex items-center justify-center text-black font-bold text-xl">N</div>
-            <h1 class="text-xl font-semibold" style="text-shadow: 0 0 15px #22ff88;">Neonova</h1>
-            <span class="text-emerald-400 text-xs font-mono tracking-widest">DASHBOARD</span>
-        </div>
-        <button class="px-6 py-2 text-sm font-medium bg-emerald-500 hover:bg-emerald-600 text-black rounded-2xl flex items-center gap-2 transition">
-            <i class="fas fa-chevron-up"></i> Maximize
-        </button>
+            <div class="flex items-center gap-4">
+                <div class="w-8 h-8 bg-emerald-500 rounded-2xl flex items-center justify-center text-black font-bold text-xl">N</div>
+                <h1 class="text-xl font-semibold" style="text-shadow: 0 0 15px #22ff88;">Neonova</h1>
+                <span class="text-emerald-400 text-xs font-mono tracking-widest">DASHBOARD</span>
+            </div>
+            <button class="px-8 py-2.5 text-sm font-medium bg-emerald-500 hover:bg-emerald-600 text-black rounded-2xl flex items-center gap-2 transition shadow-md">
+                <i class="fas fa-chevron-up"></i> Maximize
+            </button>
         `;
+this.minimizeBar.addEventListener('click', () => this.toggleMinimize());
+document.body.appendChild(this.minimizeBar);
         this.minimizeBar.addEventListener('click', () => this.toggleMinimize());
         document.body.appendChild(this.minimizeBar);
 
