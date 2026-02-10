@@ -224,22 +224,26 @@ class NeonovaDashboardView {
 
         if (btn.classList.contains('add-btn')) {
             const idInput = this.panel.querySelector('#radiusId');
-            const nameInput = this.panel.querySelector('#friendlyName');
+            if (!idInput) {
+                console.error('radiusId input not found');
+                return;
+            }
         
-            if (!idInput) return;
-        
-            const rawValue = idInput.value;
-            // Aggressive clean: remove ALL whitespace (including non-breaking, zero-width, etc.)
-            const cleanedId = rawValue.replace(/\s+/g, '').replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '');
+            // Force a read right now, before any re-render can interfere
+            const rawValue = idInput.value || '';
+            const cleanedId = rawValue.trim().replace(/\s+/g, '').replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '');
         
             console.log('ADD - Raw value:', JSON.stringify(rawValue));
             console.log('ADD - Cleaned ID:', JSON.stringify(cleanedId));
             console.log('ADD - Cleaned length:', cleanedId.length);
         
             if (cleanedId.length > 0) {
+                const nameInput = this.panel.querySelector('#friendlyName');
                 const name = nameInput ? nameInput.value.trim() : '';
-                console.log('Calling add with clean ID:', cleanedId);
+                console.log('Calling add with:', cleanedId, name);
                 this.controller.add(cleanedId, name);
+        
+                // Clear AFTER add succeeds
                 idInput.value = '';
                 if (nameInput) nameInput.value = '';
                 idInput.focus();
