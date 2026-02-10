@@ -223,15 +223,26 @@ class NeonovaDashboardView {
         }
 
         if (btn.classList.contains('add-btn')) {
-            const id = this.panel.querySelector('#radiusId').value.trim();
-                const name = this.panel.querySelector('#friendlyName').value.trim();
-                if (id) {
-                    this.controller.add(id, name);
-                    this.panel.querySelector('#radiusId').value = '';
-                    this.panel.querySelector('#friendlyName').value = '';
-                } else {
-                    alert('RADIUS username required');
-                }
+            const idInput = this.panel.querySelector('#radiusId');
+            const nameInput = this.panel.querySelector('#friendlyName');
+        
+            const idRaw = idInput.value;
+            const id = idRaw.trim();
+        
+            // Debug: show exactly what was entered
+            console.log('Raw input:', JSON.stringify(idRaw));
+            console.log('Trimmed ID:', JSON.stringify(id));
+        
+            if (id.length > 0) {
+                const name = nameInput.value.trim();
+                this.controller.add(id, name);
+                idInput.value = '';
+                nameInput.value = '';
+            } else {
+                alert('RADIUS username required');
+                idInput.focus();  // helpful UX: focus back on the field
+                idInput.select(); // select all text so user can retype easily
+            }
         }
         if (btn.classList.contains('refresh-btn')) this.controller.poll();
         if (btn.classList.contains('minimize-btn')) this.toggleMinimize();
