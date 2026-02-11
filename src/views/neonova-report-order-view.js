@@ -9,6 +9,53 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         this.render();
     }
 
+        showModal() {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed; inset: 0;
+                background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
+                z-index: 10000; display: flex; align-items: center; justify-content: center;
+            `;
+            document.body.appendChild(overlay);
+    
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                background: #18181b; border: 1px solid #27272a; border-radius: 24px;
+                width: 820px; max-width: 92vw; max-height: 92vh;
+                overflow: hidden; box-shadow: 0 25px 70px rgba(0,0,0,0.95);
+                display: flex; flex-direction: column;
+            `;
+            overlay.appendChild(modal);
+    
+            const header = document.createElement('div');
+            header.style.cssText = `
+                padding: 24px 32px; border-bottom: 1px solid #27272a;
+                background: #09090b; flex-shrink: 0;
+                display: flex; align-items: center; justify-content: space-between;
+            `;
+            header.innerHTML = `
+                <div>
+                    <div class="text-emerald-400 text-xs font-mono tracking-widest">GENERATE REPORT</div>
+                    <div class="text-2xl font-semibold text-white mt-1">${this.friendlyName}</div>
+                </div>
+                <button class="close-btn px-6 py-2.5 text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-white rounded-2xl flex items-center gap-2 transition">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            `;
+            modal.appendChild(header);
+    
+            const content = document.createElement('div');
+            content.style.cssText = `flex: 1; overflow-y: auto; padding: 32px 40px; background: #18181b;`;
+            modal.appendChild(content);
+    
+            this.container = content;
+            this.render();
+    
+            const close = () => overlay.remove();
+            header.querySelector('.close-btn').addEventListener('click', close);
+            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+        }
+
         render() {
         console.log('ReportOrderView.render() called – this =', this);
 
