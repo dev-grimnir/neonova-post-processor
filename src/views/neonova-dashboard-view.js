@@ -279,7 +279,7 @@ class NeonovaDashboardView extends BaseNeonovaView{
                 });
             });
         });
-        this.updatePollingButton();
+        //this.updatePollingButton();
     }
 
     handleGlobalClick(e) {
