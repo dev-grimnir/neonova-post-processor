@@ -485,15 +485,16 @@ class NeonovaDashboardView extends BaseNeonovaView{
     }
 
     update() { this.render(); }
-
+/*
     updatePollingButton() {
-    const btn = this.panel.querySelector('#poll-toggle-btn');
-    if (!btn) return;
-
-    if (this.controller.isPollingPaused) {
-        btn.innerHTML = '<i class="fas fa-play"></i> Resume Polling';
-    } else {
-        btn.innerHTML = '<i class="fas fa-pause"></i> Pause Polling';
-        }
+        const btn = this.panel.querySelector('#poll-toggle-btn');
+        if (!btn) return;
+    
+        if (this.controller.isPollingPaused) {
+            btn.innerHTML = '<i class="fas fa-play"></i> Resume Polling';
+        } else {
+            btn.innerHTML = '<i class="fas fa-pause"></i> Pause Polling';
+            }
     }
+    */
 }
