@@ -61,6 +61,36 @@ class NeonovaDashboardView extends BaseNeonovaView{
         this.panel.style.display = 'none';
 
         document.body.addEventListener('click', this.handleGlobalClick.bind(this), true);
+
+        // Beautiful emerald scrollbar (matches the whole UI)
+        if (!document.getElementById('neonova-scroll-style')) {
+            const style = document.createElement('style');
+            style.id = 'neonova-scroll-style';
+            style.innerHTML = `
+                .neonova-scroll::-webkit-scrollbar {
+                    width: 7px;
+                }
+                .neonova-scroll::-webkit-scrollbar-track {
+                    background: #18181b;
+                    border-radius: 9999px;
+                }
+                .neonova-scroll::-webkit-scrollbar-thumb {
+                    background: #34d399;        /* emerald-400 */
+                    border-radius: 9999px;
+                    border: 2px solid #18181b;
+                }
+                .neonova-scroll::-webkit-scrollbar-thumb:hover {
+                    background: #10b981;        /* emerald-500 */
+                }
+
+                /* Firefox */
+                .neonova-scroll {
+                    scrollbar-width: thin;
+                    scrollbar-color: #34d399 #18181b;
+                }
+            `;
+            document.head.appendChild(style);
+        }
         
         this.render();
     }
@@ -116,8 +146,8 @@ class NeonovaDashboardView extends BaseNeonovaView{
                         </button>
                     </div>
             
-                    <!-- SCROLLABLE CONTENT AREA -->
-                    <div class="flex-1 overflow-hidden flex flex-col">
+                    <!-- SCROLLABLE TABLE -->
+                    <div class="flex-1 overflow-y-auto px-8 pb-8 neonova-scroll">
                         <!-- Add bar (fixed at top of scroll area) -->
                         <div class="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 mx-8 mt-8 mb-8 shrink-0">
                             <div class="grid grid-cols-12 gap-4">
