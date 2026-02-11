@@ -444,69 +444,62 @@ class NeonovaDashboardView extends BaseNeonovaView{
     openReportModal(username, friendlyName) {
         console.log('openReportModal started for', username);
 
+        // Dark overlay
         const overlay = document.createElement('div');
-        overlay.style.cssText = `position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;`;
+        overlay.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
+            z-index: 10000; display: flex; align-items: center; justify-content: center;
+        `;
         document.body.appendChild(overlay);
 
+        // Dark modal box – matches dashboard style
         const modal = document.createElement('div');
-        modal.style.cssText = `background:white;padding:20px;border-radius:8px;width:600px;max-height:80vh;overflow-y:auto;position:relative;`;
+        modal.style.cssText = `
+            background: #18181b; 
+            border: 1px solid #27272a;
+            border-radius: 24px;
+            width: 620px;
+            max-height: 85vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+            position: relative;
+            font-family: system-ui;
+        `;
         overlay.appendChild(modal);
 
-        const closeBtn = document.createElement('button');
-        closeBtn.textContent = 'Close';
-        closeBtn.style.cssText = `position:absolute;top:10px;right:10px;`;
-        closeBtn.addEventListener('click', () => overlay.remove());
-        modal.appendChild(closeBtn);
+        // Header with close button
+        const header = document.createElement('div');
+        header.style.cssText = `
+            padding: 20px 28px; 
+            border-bottom: 1px solid #27272a;
+            display: flex; align-items: center; justify-content: space-between;
+            background: #09090b;
+        `;
+        header.innerHTML = `
+            <div>
+                <div class="text-emerald-400 text-xs font-mono tracking-widest">GENERATE REPORT</div>
+                <div class="text-2xl font-semibold text-white mt-1">${friendlyName || username}</div>
+            </div>
+            <button class="close-btn px-6 py-2.5 text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-white rounded-2xl flex items-center gap-2 transition">
+                <i class="fas fa-times"></i> Close
+            </button>
+        `;
+        modal.appendChild(header);
 
-        const container = document.createElement('div');
-        modal.appendChild(container);
+        // Content area for NeonovaReportOrderView
+        const content = document.createElement('div');
+        content.style.cssText = `padding: 28px; overflow-y: auto; max-height: calc(85vh - 80px);`;
+        modal.appendChild(content);
 
-        const orderView = new NeonovaReportOrderView(container, username, friendlyName);
+        // Render the themed order form
+        const orderView = new NeonovaReportOrderView(content, username, friendlyName);
         orderView.renderOrderForm();
 
-        orderView.onGenerateRequested = (startIso, endIso) => {
-            overlay.remove();
-            // ... rest of your original onGenerateRequested code exactly as before ...
-            const progressOverlay = document.createElement('div');
-            progressOverlay.style.cssText = `position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10001;display:flex;align-items:center;justify-content:center;`;
-            document.body.appendChild(progressOverlay);
-
-            const progressModal = document.createElement('div');
-            progressModal.style.cssText = `background:white;padding:20px;border-radius:8px;width:400px;position:relative;`;
-            progressOverlay.appendChild(progressModal);
-
-            const progressCloseBtn = document.createElement('button');
-            progressCloseBtn.textContent = 'Cancel';
-            progressCloseBtn.style.cssText = `position:absolute;top:10px;right:10px;`;
-            progressCloseBtn.addEventListener('click', () => progressOverlay.remove());
-            progressModal.appendChild(progressCloseBtn);
-
-            const progressContainer = document.createElement('div');
-            progressModal.appendChild(progressContainer);
-
-            const progressView = new NeonovaProgressView(progressContainer);
-            progressView.render();
-
-            this.controller.generateReportData(
-                username,
-                friendlyName,
-                new Date(startIso),
-                new Date(endIso),
-                (entries, page) => {
-                    const percent = Math.min(100, (page / 50) * 100);
-                    progressView.updateProgress(percent, `Fetched ${entries} entries (page ${page})`);
-                }
-            ).then(data => {
-                progressOverlay.remove();
-                const reportView = new NeonovaReportView(data.username, data.friendlyName, data.metrics, data.entries.length, data.metrics.longDisconnects);
-                const reportHTML = reportView.generateReportHTML('');
-                const newTab = window.open('', '_blank');
-                newTab.document.write(reportHTML);
-                newTab.document.close();
-            }).catch(error => {
-                progressView.showError(error.message);
-            });
-        };
+        // Close handlers
+        const closeModal = () => overlay.remove();
+        header.querySelector('.close-btn').addEventListener('click', closeModal);
+        overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
 
         console.log('openReportModal finished creating modal');
     }
