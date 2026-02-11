@@ -513,18 +513,35 @@ class NeonovaDashboardView extends BaseNeonovaView{
 
     toggleMinimize() {
         console.log('toggleMinimize called - was minimized:', this.isMinimized);
-        this.isMinimized = !this.isMinimized;
+        
         const dash = this.panel;
         const bar = this.minimizeBar;
+        this.isMinimized = !this.isMinimized;
 
         if (this.isMinimized) {
-            dash.style.transition = 'transform 0.45s cubic-bezier(0.4, 0, 0.2, 1)';
-            dash.style.transform = 'translate(-50%, 85%)';
-            setTimeout(() => { dash.style.display = 'none'; bar.style.display = 'flex'; }, 420);
+            // SLIDE DOWN → off screen
+            dash.style.transform = 'translate(-50%, 100%)';
+            
+            // Hide panel + show minimize bar AFTER animation finishes
+            setTimeout(() => {
+                dash.style.display = 'none';
+                bar.style.display = 'flex';
+            }, 480);   // slightly longer than transition
         } else {
+            // MAXIMIZE → SLIDE UP
             bar.style.display = 'none';
             dash.style.display = 'block';
-            setTimeout(() => { dash.style.transform = 'translateX(-50%)'; }, 10);
+            
+            // Start completely off-screen at the bottom
+            dash.style.transform = 'translate(-50%, 100%)';
+            
+            // Force browser to read the new transform (reflow)
+            void dash.offsetWidth;
+            
+            // Now animate it up to centered position
+            requestAnimationFrame(() => {
+                dash.style.transform = 'translateX(-50%)';
+            });
         }
     }
 
