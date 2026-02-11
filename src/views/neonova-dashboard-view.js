@@ -457,7 +457,7 @@ class NeonovaDashboardView extends BaseNeonovaView{
         const modal = document.createElement('div');
         modal.style.cssText = `
             background: #18181b; border: 1px solid #27272a; border-radius: 24px;
-            width: 640px; max-width: 92%; max-height: 92vh;
+            width: 780px; max-width: 92%; max-height: 92vh;
             overflow: hidden; box-shadow: 0 25px 70px rgba(0,0,0,0.95);
             display: flex; flex-direction: column;
             font-family: system-ui;
