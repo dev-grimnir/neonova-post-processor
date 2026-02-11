@@ -12,6 +12,7 @@ class NeonovaReportOrderView extends BaseNeonovaView {
     }
 
        render() {
+        console.log('ReportOrderView.render() called – this =', this);
         this.container.innerHTML = `
             <div class="p-6">
                 <h2 class="text-2xl font-bold mb-6" style="color: ${BaseNeonovaView.THEME.accent}; text-shadow: ${BaseNeonovaView.THEME.neonGlow}">
