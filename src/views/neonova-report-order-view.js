@@ -1,10 +1,9 @@
 class NeonovaReportOrderView extends BaseNeonovaView {
     constructor(container, username, friendlyName) {
-        super(container);
-        this.container = container;
         this.username = username;
         this.friendlyName = friendlyName || username;
         this.onGenerateRequested = null;
+        super(container);
     }
 
        render() {
@@ -38,9 +37,9 @@ class NeonovaReportOrderView extends BaseNeonovaView {
                     <div>
                         <label class="block text-xs uppercase tracking-widest text-zinc-500 mb-3">Start Date</label>
                         <div class="grid grid-cols-3 gap-3">
-                            <select id="start-year" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 text-white focus:border-emerald-500"></select>
-                            <select id="start-month" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 text-white focus:border-emerald-500"></select>
-                            <select id="start-day" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 text-white focus:border-emerald-500"></select>
+                            <select id="start-year" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 text-sm"></select>
+                            <select id="start-month" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 text-sm"></select>
+                            <select id="start-day" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 text-sm"></select>
                         </div>
                     </div>
 
@@ -48,9 +47,9 @@ class NeonovaReportOrderView extends BaseNeonovaView {
                     <div>
                         <label class="block text-xs uppercase tracking-widest text-zinc-500 mb-3">End Date</label>
                         <div class="grid grid-cols-3 gap-3">
-                            <select id="end-year" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 text-white focus:border-emerald-500"></select>
-                            <select id="end-month" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 text-white focus:border-emerald-500"></select>
-                            <select id="end-day" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 text-white focus:border-emerald-500"></select>
+                            <select id="end-year" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 text-sm"></select>
+                            <select id="end-month" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 text-sm"></select>
+                            <select id="end-day" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 text-sm"></select>
                         </div>
                     </div>
                 </div>
