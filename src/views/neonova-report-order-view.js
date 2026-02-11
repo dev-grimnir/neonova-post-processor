@@ -1,6 +1,6 @@
 class NeonovaReportOrderView extends BaseNeonovaView {
     constructor(container, username, friendlyName) {
-        super();
+        super(container);
         this.container = container;
         this.username = username;
         this.friendlyName = friendlyName || username;
