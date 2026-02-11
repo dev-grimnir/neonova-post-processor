@@ -1,14 +1,21 @@
 class BaseNeonovaView {
-    constructor() {
+    constructor(container = null) {
         this.theme = {
             accent: 'emerald',
-            accentColor: '#34d399',      // emerald-400
+            accentColor: '#34d399',
             primary: 'emerald'
         };
         this.accent = 'emerald';
         this.accentColor = 'emerald-500';
+
+        // Support both full-panel views and embedded views (like report)
+        if (container) {
+            this.container = container;
+        } else {
+            this.panel = this.createPanelContainer();
+        }
+
         this.ensureTailwind();
-        this.panel = this.createPanelContainer();
     }
 
     ensureTailwind() {
