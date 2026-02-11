@@ -379,10 +379,21 @@ class NeonovaDashboardView extends BaseNeonovaView{
         if (btn.classList.contains('refresh-btn')) this.controller.poll();
         if (btn.classList.contains('minimize-btn')) this.toggleMinimize();
         if (btn.id === 'poll-toggle-btn') {
+            console.log('Poll toggle clicked - was paused:', this.controller.isPollingPaused);
+
             this.controller.togglePolling();
-            this.updatePollingButton();           // ← immediate, no race
-            // Optional: keep a re-render if you want other parts updated
-            // setTimeout(() => this.render(), 0);
+
+            // Update button text DIRECTLY (bypasses render race)
+            const button = this.panel.querySelector('#poll-toggle-btn');
+            if (button) {
+                if (this.controller.isPollingPaused) {
+                    button.innerHTML = '<i class="fas fa-play"></i> Resume Polling';
+                } else {
+                    button.innerHTML = '<i class="fas fa-pause"></i> Pause Polling';
+                }
+            }
+
+            console.log('Poll toggle finished - now paused:', this.controller.isPollingPaused);
         }
     }
 
