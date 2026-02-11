@@ -152,7 +152,9 @@ class NeonovaDashboardView extends BaseNeonovaView{
                                         <span id="interval-value" class="font-mono text-emerald-400 w-12">${this.controller.pollingIntervalMinutes} min</span>
                                     </div>
                                         <button id="poll-toggle-btn" class="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition">
-                                            <!-- Text updated dynamically -->
+                                            ${this.controller.isPollingPaused 
+                                                ? '<i class="fas fa-play"></i> Resume Polling' 
+                                                : '<i class="fas fa-pause"></i> Pause Polling'}
                                         </button>
                                     </div>
                                 <div class="flex items-center gap-6 text-sm">
