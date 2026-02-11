@@ -146,7 +146,7 @@ class NeonovaDashboardView extends BaseNeonovaView{
                         </button>
                     </div>
             
-                    <!-- SCROLLABLE TABLE -->
+                   <!--   <!-- SCROLLABLE TABLE -->
                     <div class="flex-1 overflow-y-auto px-8 pb-8 neonova-scroll">
                         <!-- Add bar (fixed at top of scroll area) -->
                         <div class="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 mx-8 mt-8 mb-8 shrink-0">
@@ -156,7 +156,7 @@ class NeonovaDashboardView extends BaseNeonovaView{
                                 <div class="col-span-2"><button class="add-btn w-full h-full bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl transition">ADD</button></div>
                             </div>
                         </div>
-            
+                        -->
                         <!-- SCROLLABLE TABLE -->
                         <div class="flex-1 overflow-y-auto px-8 pb-8">
                             <div class="bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden">
