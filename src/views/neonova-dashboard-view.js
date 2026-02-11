@@ -152,11 +152,12 @@ class NeonovaDashboardView extends BaseNeonovaView{
                                         <span id="interval-value" class="font-mono text-emerald-400 w-12">${this.controller.pollingIntervalMinutes} min</span>
                                     </div>
                                         <button id="poll-toggle-btn" class="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition">
+                                        <button id="poll-toggle-btn" class="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition">
                                             ${this.controller.isPollingPaused 
                                                 ? '<i class="fas fa-play"></i> Resume Polling' 
                                                 : '<i class="fas fa-pause"></i> Pause Polling'}
                                         </button>
-                                </div>
+                                    </div>
                                 <div class="flex items-center gap-6 text-sm">
                                     <button class="refresh-btn flex items-center gap-2 text-emerald-400 hover:text-emerald-300">
                                         <i class="fas fa-sync-alt"></i> Refresh Now
@@ -290,9 +291,9 @@ class NeonovaDashboardView extends BaseNeonovaView{
         // Ignore clicks on the minimized bar itself (prevents loop)
         if (e.target.closest('#minimize-bar') || this.minimizeBar.contains(e.target)) {
         return;
-    }
+        }
 
-    console.log('Button clicked:', btn.className);
+        console.log('Button clicked:', btn.className);
 
         // Friendly name editing (on click of .friendly-name cell)
         if (e.target.classList.contains('friendly-name')) {
@@ -380,10 +381,10 @@ class NeonovaDashboardView extends BaseNeonovaView{
         if (btn.classList.contains('refresh-btn')) this.controller.poll();
         if (btn.classList.contains('minimize-btn')) this.toggleMinimize();
         if (btn.id === 'poll-toggle-btn') {
-            this.controller.togglePolling();
-            this.render();
+        this.controller.togglePolling();
+        setTimeout(() => this.render(), 0);   // next tick — guarantees new state is visible
         }
-    }
+        }
 
     openReportModal(username, friendlyName) {
         console.log('openReportModal started for', username);
