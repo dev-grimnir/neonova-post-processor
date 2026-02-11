@@ -18,14 +18,17 @@ class NeonovaReportOrderView extends BaseNeonovaView {
 
                 <!-- Quick Presets -->
                 <div class="flex flex-wrap gap-3">
-                    <button class="quick-btn px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-2xl text-sm transition flex items-center gap-2" data-days="7">
+                    <button class="quick-btn px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-black font-medium rounded-2xl text-sm transition flex items-center gap-2 shadow-md" data-days="1">
+                        <i class="fas fa-calendar-day"></i> Last 1 day
+                    </button>
+                    <button class="quick-btn px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-black font-medium rounded-2xl text-sm transition flex items-center gap-2 shadow-md" data-days="7">
                         <i class="fas fa-calendar-week"></i> Last 7 days
                     </button>
-                    <button class="quick-btn px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-2xl text-sm transition flex items-center gap-2" data-days="30">
+                    <button class="quick-btn px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-black font-medium rounded-2xl text-sm transition flex items-center gap-2 shadow-md" data-days="30">
                         <i class="fas fa-calendar"></i> Last 30 days
                     </button>
-                    <button class="quick-btn px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-2xl text-sm transition flex items-center gap-2" data-hours="24">
-                        <i class="fas fa-clock"></i> Last 24 hours
+                    <button class="quick-btn px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-black font-medium rounded-2xl text-sm transition flex items-center gap-2 shadow-md" data-days="90">
+                        <i class="fas fa-calendar-alt"></i> Last 90 days
                     </button>
                 </div>
 
@@ -73,53 +76,71 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         });
         */
     
-        // Populate dropdowns + listeners (with null-safety so nothing ever crashes)
+        // Populate dropdowns – correct defaults
         const today = new Date();
         const currentYear = today.getFullYear();
-        const previousYear = currentYear - 1;
-        const currentMonth = today.getMonth() + 1;
+        const currentMonth = today.getMonth() + 1;   // 1-12
+        const currentDay = today.getDate();
 
-        const populateYears = (select, defaultYear) => { if (!select) return; for (let y = previousYear; y <= currentYear; y++) select.add(new Option(y, y, y === defaultYear)); };
-        const populateMonths = (select, defaultMonth) => { if (!select) return; for (let m = 1; m <= 12; m++) select.add(new Option(new Date(2000, m-1, 1).toLocaleString('default', { month: 'long' }), m.toString().padStart(2, '0'), m === defaultMonth)); };
-        const getDaysInMonth = (year, month) => new Date(year, month, 0).getDate();
-        const populateDays = (select, year, month, defaultDay) => {
+        const populateYears = (select, defaultYear) => {
             if (!select) return;
-            const daysInMonth = getDaysInMonth(year, month);
-            select.innerHTML = '';
-            for (let d = 1; d <= daysInMonth; d++) select.add(new Option(d, d.toString().padStart(2, '0'), d === defaultDay));
+            for (let y = currentYear - 1; y <= currentYear + 1; y++) {
+                select.add(new Option(y, y, y === defaultYear));
+            }
         };
 
-        const updateDays = (dayId, yearId, monthId, defaultDay) => {
+        const populateMonths = (select, defaultMonth) => {
+            if (!select) return;
+            for (let m = 1; m <= 12; m++) {
+                const name = new Date(2000, m-1, 1).toLocaleString('default', { month: 'long' });
+                select.add(new Option(name, m.toString().padStart(2, '0'), m === defaultMonth));
+            }
+        };
+
+        const getDaysInMonth = (year, month) => new Date(year, month, 0).getDate();
+
+        const populateDays = (select, year, month, defaultDay) => {
+            if (!select) return;
+            const days = getDaysInMonth(year, month);
+            select.innerHTML = '';
+            for (let d = 1; d <= days; d++) {
+                select.add(new Option(d, d.toString().padStart(2, '0'), d === defaultDay));
+            }
+        };
+
+        const updateDays = (dayId, yearId, monthId) => {
             const y = this.container.querySelector(`#${yearId}`);
             const m = this.container.querySelector(`#${monthId}`);
             const d = this.container.querySelector(`#${dayId}`);
             if (!y || !m || !d) return;
             const year = parseInt(y.value);
             const month = parseInt(m.value);
-            const current = parseInt(d.value) || defaultDay;
-            populateDays(d, year, month, defaultDay);
+            const current = parseInt(d.value) || 1;
+            populateDays(d, year, month, current);
             d.value = Math.min(current, getDaysInMonth(year, month)).toString().padStart(2, '0');
         };
 
-        // Start date
-        const sy = this.container.querySelector('#start-year');
-        const sm = this.container.querySelector('#start-month');
-        const sd = this.container.querySelector('#start-day');
-        if (sy) populateYears(sy, previousYear);
-        if (sm) populateMonths(sm, currentMonth);
-        if (sd) populateDays(sd, parseInt(sy?.value) || previousYear, parseInt(sm?.value) || currentMonth, 1);
-        if (sy) sy.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month', 1));
-        if (sm) sm.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month', 1));
+        // Start date → 1st of current month
+        const startYear  = this.container.querySelector('#start-year');
+        const startMonth = this.container.querySelector('#start-month');
+        const startDay   = this.container.querySelector('#start-day');
+        if (startYear)  populateYears(startYear, currentYear);
+        if (startMonth) populateMonths(startMonth, currentMonth);
+        if (startDay)   populateDays(startDay, currentYear, currentMonth, 1);
 
-        // End date
-        const ey = this.container.querySelector('#end-year');
-        const em = this.container.querySelector('#end-month');
-        const ed = this.container.querySelector('#end-day');
-        if (ey) populateYears(ey, currentYear);
-        if (em) populateMonths(em, currentMonth);
-        if (ed) populateDays(ed, parseInt(ey?.value) || currentYear, parseInt(em?.value) || currentMonth, 1);
-        if (ey) ey.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month', 1));
-        if (em) em.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month', 1));
+        startYear?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
+        startMonth?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
+
+        // End date → today
+        const endYear  = this.container.querySelector('#end-year');
+        const endMonth = this.container.querySelector('#end-month');
+        const endDay   = this.container.querySelector('#end-day');
+        if (endYear)  populateYears(endYear, currentYear);
+        if (endMonth) populateMonths(endMonth, currentMonth);
+        if (endDay)   populateDays(endDay, currentYear, currentMonth, currentDay);
+
+        endYear?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
+        endMonth?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
 
         // Quick preset buttons
         this.container.querySelectorAll('.quick-btn').forEach(btn => {
