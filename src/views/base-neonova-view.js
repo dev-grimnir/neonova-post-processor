@@ -34,7 +34,12 @@ class BaseNeonovaView {
     }
 
     render() {
-        // Subclass must override this
+        if (!this.panel) return;
+        this.panel.innerHTML = "";
+        this.renderContent();
+    }
+
+    renderContent() {
         this.panel.innerHTML = '<div class="p-8 text-center text-zinc-400">Loading...</div>';
     }
 
