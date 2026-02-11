@@ -67,6 +67,9 @@ class NeonovaDashboardView extends BaseNeonovaView{
             console.warn('Panel not ready yet');
             return
         }
+
+        const scrollContainer = this.panel.querySelector('.flex-1.overflow-y-auto');
+        const savedScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
         
         let rows = '';
         this.controller.customers.forEach(c => {
@@ -148,9 +151,11 @@ class NeonovaDashboardView extends BaseNeonovaView{
                                         <input type="range" id="polling-interval-slider" min="1" max="60" value="${this.controller.pollingIntervalMinutes}" class="w-64 accent-emerald-500">
                                         <span id="interval-value" class="font-mono text-emerald-400 w-12">${this.controller.pollingIntervalMinutes} min</span>
                                     </div>
-                                    <button id="poll-toggle-btn" class="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition">
-                                        ${this.controller.isPollingPaused ? '<i class="fas fa-play"></i> Resume Polling' : '<i class="fas fa-pause"></i> Pause Polling'}
-                                    </button>
+                                        <button id="poll-toggle-btn" class="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition">
+                                            ${this.controller.isPollingPaused 
+                                                ? '<i class="fas fa-play"></i> Resume Polling' 
+                                                : '<i class="fas fa-pause"></i> Pause Polling'}
+                                        </button>
                                 </div>
                                 <div class="flex items-center gap-6 text-sm">
                                     <button class="refresh-btn flex items-center gap-2 text-emerald-400 hover:text-emerald-300">
@@ -165,6 +170,12 @@ class NeonovaDashboardView extends BaseNeonovaView{
                     </div>
                 </div>
             `;
+
+        // === RESTORE SCROLL POSITION AFTER REBUILD ===
+        const newScrollContainer = this.panel.querySelector('.flex-1.overflow-y-auto');
+        if (newScrollContainer) {
+            newScrollContainer.scrollTop = savedScrollTop;
+        }
 
         // Slider + tooltip
         const slider = this.panel.querySelector('#polling-interval-slider');
