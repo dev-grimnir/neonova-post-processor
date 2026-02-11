@@ -9,27 +9,52 @@ class NeonovaReportOrderView extends BaseNeonovaView {
 
        render() {
         console.log('ReportOrderView.render() called – this =', this);
+
         this.container.innerHTML = `
-            <div class="p-6">
-                <h2 class="text-2xl font-bold mb-6" style="color: ${BaseNeonovaView.THEME.accent}; text-shadow: ${BaseNeonovaView.THEME.neonGlow}">
+            <div class="p-6 space-y-8">
+                <h2 class="text-3xl font-bold mb-8" style="color: ${this.theme.accent}; text-shadow: 0 0 20px ${this.theme.accentColor}44;">
                     Generate Report for ${this.friendlyName || this.username}
                 </h2>
 
-                <!-- Your existing form fields, date pickers, etc. -->
-                <div class="space-y-6">
-                    <div>
-                        <label class="block text-sm font-medium text-zinc-300 mb-2">Start Date</label>
-                        <input type="date" id="startDate" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:border-emerald-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-zinc-300 mb-2">End Date</label>
-                        <input type="date" id="endDate" class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:border-emerald-500">
-                    </div>
-                    <!-- ... other fields ... -->
-                    <button id="generateBtn" class="w-full bg-emerald-500 hover:bg-emerald-600 text-black font-semibold py-3 rounded-xl transition">
-                        Generate Report
+                <!-- Quick Presets -->
+                <div class="flex flex-wrap gap-3">
+                    <button class="quick-btn px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-2xl text-sm transition flex items-center gap-2" data-days="7">
+                        <i class="fas fa-calendar-week"></i> Last 7 days
+                    </button>
+                    <button class="quick-btn px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-2xl text-sm transition flex items-center gap-2" data-days="30">
+                        <i class="fas fa-calendar"></i> Last 30 days
+                    </button>
+                    <button class="quick-btn px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-2xl text-sm transition flex items-center gap-2" data-hours="24">
+                        <i class="fas fa-clock"></i> Last 24 hours
                     </button>
                 </div>
+
+                <!-- Custom Date Range -->
+                <div class="grid grid-cols-2 gap-8">
+                    <!-- Start Date -->
+                    <div>
+                        <label class="block text-xs uppercase tracking-widest text-zinc-500 mb-3">Start Date</label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <select id="start-year" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 text-white focus:border-emerald-500"></select>
+                            <select id="start-month" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 text-white focus:border-emerald-500"></select>
+                            <select id="start-day" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 text-white focus:border-emerald-500"></select>
+                        </div>
+                    </div>
+
+                    <!-- End Date -->
+                    <div>
+                        <label class="block text-xs uppercase tracking-widest text-zinc-500 mb-3">End Date</label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <select id="end-year" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 text-white focus:border-emerald-500"></select>
+                            <select id="end-month" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 text-white focus:border-emerald-500"></select>
+                            <select id="end-day" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 text-white focus:border-emerald-500"></select>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="generate-custom" class="w-full bg-emerald-500 hover:bg-emerald-600 text-black font-semibold py-4 rounded-2xl transition text-lg">
+                    Generate Report
+                </button>
             </div>
         `;
 
