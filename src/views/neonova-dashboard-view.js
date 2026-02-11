@@ -493,8 +493,6 @@ class NeonovaDashboardView extends BaseNeonovaView{
         // === Render the form ===
         try {
             const orderView = new NeonovaReportOrderView(content, username, friendlyName);
-            orderView.renderOrderForm();
-            console.log('NeonovaReportOrderView.renderOrderForm() called successfully');
         } catch (err) {
             console.error('ReportOrderView failed to render:', err);
             content.innerHTML = `<div class="text-red-400">Error rendering report form: ${err.message}</div>`;
