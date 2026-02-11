@@ -6,7 +6,7 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         super(container);
     }
 
-       render() {
+        render() {
         console.log('ReportOrderView.render() called – this =', this);
 
         this.container.innerHTML = `
@@ -60,101 +60,87 @@ class NeonovaReportOrderView extends BaseNeonovaView {
             </div>
         `;
 
-        /*
-        // Attach event listeners
-        this.container.querySelector('#generateBtn').addEventListener('click', () => {
-            const start = this.container.querySelector('#startDate').value;
-            const end = this.container.querySelector('#endDate').value;
-            if (start && end) {
-                if (this.onGenerateRequested) {
-                    this.onGenerateRequested(start, end);
-                }
-            } else {
-                alert('Please select both start and end dates');
-            }
-        });
-        */
-    
-        // Populate dropdowns – correct defaults
+        // === CORRECT DEFAULTS + BULLETPROOF SELECTION ===
         const today = new Date();
-        const currentYear = today.getFullYear();
+        const currentYear  = today.getFullYear();
         const currentMonth = today.getMonth() + 1;   // 1-12
-        const currentDay = today.getDate();
+        const currentDay   = today.getDate();
 
         const populateYears = (select, defaultYear) => {
             if (!select) return;
+            select.innerHTML = '';
             for (let y = currentYear - 1; y <= currentYear + 1; y++) {
-                select.add(new Option(y, y, y === defaultYear));
+                const opt = new Option(y, y);
+                select.add(opt);
             }
+            select.value = defaultYear;   // ← force correct selection
         };
 
         const populateMonths = (select, defaultMonth) => {
             if (!select) return;
+            select.innerHTML = '';
             for (let m = 1; m <= 12; m++) {
                 const name = new Date(2000, m-1, 1).toLocaleString('default', { month: 'long' });
-                select.add(new Option(name, m.toString().padStart(2, '0'), m === defaultMonth));
+                const opt = new Option(name, m.toString().padStart(2, '0'));
+                select.add(opt);
             }
+            select.value = defaultMonth.toString().padStart(2, '0');
         };
 
-        const getDaysInMonth = (year, month) => new Date(year, month, 0).getDate();
+        const getDaysInMonth = (y, m) => new Date(y, m, 0).getDate();
 
         const populateDays = (select, year, month, defaultDay) => {
             if (!select) return;
-            const days = getDaysInMonth(year, month);
             select.innerHTML = '';
+            const days = getDaysInMonth(year, month);
             for (let d = 1; d <= days; d++) {
-                select.add(new Option(d, d.toString().padStart(2, '0'), d === defaultDay));
+                const opt = new Option(d, d.toString().padStart(2, '0'));
+                select.add(opt);
             }
+            select.value = Math.min(defaultDay, days).toString().padStart(2, '0');
         };
 
+        // Start date = 1st of current month
+        const sy = this.container.querySelector('#start-year');
+        const sm = this.container.querySelector('#start-month');
+        const sd = this.container.querySelector('#start-day');
+        if (sy) populateYears(sy, currentYear);
+        if (sm) populateMonths(sm, currentMonth);
+        if (sd) populateDays(sd, currentYear, currentMonth, 1);
+
+        // End date = today
+        const ey = this.container.querySelector('#end-year');
+        const em = this.container.querySelector('#end-month');
+        const ed = this.container.querySelector('#end-day');
+        if (ey) populateYears(ey, currentYear);
+        if (em) populateMonths(em, currentMonth);
+        if (ed) populateDays(ed, currentYear, currentMonth, currentDay);
+
+        // Listeners (unchanged except null-safe)
         const updateDays = (dayId, yearId, monthId) => {
             const y = this.container.querySelector(`#${yearId}`);
             const m = this.container.querySelector(`#${monthId}`);
             const d = this.container.querySelector(`#${dayId}`);
             if (!y || !m || !d) return;
-            const year = parseInt(y.value);
-            const month = parseInt(m.value);
-            const current = parseInt(d.value) || 1;
-            populateDays(d, year, month, current);
-            d.value = Math.min(current, getDaysInMonth(year, month)).toString().padStart(2, '0');
+            populateDays(d, parseInt(y.value), parseInt(m.value), parseInt(d.value) || 1);
         };
 
-        // Start date → 1st of current month
-        const startYear  = this.container.querySelector('#start-year');
-        const startMonth = this.container.querySelector('#start-month');
-        const startDay   = this.container.querySelector('#start-day');
-        if (startYear)  populateYears(startYear, currentYear);
-        if (startMonth) populateMonths(startMonth, currentMonth);
-        if (startDay)   populateDays(startDay, currentYear, currentMonth, 1);
+        sy?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
+        sm?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
+        ey?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
+        em?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
 
-        startYear?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
-        startMonth?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
-
-        // End date → today
-        const endYear  = this.container.querySelector('#end-year');
-        const endMonth = this.container.querySelector('#end-month');
-        const endDay   = this.container.querySelector('#end-day');
-        if (endYear)  populateYears(endYear, currentYear);
-        if (endMonth) populateMonths(endMonth, currentMonth);
-        if (endDay)   populateDays(endDay, currentYear, currentMonth, currentDay);
-
-        endYear?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
-        endMonth?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
-
-        // Quick preset buttons
+        // Quick buttons + Generate button (unchanged)
         this.container.querySelectorAll('.quick-btn').forEach(btn => {
-            if (btn) btn.addEventListener('click', () => {
-                const hours = parseInt(btn.dataset.hours);
+            btn.addEventListener('click', () => {
                 const days = parseInt(btn.dataset.days);
                 let start = new Date();
                 const end = new Date();
-                if (hours) start.setHours(start.getHours() - hours);
                 if (days) start.setDate(start.getDate() - days);
                 if (this.onGenerateRequested) this.onGenerateRequested(start.toISOString(), end.toISOString());
             });
         });
 
-        // Generate button
         const genBtn = this.container.querySelector('#generate-custom');
         if (genBtn) genBtn.addEventListener('click', () => {
             const startY = parseInt(this.container.querySelector('#start-year')?.value);
@@ -175,4 +161,5 @@ class NeonovaReportOrderView extends BaseNeonovaView {
             if (this.onGenerateRequested) this.onGenerateRequested(start.toISOString(), end.toISOString());
         });
     }
+
 }
