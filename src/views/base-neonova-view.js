@@ -1,5 +1,12 @@
 class BaseNeonovaView {
     constructor() {
+        this.theme = {
+            accent: 'emerald',
+            accentColor: '#34d399',      // emerald-400
+            primary: 'emerald'
+        };
+        this.accent = 'emerald';
+        this.accentColor = 'emerald-500';
         this.ensureTailwind();
         this.panel = this.createPanelContainer();
     }
