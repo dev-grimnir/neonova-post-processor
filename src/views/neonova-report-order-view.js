@@ -11,10 +11,10 @@ class NeonovaReportOrderView extends BaseNeonovaView {
 
         this.container.innerHTML = `
             <div class="p-6 space-y-8">
-                <h2 class="text-3xl font-bold mb-8" style="color: ${this.theme.accent}; text-shadow: 0 0 20px ${this.theme.accentColor}44;">
-                    Generate Report for ${this.friendlyName || this.username}
+                <h2 class="text-3xl font-bold mb-8 text-white" 
+                    style="text-shadow: 0 0 25px ${this.theme.accentColor};">
+                    Generate Report for ${this.friendlyName}
                 </h2>
-
                 <!-- Quick Presets -->
                 <div class="flex flex-wrap gap-3">
                     <button class="quick-btn px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-black font-medium rounded-2xl text-sm transition flex items-center gap-2 shadow-md" data-days="1">
