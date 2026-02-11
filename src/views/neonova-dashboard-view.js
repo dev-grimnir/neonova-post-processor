@@ -3,24 +3,10 @@ class NeonovaDashboardView extends BaseNeonovaView{
         super();
         this.controller = controller;
         this.isMinimized = true;
+        this.createElements();
     }
 
     createElements() {
-        // Load Tailwind and wait for it
-        if (!document.getElementById('tailwind-css')) {
-            const s = document.createElement('script');
-            s.id = 'tailwind-css';
-            s.src = 'https://cdn.tailwindcss.com';
-            s.onload = () => {
-                console.log('Tailwind loaded');
-                this.render();
-            };
-            document.head.appendChild(s);
-        } else {
-            this.render();
-        }
-
-        this.minimizeBar = document.createElement('div');
         // Minimized bar – matches dashboard width exactly
         this.minimizeBar = document.createElement('div');
         this.minimizeBar.style.cssText = `
@@ -77,6 +63,11 @@ class NeonovaDashboardView extends BaseNeonovaView{
     }
 
     render() {
+        if (!this.panel) {
+            console.warn('Panel not ready yet');
+            return
+        }
+        
         let rows = '';
         this.controller.customers.forEach(c => {
             const isConnected = c.status === 'Connected';
