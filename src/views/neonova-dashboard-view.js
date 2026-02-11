@@ -48,12 +48,14 @@ class NeonovaDashboardView extends BaseNeonovaView{
 
         this.panel = document.createElement('div');
         this.panel.style.cssText = `
-        position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
-        width: 92%; max-width: 1100px; height: calc(100vh - 80px);
-        background: #09090b; border: 1px solid #27272a;
-        border-radius: 24px; box-shadow: 0 8px 40px rgba(0,0,0,0.8);
-        padding: 0; font-family: system-ui; z-index: 9999; display: none;
-        overflow: hidden;  /* important for internal scrolling */
+                // Smooth slide animation for maximize/minimize
+                this.panel.style.transition = 'transform 0.45s cubic-bezier(0.4, 0, 0.2, 1)';
+                position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+                width: 92%; max-width: 1100px; height: calc(100vh - 80px);
+                background: #09090b; border: 1px solid #27272a;
+                border-radius: 24px; box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+                padding: 0; font-family: system-ui; z-index: 9999; display: none;
+                overflow: hidden;  /* important for internal scrolling */
         `;
         document.body.appendChild(this.panel);
 
