@@ -58,6 +58,7 @@ class NeonovaReportOrderView extends BaseNeonovaView {
             </div>
         `;
 
+        /*
         // Attach event listeners
         this.container.querySelector('#generateBtn').addEventListener('click', () => {
             const start = this.container.querySelector('#startDate').value;
@@ -70,6 +71,7 @@ class NeonovaReportOrderView extends BaseNeonovaView {
                 alert('Please select both start and end dates');
             }
         });
+        */
     
         // Populate dropdowns
         const today = new Date();
