@@ -8,10 +8,8 @@ class BaseNeonovaView {
         this.accent = 'emerald';
         this.accentColor = 'emerald-500';
 
-        // Embedded views (report, progress, etc.) pass their container
-        // Full-panel views pass nothing → create panel as before
         if (container) {
-            this.container = container;
+            this.container = container;        // ← for report/progress views
         } else {
             this.panel = this.createPanelContainer();
         }
