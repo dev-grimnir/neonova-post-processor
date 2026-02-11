@@ -59,6 +59,9 @@ class NeonovaDashboardView extends BaseNeonovaView{
 
         this.minimizeBar.style.display = 'flex';
         this.panel.style.display = 'none';
+
+        document.body.addEventListener('click', this.handleGlobalClick.bind(this), true);
+        
         this.render();
     }
 
@@ -236,8 +239,8 @@ class NeonovaDashboardView extends BaseNeonovaView{
             });
         }
 
-        // Global delegation
-        document.body.addEventListener('click', this.handleGlobalClick.bind(this), true);
+        
+        //document.body.addEventListener('click', this.handleGlobalClick.bind(this), true);
 
                 // Friendly name editing
         this.panel.querySelectorAll('.friendly-name').forEach(cell => {
