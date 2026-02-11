@@ -2,10 +2,7 @@ class NeonovaDashboardView extends BaseNeonovaView{
     constructor(controller) {
         super();
         this.controller = controller;
-        this.panel = null;
-        this.minimizeBar = null;
         this.isMinimized = true;
-        this.createElements();
     }
 
     createElements() {
