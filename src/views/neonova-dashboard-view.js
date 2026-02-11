@@ -391,9 +391,11 @@ class NeonovaDashboardView extends BaseNeonovaView{
         
         if (btn.classList.contains('report-btn') || btn.className.includes('report-btn')) {
             const username = btn.dataset.username;
-            if (!username) return;
             const customer = this.controller.customers.find(c => c.radiusUsername === username);
-            if (customer) this.openReportModal(username, customer.friendlyName || username);
+            if (customer) {
+                const reportView = new NeonovaReportOrderView(null, username, customer.friendlyName || username);
+                reportView.showModal();
+            }
         }
 
         if (btn.classList.contains('add-btn')) {
