@@ -4,6 +4,7 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         this.username = username;
         this.friendlyName = friendlyName || username;
         this.onGenerateRequested = null;
+        this.render();
     }
 
         render() {
