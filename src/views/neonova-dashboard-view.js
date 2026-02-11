@@ -379,8 +379,10 @@ class NeonovaDashboardView extends BaseNeonovaView{
         if (btn.classList.contains('refresh-btn')) this.controller.poll();
         if (btn.classList.contains('minimize-btn')) this.toggleMinimize();
         if (btn.id === 'poll-toggle-btn') {
-        this.controller.togglePolling();
-        setTimeout(() => this.render(), 0);   // next tick — guarantees new state is visible
+            this.controller.togglePolling();
+            this.updatePollingButton();           // ← immediate, no race
+            // Optional: keep a re-render if you want other parts updated
+            // setTimeout(() => this.render(), 0);
         }
     }
 
