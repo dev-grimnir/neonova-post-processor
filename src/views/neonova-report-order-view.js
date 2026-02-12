@@ -49,6 +49,7 @@ class NeonovaReportOrderView extends BaseNeonovaView {
 
         this.container = content;
         this.render();
+        this.attachListeners();
 
         const close = () => overlay.remove();
         header.querySelector('.close-btn').addEventListener('click', close);
@@ -182,10 +183,12 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         ey?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
         em?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
 
-        // Quick buttons
+    }
+
+    attachListeners() {
+        // Quick preset buttons
         this.container.querySelectorAll('.quick-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                e.stopImmediatePropagation();
                 const days = parseInt(btn.dataset.days);
                 let start = new Date();
                 const end = new Date();
@@ -197,7 +200,6 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         // Generate button
         const genBtn = this.container.querySelector('#generate-custom');
         if (genBtn) genBtn.addEventListener('click', (e) => {
-            e.stopImmediatePropagation();
             const startY = parseInt(this.container.querySelector('#start-year')?.value);
             const startM = parseInt(this.container.querySelector('#start-month')?.value) - 1;
             const startD = parseInt(this.container.querySelector('#start-day')?.value);
@@ -216,5 +218,5 @@ class NeonovaReportOrderView extends BaseNeonovaView {
             if (this.onGenerateRequested) this.onGenerateRequested(start.toISOString(), end.toISOString());
         });
     }
-
+    
 }
