@@ -63,11 +63,23 @@ class NeonovaProgressView extends BaseNeonovaView {
         // For now we leave it empty because we already built the HTML in showModal()
     }
 
-    updateProgress(percent, text) {
+    updateProgress(currentPage, totalPages, message = 'Processing...') {
         const bar = this.container.querySelector('#progress-bar');
         const status = this.container.querySelector('#status');
+
+        let percent = 0;
+        let displayText = message;
+
+        if (totalPages && totalPages > 0) {
+            percent = Math.min(100, Math.round((currentPage / totalPages) * 100));
+            displayText = `${message} (${currentPage}/${totalPages})`;
+        } else if (currentPage > 0) {
+            // fallback if totalPages unknown
+            percent = Math.min(100, currentPage * 5); // rough guess, e.g. assume 20 pages max
+        }
+
         if (bar) bar.style.width = percent + '%';
-        if (status) status.textContent = text || 'Processing...';
+        if (status) status.textContent = displayText;
     }
 
     finish(data) {
