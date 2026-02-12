@@ -278,10 +278,7 @@ class NeonovaDashboardView extends BaseNeonovaView{
             });
         }
 
-        
-        //document.body.addEventListener('click', this.handleGlobalClick.bind(this), true);
-
-                // Friendly name editing
+        // Friendly name editing
         this.panel.querySelectorAll('.friendly-name').forEach(cell => {
             if (cell.dataset.editable === 'true') return;
             cell.dataset.editable = 'true';
