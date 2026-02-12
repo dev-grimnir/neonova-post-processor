@@ -234,6 +234,7 @@ class NeonovaDashboardView extends BaseNeonovaView{
                 const customer = this.controller.customers.find(c => c.radiusUsername === username);
                 if (customer) {
                     const reportView = new NeonovaReportOrderView(null, username, customer.friendlyName || username);
+                    reportView.controller = this.controller;
                     reportView.showModal();
                 }
             });
