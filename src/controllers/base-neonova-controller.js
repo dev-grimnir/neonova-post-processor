@@ -201,13 +201,13 @@ parsePageRows(doc) {
             let page = 1;
             let offset = 0;
             const hitsPerPage = 100;
-            const maxPages = 50; // safety cap
+            //const maxPages = 50; // safety cap
         
             const now = new Date();
             const sDate = startDate || new Date(now.getFullYear(), now.getMonth(), 1); // Start of current month if null
             const eDate = endDate || now;
     
-            while (page <= maxPages) {
+            while (true) {
                 const params = new URLSearchParams({
                     acctsearch: '2',
                     sd: 'fairpoint.net',
