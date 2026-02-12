@@ -41,6 +41,7 @@ class NeonovaReportOrderView extends BaseNeonovaView {
                 <i class="fas fa-times"></i> Close
             </button>
         `;
+        
         modal.appendChild(header);
 
         const content = document.createElement('div');
@@ -50,6 +51,29 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         this.container = content;
         this.render();
         this.attachListeners();
+
+                // Wire up the buttons so they actually do something
+        this.onGenerateRequested = (startIso, endIso) => {
+            overlay.remove();   // close the order modal
+
+            const progressView = new NeonovaProgressView(this.username, this.friendlyName);
+            progressView.showModal();
+
+            this.controller.generateReportData(
+                this.username,
+                this.friendlyName,
+                new Date(startIso),
+                new Date(endIso),
+                (entries, page) => {
+                    const percent = Math.min(100, (page / 50) * 100);
+                    progressView.updateProgress(percent, `Fetched ${entries} entries (page ${page})`);
+                }
+            ).then(data => {
+                progressView.finish(data);
+            }).catch(err => {
+                progressView.showError(err.message);
+            });
+        };
 
         const close = () => overlay.remove();
         header.querySelector('.close-btn').addEventListener('click', close);
