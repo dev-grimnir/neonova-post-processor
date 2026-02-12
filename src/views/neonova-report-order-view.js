@@ -205,10 +205,6 @@ class NeonovaReportOrderView extends BaseNeonovaView {
             };
 
             // Calculate defaults
-            const today = new Date();
-            const currentYear = today.getFullYear();
-            const currentMonth = today.getMonth() + 1;  // 1-12
-            const currentDay = today.getDate();
 
             const oneYearAgo = new Date(today);
             oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
