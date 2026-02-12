@@ -187,6 +187,7 @@ parsePageRows(doc) {
          * @returns {Promise<Array<{timestamp: string, status: string, sessionTime: string, dateObj: Date}>>}
          */
         async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
+            let knownTotal = null;  // Will hold the exact total once scraped from first page
             // Handle legacy calls where second arg might be onProgress
             if (typeof startDate === 'function') {
                 onProgress = startDate;
@@ -256,16 +257,38 @@ parsePageRows(doc) {
                 const doc = new DOMParser().parseFromString(html, 'text/html');
         
                 const pageEntries = this.parsePageRows(doc);
+
+                if (page === 1) {
+                    // Scrape the exact total from the status table: last <td> in the specific gray row
+                    const statusTable = doc.querySelector('table[bgcolor="gray"] > tbody > tr');
+                    if (statusTable) {
+                        const cells = statusTable.querySelectorAll('td');
+                        if (cells.length >= 5) {
+                            const totalText = cells[cells.length - 1].textContent.trim().replace(/&nbsp;/g, '');
+                            knownTotal = parseInt(totalText, 10);
+                            if (!isNaN(knownTotal)) {
+                                console.log(`Scraped exact total rows: ${knownTotal}`);
+                                // Early exit if zero results
+                                if (knownTotal === 0) {
+                                    entries.push(...pageEntries);  // still add any (should be none)
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 entries.push(...pageEntries);
         
                 if (typeof onProgress === 'function') {
-                    onProgress(entries.length, page);
+                        const progressTotal = knownTotal !== null ? knownTotal : entries.length;
+                        onProgress(progressTotal, entries.length, page);
                 }
         
-                // Stop when fewer than full page (last page)
-                if (pageEntries.length < hitsPerPage) {
-                    break;
-                }
+            // Stop when fewer than full page (last page) or fewer or equal to knownTotal
+            if (pageEntries.length < hitsPerPage || (knownTotal !== null && entries.length >= knownTotal)) {
+                break;
+            }
     
             offset += hitsPerPage;
             page++;
