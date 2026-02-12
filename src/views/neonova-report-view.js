@@ -15,11 +15,13 @@ class NeonovaReportView extends BaseNeonovaView {
         let html = `
             <table class="w-full border-collapse">
                 <thead>
+                    <!-- Title row (part of the table) -->
                     <tr class="bg-zinc-800">
                         <th colspan="3" class="p-6 text-${this.accent}-400 font-medium text-left border-b border-zinc-700">
                             Long Disconnects (>30 minutes): ${this.longDisconnects.length}
                         </th>
                     </tr>
+                    <!-- Column headers -->
                     <tr class="bg-zinc-800 border-b border-zinc-700">
                         <th class="p-6 text-left text-zinc-400 font-medium">Disconnected At</th>
                         <th class="p-6 text-left text-zinc-400 font-medium">Reconnected At</th>
@@ -48,17 +50,9 @@ class NeonovaReportView extends BaseNeonovaView {
         }
 
         return `
-            <details class="group mt-16 mb-16" open>
-                <summary class="list-none">
-                    <div class="bg-zinc-800 hover:bg-zinc-700 transition-colors p-6 rounded-t-3xl cursor-pointer flex justify-between items-center text-${this.accent}-400 font-medium">
-                        <span>Long Disconnects (>30 minutes): ${this.longDisconnects.length}</span>
-                        <span class="text-xs text-zinc-500 group-open:rotate-180 transition-transform">▼</span>
-                    </div>
-                </summary>
-                <div class="mt-0 bg-zinc-900 border border-zinc-700 border-t-0 rounded-b-3xl overflow-hidden">
-                    ${this.generateLongDisconnectsHTML()}
-                </div>
-            </details>`;
+            <div class="mt-16 bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden">
+                ${this.generateLongDisconnectsHTML()}
+            </div>`;
     }
 
     generateCsvContent() {
@@ -104,7 +98,6 @@ class NeonovaReportView extends BaseNeonovaView {
                         transition: all 0.2s; font-size: 13px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3);
                     }
                     .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
-                    details summary::-webkit-details-marker { display: none; }
                 </style>
             </head>
             <body class="bg-zinc-950 text-zinc-200">
@@ -192,7 +185,7 @@ class NeonovaReportView extends BaseNeonovaView {
                         </div>
                     </div>
 
-                    <!-- Long Disconnects – one seamless card with title as top row -->
+                    <!-- Long Disconnects – title is now the top row of the table -->
                     ${longDisconnSection}
 
                     <!-- Export Buttons -->
