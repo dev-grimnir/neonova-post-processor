@@ -327,9 +327,8 @@ class NeonovaDashboardView extends BaseNeonovaView{
     }
 
     handleGlobalClick(e) {
-        if (e.target.closest('.modal') || e.target.closest('[class*="modal"]') || e.target.closest('.overlay')) {
-            return;   // ignore anything inside a report/progress modal
-        }
+        if (e.target.closest('.neonova-modal')) return;
+        
         const btn = e.target.closest('button');
         if (!btn) return;
 
