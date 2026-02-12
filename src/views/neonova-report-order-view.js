@@ -147,15 +147,17 @@ class NeonovaReportOrderView extends BaseNeonovaView {
                 select.innerHTML = '';
             
                 const prevYear = currentYear - 1;
+                const years = [prevYear, currentYear];  // previous first, then current
             
-                // Only two options: previous year first
-                select.add(new Option(prevYear, prevYear));
-                select.add(new Option(currentYear, currentYear));
+                years.forEach(y => {
+                    const opt = new Option(y, y);
+                    if (y === defaultYear) {
+                        opt.selected = true;
+                    }
+                    select.add(opt);
+                });
             
-                // Force the value and selected attribute
-                select.value = defaultYear;
-                const selectedOpt = Array.from(select.options).find(opt => opt.value == defaultYear);
-                if (selectedOpt) selectedOpt.selected = true;
+                // No need to set select.value or manually force selected anymore
             };
 
         const populateMonths = (select, defaultMonth) => {
