@@ -187,6 +187,7 @@ parsePageRows(doc) {
          * @returns {Promise<Array<{timestamp: string, status: string, sessionTime: string, dateObj: Date}>>}
          */
         async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
+            console.log('=== PAGINATE v5 - SCRAPE BLOCK ACTIVE ===');
             let knownTotal = null;  // Will hold the exact total once scraped from first page
             // Handle legacy calls where second arg might be onProgress
             if (typeof startDate === 'function') {
