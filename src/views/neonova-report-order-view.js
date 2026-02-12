@@ -81,6 +81,7 @@ class NeonovaReportOrderView extends BaseNeonovaView {
     
         render() {
         if (!this.container) {
+            console.log('!!! THIS IS THE FEB2026 DEBUG VERSION - NEW CODE LOADED !!!');
             console.log('render() called too early — container not set yet');
             return;
         }
@@ -144,6 +145,7 @@ class NeonovaReportOrderView extends BaseNeonovaView {
     
             const populateYears = (select, defaultYear) => {
                 if (!select) return;
+                select.add(new Option('TEST YEAR - IGNORE ME', '9999'));
                 select.innerHTML = '';
             
                 const prevYear = currentYear - 1;
