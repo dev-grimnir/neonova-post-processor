@@ -193,7 +193,7 @@ class NeonovaReportOrderView extends BaseNeonovaView {
     
             // Quick buttons + Generate button (unchanged)
             this.container.querySelectorAll('.quick-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
+                btn.addEventListener('click', (e) => { 
                     e.stopImmediatePropagation();
                     const days = parseInt(btn.dataset.days);
                     let start = new Date();
@@ -204,7 +204,7 @@ class NeonovaReportOrderView extends BaseNeonovaView {
             });
     
             const genBtn = this.container.querySelector('#generate-custom');
-            if (genBtn) genBtn.addEventListener('click', () => {
+            if (genBtn) genBtn.addEventListener('click', (e) => {
                 e.stopImmediatePropagation();
                 const startY = parseInt(this.container.querySelector('#start-year')?.value);
                 const startM = parseInt(this.container.querySelector('#start-month')?.value) - 1;
