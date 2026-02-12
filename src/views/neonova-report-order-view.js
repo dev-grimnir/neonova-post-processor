@@ -136,7 +136,7 @@ class NeonovaReportOrderView extends BaseNeonovaView {
             </div>
         `;
 
-        // Populate dropdowns (same as before)
+            // Populate dropdowns
         const today = new Date();
         const currentYear = today.getFullYear();
         const currentMonth = today.getMonth() + 1;
@@ -145,26 +145,15 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         const populateYears = (select, defaultYear) => {
             if (!select) return;
             select.innerHTML = '';
-        
-            const currentYear = today.getFullYear();
+
             const prevYear = currentYear - 1;
-        
-            // Add previous year first (appears at top)
-            const optPrev = new Option(prevYear, prevYear);
-            select.add(optPrev);
-        
-            // Add current year
-            const optCurr = new Option(currentYear, currentYear);
-            select.add(optCurr);
-        
+
+            // Only two years, previous first
+            select.add(new Option(prevYear, prevYear));
+            select.add(new Option(currentYear, currentYear));
+
             // Force selection
             select.value = defaultYear;
-        
-            // Extra safety: explicitly set the selected attribute
-            if (select.value === defaultYear.toString()) {
-                const selectedOpt = select.querySelector(`option[value="${defaultYear}"]`);
-                if (selectedOpt) selectedOpt.selected = true;
-            }
         };
 
         const populateMonths = (select, defaultMonth) => {
@@ -191,13 +180,13 @@ class NeonovaReportOrderView extends BaseNeonovaView {
             select.value = Math.min(defaultDay, days).toString().padStart(2, '0');
         };
 
-        // Start date = 1st of current month
+        // Start date = 1st of previous year/month
         const sy = this.container.querySelector('#start-year');
         const sm = this.container.querySelector('#start-month');
         const sd = this.container.querySelector('#start-day');
         if (sy) populateYears(sy, currentYear - 1);
         if (sm) populateMonths(sm, currentMonth);
-        if (sd) populateDays(sd, currentYear, currentMonth, 1);
+        if (sd) populateDays(sd, currentYear - 1, currentMonth, 1);  // use previous year here too
 
         // End date = today
         const ey = this.container.querySelector('#end-year');
@@ -207,7 +196,7 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         if (em) populateMonths(em, currentMonth);
         if (ed) populateDays(ed, currentYear, currentMonth, currentDay);
 
-        // Listeners
+        // Listeners (unchanged)
         const updateDays = (dayId, yearId, monthId) => {
             const y = this.container.querySelector(`#${yearId}`);
             const m = this.container.querySelector(`#${monthId}`);
