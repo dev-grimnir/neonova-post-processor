@@ -137,24 +137,26 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         `;
 
             // Populate dropdowns
-        const today = new Date();
-        const currentYear = today.getFullYear();
-        const currentMonth = today.getMonth() + 1;
-        const currentDay = today.getDate();
-
-        const populateYears = (select, defaultYear) => {
-            if (!select) return;
-            select.innerHTML = '';
-
-            const prevYear = currentYear - 1;
-
-            // Only two years, previous first
-            select.add(new Option(prevYear, prevYear));
-            select.add(new Option(currentYear, currentYear));
-
-            // Force selection
-            select.value = defaultYear;
-        };
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            const currentMonth = today.getMonth() + 1;
+            const currentDay = today.getDate();
+    
+            const populateYears = (select, defaultYear) => {
+                if (!select) return;
+                select.innerHTML = '';
+            
+                const prevYear = currentYear - 1;
+            
+                // Only two options: previous year first
+                select.add(new Option(prevYear, prevYear));
+                select.add(new Option(currentYear, currentYear));
+            
+                // Force the value and selected attribute
+                select.value = defaultYear;
+                const selectedOpt = Array.from(select.options).find(opt => opt.value == defaultYear);
+                if (selectedOpt) selectedOpt.selected = true;
+            };
 
         const populateMonths = (select, defaultMonth) => {
             if (!select) return;
@@ -163,11 +165,11 @@ class NeonovaReportOrderView extends BaseNeonovaView {
                 const name = new Date(2000, m-1, 1).toLocaleString('default', { month: 'long' });
                 const opt = new Option(name, m.toString().padStart(2, '0'));
                 select.add(opt);
-            }
-            select.value = defaultMonth.toString().padStart(2, '0');
-        };
+                }
+                select.value = defaultMonth.toString().padStart(2, '0');
+            };
 
-        const getDaysInMonth = (y, m) => new Date(y, m, 0).getDate();
+            const getDaysInMonth = (y, m) => new Date(y, m, 0).getDate();
 
         const populateDays = (select, year, month, defaultDay) => {
             if (!select) return;
@@ -176,39 +178,39 @@ class NeonovaReportOrderView extends BaseNeonovaView {
             for (let d = 1; d <= days; d++) {
                 const opt = new Option(d, d.toString().padStart(2, '0'));
                 select.add(opt);
-            }
-            select.value = Math.min(defaultDay, days).toString().padStart(2, '0');
-        };
+                }
+                select.value = Math.min(defaultDay, days).toString().padStart(2, '0');
+            };
 
-        // Start date = 1st of previous year/month
-        const sy = this.container.querySelector('#start-year');
-        const sm = this.container.querySelector('#start-month');
-        const sd = this.container.querySelector('#start-day');
-        if (sy) populateYears(sy, currentYear - 1);
-        if (sm) populateMonths(sm, currentMonth);
-        if (sd) populateDays(sd, currentYear - 1, currentMonth, 1);  // use previous year here too
+            // Start date = 1st of previous year/month
+            const sy = this.container.querySelector('#start-year');
+            const sm = this.container.querySelector('#start-month');
+            const sd = this.container.querySelector('#start-day');
+            if (sy) populateYears(sy, currentYear - 1);
+            if (sm) populateMonths(sm, currentMonth);
+            if (sd) populateDays(sd, currentYear - 1, currentMonth, 1);  // use previous year here too
 
-        // End date = today
-        const ey = this.container.querySelector('#end-year');
-        const em = this.container.querySelector('#end-month');
-        const ed = this.container.querySelector('#end-day');
-        if (ey) populateYears(ey, currentYear);
-        if (em) populateMonths(em, currentMonth);
-        if (ed) populateDays(ed, currentYear, currentMonth, currentDay);
-
-        // Listeners (unchanged)
-        const updateDays = (dayId, yearId, monthId) => {
-            const y = this.container.querySelector(`#${yearId}`);
-            const m = this.container.querySelector(`#${monthId}`);
-            const d = this.container.querySelector(`#${dayId}`);
-            if (!y || !m || !d) return;
-            populateDays(d, parseInt(y.value), parseInt(m.value), parseInt(d.value) || 1);
-        };
-
-        sy?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
-        sm?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
-        ey?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
-        em?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
+            // End date = today
+            const ey = this.container.querySelector('#end-year');
+            const em = this.container.querySelector('#end-month');
+            const ed = this.container.querySelector('#end-day');
+            if (ey) populateYears(ey, currentYear);
+            if (em) populateMonths(em, currentMonth);
+            if (ed) populateDays(ed, currentYear, currentMonth, currentDay);
+    
+            // Listeners (unchanged)
+            const updateDays = (dayId, yearId, monthId) => {
+                const y = this.container.querySelector(`#${yearId}`);
+                const m = this.container.querySelector(`#${monthId}`);
+                const d = this.container.querySelector(`#${dayId}`);
+                if (!y || !m || !d) return;
+                populateDays(d, parseInt(y.value), parseInt(m.value), parseInt(d.value) || 1);
+            };
+    
+            sy?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
+            sm?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
+            ey?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
+            em?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
 
     }
 
