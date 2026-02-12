@@ -62,8 +62,6 @@ class NeonovaDashboardView extends BaseNeonovaView{
         this.minimizeBar.style.display = 'flex';
         this.panel.style.display = 'none';
 
-        //document.body.addEventListener('click', this.handleGlobalClick.bind(this));
-
         // Beautiful emerald scrollbar (matches the whole UI)
         if (!document.getElementById('neonova-scroll-style')) {
             const style = document.createElement('style');
@@ -219,6 +217,65 @@ class NeonovaDashboardView extends BaseNeonovaView{
             newScrollContainer.scrollTop = savedScrollTop;
         }
 
+                // === ALL LISTENERS ATTACHED DIRECTLY AFTER RENDER (no global listener) ===
+        
+        // Remove buttons
+        this.panel.querySelectorAll('.remove-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const username = btn.dataset.username;
+                if (username) this.controller.remove(username);
+            });
+        });
+
+        // Report buttons
+        this.panel.querySelectorAll('.report-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const username = btn.dataset.username;
+                const customer = this.controller.customers.find(c => c.radiusUsername === username);
+                if (customer) {
+                    const reportView = new NeonovaReportOrderView(null, username, customer.friendlyName || username);
+                    reportView.showModal();
+                }
+            });
+        });
+
+        // Add button
+        const addBtn = this.panel.querySelector('.add-btn');
+        if (addBtn) addBtn.addEventListener('click', () => {
+            const idInput = this.panel.querySelector('#radiusId');
+            const nameInput = this.panel.querySelector('#friendlyName');
+            if (!idInput) return;
+            setTimeout(() => {
+                const cleanedId = idInput.value.trim().replace(/\s+/g, '');
+                if (cleanedId) {
+                    this.controller.add(cleanedId, nameInput ? nameInput.value.trim() : '');
+                    idInput.value = '';
+                    if (nameInput) nameInput.value = '';
+                    idInput.focus();
+                }
+            }, 100);
+        });
+
+        // Refresh button
+        const refreshBtn = this.panel.querySelector('.refresh-btn');
+        if (refreshBtn) refreshBtn.addEventListener('click', () => this.controller.poll());
+
+        // Minimize button
+        const minimizeBtn = this.panel.querySelector('.minimize-btn');
+        if (minimizeBtn) minimizeBtn.addEventListener('click', () => this.toggleMinimize());
+
+        // Poll toggle button
+        const pollBtn = this.panel.querySelector('#poll-toggle-btn');
+        if (pollBtn) pollBtn.addEventListener('click', () => {
+            this.controller.togglePolling();
+            // Update button text directly
+            if (this.controller.isPollingPaused) {
+                pollBtn.innerHTML = '<i class="fas fa-play"></i> Resume Polling';
+            } else {
+                pollBtn.innerHTML = '<i class="fas fa-pause"></i> Pause Polling';
+            }
+        });
+
         // Slider + tooltip
         const slider = this.panel.querySelector('#polling-interval-slider');
         const display = this.panel.querySelector('#interval-value');
@@ -320,126 +377,7 @@ class NeonovaDashboardView extends BaseNeonovaView{
                 });
             });
         });
-        //this.updatePollingButton();
-    }
-
-    handleGlobalClick(e) {
-        if (e.target.closest('.neonova-modal')) return;
-        
-        const btn = e.target.closest('button');
-        if (!btn) return;
-
-        // Ignore clicks on the minimized bar itself (prevents loop)
-        if (e.target.closest('#minimize-bar') || this.minimizeBar.contains(e.target)) {
-        return;
-        }
-
-        console.log('Button clicked:', btn.className);
-
-        // Friendly name editing (on click of .friendly-name cell)
-        if (e.target.classList.contains('friendly-name')) {
-            const cell = e.target;
-            if (cell.dataset.editable === 'true') return; // already set up
-        
-            cell.dataset.editable = 'true';
-            cell.style.cursor = 'pointer';
-            cell.title = 'Click to edit friendly name (blank to reset)';
-        
-            // We don't need to add the listener again — just run the editing logic here
-            if (cell.querySelector('input')) return;
-        
-            const username = cell.dataset.username;
-            const currentDisplay = cell.textContent.trim();
-        
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.value = currentDisplay;
-            input.style.cssText = 'width:100%; box-sizing:border-box; padding:2px 4px; font-size:inherit;';
-            cell.innerHTML = '';
-            cell.appendChild(input);
-            input.focus();
-            input.select();
-        
-            const save = () => {
-                const newName = input.value.trim();
-                const customer = this.controller.customers.find(c => c.radiusUsername === username);
-                if (customer) {
-                    customer.friendlyName = newName || null;
-                    cell.textContent = customer.friendlyName || customer.radiusUsername;
-                }
-            };
-        
-            input.addEventListener('blur', save);
-            input.addEventListener('keydown', e => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    save();
-                } else if (e.key === 'Escape') {
-                    cell.textContent = currentDisplay;
-                }
-            });
-        }
-
-        console.log('Button clicked →', btn.className);
-
-        if (btn.classList.contains('remove-btn')) {
-            const username = btn.dataset.username;
-            console.log('REMOVE clicked - username =', username);   // ← add this line
-            if (username) this.controller.remove(username);
-        }
-        
-        if (btn.classList.contains('report-btn') || btn.className.includes('report-btn')) {
-            const username = btn.dataset.username;
-            const customer = this.controller.customers.find(c => c.radiusUsername === username);
-            if (customer) {
-                const reportView = new NeonovaReportOrderView(null, username, customer.friendlyName || username);
-                reportView.showModal();
-            }
-        }
-
-        if (btn.classList.contains('add-btn')) {
-            const idInput = this.panel.querySelector('#radiusId');
-            const nameInput = this.panel.querySelector('#friendlyName');
-        
-            if (!idInput) return;
-        
-            // Give autofill 100 ms to finish committing the value
-            setTimeout(() => {
-                const rawValue = idInput.value || '';
-                const cleanedId = rawValue.trim().replace(/\s+/g, '').replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '');
-        
-                console.log('ADD attempt - Raw:', JSON.stringify(rawValue));
-                console.log('ADD attempt - Cleaned:', JSON.stringify(cleanedId));
-        
-                if (cleanedId.length > 0) {
-                    const name = nameInput ? nameInput.value.trim() : '';
-                    console.log('Adding:', cleanedId, name);
-                    this.controller.add(cleanedId, name);
-                    idInput.value = '';
-                    if (nameInput) nameInput.value = '';
-                    idInput.focus();
-                } 
-            }, 100);  // 100 ms is usually enough for autofill to settle
-        }
-        if (btn.classList.contains('refresh-btn')) this.controller.poll();
-        if (btn.classList.contains('minimize-btn')) this.toggleMinimize();
-        if (btn.id === 'poll-toggle-btn') {
-            console.log('Poll toggle clicked - was paused:', this.controller.isPollingPaused);
-
-            this.controller.togglePolling();
-
-            // Update button text DIRECTLY (bypasses render race)
-            const button = this.panel.querySelector('#poll-toggle-btn');
-            if (button) {
-                if (this.controller.isPollingPaused) {
-                    button.innerHTML = '<i class="fas fa-play"></i> Resume Polling';
-                } else {
-                    button.innerHTML = '<i class="fas fa-pause"></i> Pause Polling';
-                }
-            }
-
-            console.log('Poll toggle finished - now paused:', this.controller.isPollingPaused);
-        }
+    
     }
 
     openReportModal(username, friendlyName) {
