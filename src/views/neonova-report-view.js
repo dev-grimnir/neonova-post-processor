@@ -1,6 +1,6 @@
 class NeonovaReportView extends BaseNeonovaView {
     constructor(username, friendlyName, metrics, numEntries, longDisconnects) {
-        super(null);   // inherit theme
+        super(null);
 
         this.username = username;
         this.friendlyName = friendlyName;
@@ -48,7 +48,7 @@ class NeonovaReportView extends BaseNeonovaView {
         }
 
         return `
-            <details class="group mb-16" open>
+            <details class="group mt-16 mb-16" open>
                 <summary class="list-none">
                     <div class="bg-zinc-800 hover:bg-zinc-700 transition-colors p-6 rounded-t-3xl cursor-pointer flex justify-between items-center text-${this.accent}-400 font-medium">
                         <span>Long Disconnects (>30 minutes): ${this.longDisconnects.length}</span>
@@ -192,7 +192,7 @@ class NeonovaReportView extends BaseNeonovaView {
                         </div>
                     </div>
 
-                    <!-- Long Disconnects – title is now the top row of the table card -->
+                    <!-- Long Disconnects – one seamless card with title as top row -->
                     ${longDisconnSection}
 
                     <!-- Export Buttons -->
