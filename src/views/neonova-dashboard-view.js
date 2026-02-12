@@ -1,107 +1,292 @@
-class NeonovaDashboardView {
+class NeonovaDashboardView extends BaseNeonovaView{
     constructor(controller) {
+        super();
         this.controller = controller;
-        this.panel = null;
-        this.minimizeBar = null;
+        this.isMinimized = true;
         this.createElements();
     }
 
     createElements() {
-        // Minimize bar (shown when minimized)
+        // Minimized bar – matches dashboard width exactly
         this.minimizeBar = document.createElement('div');
         this.minimizeBar.style.cssText = `
-            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-            background: #444; color: white; padding: 6px 12px; border-radius: 6px 6px 0 0;
-            cursor: pointer; z-index: 9999; font-family: Arial; display: none;
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 92%;
+            max-width: 1100px;
+            background: #18181b;
+            color: white;
+            padding: 12px 32px;                /* same horizontal padding as dashboard content */
+            border-radius: 24px 24px 0 0;      /* match dashboard's big radius */
+            cursor: pointer;
+            z-index: 10000;
+            font-family: system-ui;
+            display: none;
+            box-shadow: 0 -12px 40px rgba(0,0,0,0.8);
+            border: 1px solid #22ff88;
+            border-bottom: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
         `;
-        this.minimizeBar.textContent = 'Dashboard (click to show)';
-        this.minimizeBar.addEventListener('click', () => this.controller.togglePanel());
+        this.minimizeBar.innerHTML = `
+            <div class="flex items-center gap-4">
+                <div class="w-8 h-8 bg-emerald-500 rounded-2xl flex items-center justify-center text-black font-bold text-xl">N</div>
+                <h1 class="text-xl font-semibold" style="text-shadow: 0 0 15px #22ff88;">Neonova</h1>
+                <span class="text-emerald-400 text-xs font-mono tracking-widest">DASHBOARD</span>
+            </div>
+            <button class="px-8 py-2.5 text-sm font-medium bg-emerald-500 hover:bg-emerald-600 text-black rounded-2xl flex items-center gap-2 transition shadow-md">
+                <i class="fas fa-chevron-up"></i> Maximize
+            </button>
+        `;
+
+        this.minimizeBar.addEventListener('click', () => this.toggleMinimize());
         document.body.appendChild(this.minimizeBar);
-        
-        // Main panel
+
         this.panel = document.createElement('div');
         this.panel.style.cssText = `
-            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-            width: 90%; max-width: 900px; max-height: 50vh; overflow-y: auto;
-            background: #fff; border: 1px solid #999; border-bottom: none;
-            border-radius: 8px 8px 0 0; box-shadow: 0 -4px 12px rgba(0,0,0,0.3);
-            padding: 12px; font-family: Arial; z-index: 9998; display: none;
-            `;
+                // Smooth slide animation for maximize/minimize
+                this.panel.style.transition = 'transform 0.45s cubic-bezier(0.4, 0, 0.2, 1)';
+                position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+                width: 92%; max-width: 1100px; height: calc(100vh - 80px);
+                background: #09090b; border: 1px solid #27272a;
+                border-radius: 24px; box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+                padding: 0; font-family: system-ui; z-index: 9999; display: none;
+                overflow: hidden;  /* important for internal scrolling */
+        `;
         document.body.appendChild(this.panel);
+
+        this.minimizeBar.style.display = 'flex';
+        this.panel.style.display = 'none';
+
+        // Beautiful emerald scrollbar (matches the whole UI)
+        if (!document.getElementById('neonova-scroll-style')) {
+            const style = document.createElement('style');
+            style.id = 'neonova-scroll-style';
+            style.innerHTML = `
+                .neonova-scroll::-webkit-scrollbar {
+                    width: 7px;
+                }
+                .neonova-scroll::-webkit-scrollbar-track {
+                    background: #18181b;
+                    border-radius: 9999px;
+                }
+                .neonova-scroll::-webkit-scrollbar-thumb {
+                    background: #34d399;        /* emerald-400 */
+                    border-radius: 9999px;
+                    border: 2px solid #18181b;
+                }
+                .neonova-scroll::-webkit-scrollbar-thumb:hover {
+                    background: #10b981;        /* emerald-500 */
+                }
+
+                /* Firefox */
+                .neonova-scroll {
+                    scrollbar-width: thin;
+                    scrollbar-color: #34d399 #18181b;
+                }
+            `;
+            document.head.appendChild(style);
+        }
         
         this.render();
     }
 
     render() {
+        if (!this.panel) {
+            console.warn('Panel not ready yet');
+            return
+        }
+
+        const scrollContainer = this.panel.querySelector('.flex-1.overflow-y-auto');
+        const savedScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
+        
         let rows = '';
         this.controller.customers.forEach(c => {
             const isConnected = c.status === 'Connected';
-            const statusColor = isConnected ? '#006400' : '#c00';  // green for Connected, red for Not Connected
-            const durationColor = isConnected ? '#006400' : '#c00';  // red for offline durations
-    
             const durationText = c.getDurationStr();
-    
-            rows += `
-                <tr>
-                    <td class="friendly-name" data-username="${c.radiusUsername}" data-editable="false">${c.friendlyName || c.radiusUsername}</td>
-                    <td>${c.radiusUsername}</td>
-                    <td style="color:${statusColor};">${c.status}</td>
-                    <td style="color:${durationColor};">${durationText}</td>
-                    <td>
-                        <button class="remove-btn" data-username="${c.radiusUsername}">Remove</button>
-                        <button class="report-btn" data-username="${c.radiusUsername}">Generate Report</button>
-                    </td>
-                </tr>
-            `;
-        });
-    
-        this.panel.innerHTML = `
-            <h3>Dashboard</h3>
-            <button class="close-btn">Close</button>
-            <button class="minimize-btn">${this.controller.minimized ? 'Restore' : 'Minimize'}</button>
-            <span>Last update: ${new Date().toLocaleTimeString()}</span>
-            <div>
-                <input id="radiusId" type="text" placeholder="RADIUS Username">
-                <input id="friendlyName" type="text" placeholder="Friendly Name (optional)">
-                <button class="add-btn">Add</button>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Friendly Name</th>
-                        <th>RADIUS Username</th>
-                        <th>Status</th>
-                        <th>Duration</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-            </table>
-            <button class="refresh-btn">Refresh Now</button>
-            <button id="poll-toggle-btn">${this.controller.isPollingPaused ? 'Resume Polling' : 'Pause Polling'}</button>
-            <div style="margin: 12px 0; padding: 8px; background: #f8f8f8; border-radius: 6px; position: relative;">
-                <label style="font-size: 14px;">
-                Polling interval: 
-                <span id="interval-value">${this.controller.pollingIntervalMinutes}</span> minutes</label><br>
-                <input type="range" id="polling-interval-slider" 
-                min="1" max="60" value="${this.controller.pollingIntervalMinutes}"
-                style="width: 100%; accent-color: #006400;">
-            </div>
-        `;
+                        rows += `
+                            <tr class="hover:bg-zinc-800 transition group">
+                                <td class="friendly-name px-8 py-5 font-medium text-zinc-100" data-username="${c.radiusUsername}" data-editable="false">
+                                    ${c.friendlyName || c.radiusUsername}
+                                </td>
+                                <td class="px-8 py-5 font-mono text-zinc-400">${c.radiusUsername}</td>
+                                <td class="px-8 py-5">
+                                    <span class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-2xl text-xs font-semibold ${isConnected ? 'bg-emerald-500' : 'bg-red-500'} text-white">
+                                        <span class="w-2 h-2 rounded-full bg-current"></span>
+                                        ${c.status}
+                                    </span>
+                                </td>
+                                <td class="px-8 py-5 font-mono ${isConnected ? 'text-emerald-400' : 'text-red-400'}">
+                                    ${durationText}
+                                </td>
+                                <td class="px-8 py-5 text-right">
+                                    <button class="remove-btn text-zinc-400 hover:text-red-400 px-3 py-1 text-sm" data-username="${c.radiusUsername}">Remove</button>
+                                    <button class="report-btn ml-3 bg-emerald-600 hover:bg-emerald-500 px-5 py-2 rounded-2xl text-xs font-medium text-white" data-username="${c.radiusUsername}">Report</button>
+                                </td>
+                            </tr>
+                        `;
+            });
 
-        // === Polling interval slider + live tooltip ===
+                            this.panel.innerHTML = `
+                                <div class="flex flex-col h-full">
+                                
+                                    <!-- HEADER -->
+                                    <div class="flex items-center justify-between px-8 py-5 border-b border-zinc-800 bg-zinc-900 shrink-0">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 bg-emerald-500 rounded-2xl flex items-center justify-center text-black font-bold text-xl">N</div>
+                                            <h1 class="text-2xl font-semibold" style="text-shadow: 0 0 15px #22ff88;">Neonova</h1>
+                                            <span class="text-emerald-400 text-sm font-mono tracking-widest">DASHBOARD</span>
+                                        </div>
+                                        <button class="minimize-btn px-6 py-2.5 text-sm font-medium bg-emerald-500 hover:bg-emerald-600 text-black rounded-2xl flex items-center gap-2 transition">
+                                            <i class="fas fa-minus"></i> Minimize
+                                        </button>
+                                    </div>
+                                
+                                    <!-- FIXED ADD BAR (never scrolls) -->
+                                    <div class="shrink-0 px-8 pt-8 pb-6 bg-zinc-900 border-b border-zinc-700">
+                                        <div class="bg-zinc-900 border border-zinc-700 rounded-2xl p-6">
+                                            <div class="grid grid-cols-12 gap-4">
+                                                <div class="col-span-5">
+                                                    <input id="radiusId" type="text" placeholder="RADIUS Username" 
+                                                           class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-5 py-4 focus:outline-none focus:border-emerald-500">
+                                                </div>
+                                                <div class="col-span-5">
+                                                    <input id="friendlyName" type="text" placeholder="Friendly Name (optional)" 
+                                                           class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-5 py-4 focus:outline-none focus:border-emerald-500">
+                                                </div>
+                                                <div class="col-span-2">
+                                                    <button class="add-btn w-full h-full bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl transition">ADD</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                
+                                    <!-- SCROLLABLE TABLE ONLY -->
+                                    <div class="flex-1 overflow-y-auto px-8 pb-8 neonova-scroll">
+                                        <div class="bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden">
+                                            <table class="w-full">
+                                                <thead class="sticky top-0 bg-zinc-900 z-10">
+                                                    <tr class="border-b border-zinc-800 text-xs uppercase tracking-widest text-zinc-500">
+                                                        <th class="px-8 py-5 text-left">Friendly Name</th>
+                                                        <th class="px-8 py-5 text-left">RADIUS Username</th>
+                                                        <th class="px-8 py-5 text-left">Status</th>
+                                                        <th class="px-8 py-5 text-left">Duration</th>
+                                                        <th class="px-8 py-5 text-right">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>${rows}</tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                
+                                    <!-- BOTTOM BAR -->
+                                    <div class="bg-zinc-900 border border-zinc-700 rounded-3xl px-8 py-5 mx-8 mb-8 shrink-0">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center gap-8">
+                                                <div class="flex items-center gap-4">
+                                                    <span class="text-xs uppercase tracking-widest text-zinc-500">Polling</span>
+                                                    <input type="range" id="polling-interval-slider" min="1" max="60" value="${this.controller.pollingIntervalMinutes}" class="w-64 accent-emerald-500">
+                                                    <span id="interval-value" class="font-mono text-emerald-400 w-12">${this.controller.pollingIntervalMinutes} min</span>
+                                                </div>
+                                                <button id="poll-toggle-btn" class="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition">
+                                                    ${this.controller.isPollingPaused 
+                                                        ? '<i class="fas fa-play"></i> Resume Polling' 
+                                                        : '<i class="fas fa-pause"></i> Pause Polling'}
+                                                </button>
+                                            </div>
+                                            <div class="flex items-center gap-6 text-sm">
+                                                <button class="refresh-btn flex items-center gap-2 text-emerald-400 hover:text-emerald-300">
+                                                    <i class="fas fa-sync-alt"></i> Refresh Now
+                                                </button>
+                                                <div class="text-zinc-500 text-xs">
+                                                    Last update: <span class="font-mono text-zinc-400">${new Date().toLocaleTimeString()}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+
+        // === RESTORE SCROLL POSITION AFTER REBUILD ===
+        const newScrollContainer = this.panel.querySelector('.flex-1.overflow-y-auto');
+        if (newScrollContainer) {
+            newScrollContainer.scrollTop = savedScrollTop;
+        }
+
+                // === ALL LISTENERS ATTACHED DIRECTLY AFTER RENDER (no global listener) ===
+        
+        // Remove buttons
+        this.panel.querySelectorAll('.remove-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const username = btn.dataset.username;
+                if (username) this.controller.remove(username);
+            });
+        });
+
+        // Report buttons
+        this.panel.querySelectorAll('.report-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const username = btn.dataset.username;
+                const customer = this.controller.customers.find(c => c.radiusUsername === username);
+                if (customer) {
+                    const reportView = new NeonovaReportOrderView(null, username, customer.friendlyName || username);
+                    reportView.controller = this.controller;
+                    reportView.showModal();
+                }
+            });
+        });
+
+        // Add button
+        const addBtn = this.panel.querySelector('.add-btn');
+        if (addBtn) addBtn.addEventListener('click', () => {
+            const idInput = this.panel.querySelector('#radiusId');
+            const nameInput = this.panel.querySelector('#friendlyName');
+            if (!idInput) return;
+            setTimeout(() => {
+                const cleanedId = idInput.value.trim().replace(/\s+/g, '');
+                if (cleanedId) {
+                    this.controller.add(cleanedId, nameInput ? nameInput.value.trim() : '');
+                    idInput.value = '';
+                    if (nameInput) nameInput.value = '';
+                    idInput.focus();
+                }
+            }, 100);
+        });
+
+        // Refresh button
+        const refreshBtn = this.panel.querySelector('.refresh-btn');
+        if (refreshBtn) refreshBtn.addEventListener('click', () => this.controller.poll());
+
+        // Minimize button
+        const minimizeBtn = this.panel.querySelector('.minimize-btn');
+        if (minimizeBtn) minimizeBtn.addEventListener('click', () => this.toggleMinimize());
+
+        // Poll toggle button
+        const pollBtn = this.panel.querySelector('#poll-toggle-btn');
+        if (pollBtn) pollBtn.addEventListener('click', () => {
+            this.controller.togglePolling();
+            // Update button text directly
+            if (this.controller.isPollingPaused) {
+                pollBtn.innerHTML = '<i class="fas fa-play"></i> Resume Polling';
+            } else {
+                pollBtn.innerHTML = '<i class="fas fa-pause"></i> Pause Polling';
+            }
+        });
+
+        // Slider + tooltip
         const slider = this.panel.querySelector('#polling-interval-slider');
         const display = this.panel.querySelector('#interval-value');
-
         if (slider && display) {
-            // Existing listener (keep this)
             slider.addEventListener('input', () => {
                 const minutes = parseInt(slider.value);
                 display.textContent = minutes;
                 this.controller.setPollingInterval(minutes);
             });
 
-            // ────── Tooltip setup ──────
             let tooltip = document.getElementById('poll-tooltip');
             if (!tooltip) {
                 tooltip = document.createElement('div');
@@ -131,7 +316,6 @@ class NeonovaDashboardView {
 
                 tooltip.textContent = `${value} minute${value === 1 ? '' : 's'}`;
 
-                // Position tooltip above the thumb
                 const thumbX = rect.left + percent * rect.width;
                 tooltip.style.left = `${thumbX - tooltip.offsetWidth / 2}px`;
                 tooltip.style.top = `${rect.top - 34}px`;
@@ -145,86 +329,35 @@ class NeonovaDashboardView {
             };
 
             slider.addEventListener('mousemove', showTooltip);
-            slider.addEventListener('input', showTooltip);   // also update while dragging
+            slider.addEventListener('input', showTooltip);  // update while dragging
             slider.addEventListener('mouseleave', hideTooltip);
-            slider.addEventListener('touchmove', (e) => {    // optional mobile support
+            slider.addEventListener('touchmove', (e) => {
                 if (e.touches.length) showTooltip(e.touches[0]);
             });
         }
 
-        // === Event listeners ===
-        // Poll toggle button
-        const pollBtn = this.panel.querySelector('#poll-toggle-btn');
-        if (pollBtn) {
-            pollBtn.addEventListener('click', () => {
-                console.log('Poll button clicked – current paused:', this.controller.isPollingPaused);
-                
-                this.controller.togglePolling();   // ← just toggle, no if/else needed
-                
-                console.log('After toggle – now paused:', this.controller.isPollingPaused);
-                this.render();                     // forces fresh button text
-            });
-        }
-        
-        this.panel.querySelector('.add-btn').addEventListener('click', () => {
-            const id = this.panel.querySelector('#radiusId').value.trim();
-            const name = this.panel.querySelector('#friendlyName').value.trim();
-            if (id) {
-                this.controller.add(id, name);
-                this.panel.querySelector('#radiusId').value = '';
-                this.panel.querySelector('#friendlyName').value = '';
-            } else {
-                alert('RADIUS username required');
-            }
-        });
-    
-        this.panel.querySelector('.close-btn').addEventListener('click', () => {
-            this.controller.togglePanel();
-        });
-    
-        this.panel.querySelector('.minimize-btn').addEventListener('click', () => {
-            this.controller.toggleMinimize();
-        });
-    
-        this.panel.querySelector('.refresh-btn').addEventListener('click', () => {
-            this.controller.poll();
-        });
-    
-        // Remove buttons
-        this.panel.querySelectorAll('.remove-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const username = btn.dataset.username;
-                this.controller.remove(username);
-            });
-        });
-    
         // Friendly name editing
         this.panel.querySelectorAll('.friendly-name').forEach(cell => {
             if (cell.dataset.editable === 'true') return;
             cell.dataset.editable = 'true';
-    
             cell.style.cursor = 'pointer';
             cell.title = 'Click to edit friendly name (blank to reset to username)';
-    
+
             cell.addEventListener('click', () => {
                 if (cell.querySelector('input')) return;
-    
+
                 const username = cell.dataset.username;
                 const currentDisplay = cell.textContent.trim();
-    
+
                 const input = document.createElement('input');
                 input.type = 'text';
                 input.value = currentDisplay;
-                input.style.width = '100%';
-                input.style.boxSizing = 'border-box';
-                input.style.padding = '2px 4px';
-                input.style.fontSize = 'inherit';
-    
+                input.style.cssText = 'width:100%; box-sizing:border-box; padding:2px 4px; font-size:inherit;';
                 cell.innerHTML = '';
                 cell.appendChild(input);
                 input.focus();
                 input.select();
-    
+
                 const save = () => {
                     const newName = input.value.trim();
                     const customer = this.controller.customers.find(c => c.radiusUsername === username);
@@ -233,7 +366,7 @@ class NeonovaDashboardView {
                         cell.textContent = customer.friendlyName || customer.radiusUsername;
                     }
                 };
-    
+
                 input.addEventListener('blur', save);
                 input.addEventListener('keydown', e => {
                     if (e.key === 'Enter') {
@@ -246,158 +379,118 @@ class NeonovaDashboardView {
             });
         });
     
-        // Report buttons - modal for order, then progress modal
-        this.panel.querySelectorAll('.report-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const username = btn.dataset.username;
-                const customer = this.controller.customers.find(c => c.radiusUsername === username);
-                if (!customer) return;
-    
-                const friendlyName = customer.friendlyName || username;
-    
-                // Create overlay for order modal
-                const overlay = document.createElement('div');
-                overlay.style.cssText = `
-                    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                    background: rgba(0,0,0,0.5); z-index: 10000; display: flex;
-                    align-items: center; justify-content: center;
-                `;
-                document.body.appendChild(overlay);
-    
-                // Create order modal
-                const modal = document.createElement('div');
-                modal.style.cssText = `
-                    background: white; padding: 20px; border-radius: 8px;
-                    width: 600px; max-height: 80vh; overflow-y: auto;
-                    position: relative;
-                `;
-                overlay.appendChild(modal);
-    
-                // Close button for order
-                const closeBtn = document.createElement('button');
-                closeBtn.textContent = 'Close';
-                closeBtn.style.cssText = `position: absolute; top: 10px; right: 10px;`;
-                closeBtn.addEventListener('click', () => overlay.remove());
-                modal.appendChild(closeBtn);
-    
-                // Container for order view
-                const container = document.createElement('div');
-                modal.appendChild(container);
-    
-                // Instantiate order view
-                const orderView = new NeonovaReportOrderView(container, username, friendlyName);
-                orderView.renderOrderForm();
-    
-                // Set callback for generate request
-                orderView.onGenerateRequested = (startIso, endIso) => {
-                    // Close order modal
-                    overlay.remove();
-    
-                    // Create progress overlay
-                    const progressOverlay = document.createElement('div');
-                    progressOverlay.style.cssText = `
-                        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                        background: rgba(0,0,0,0.5); z-index: 10001; display: flex;
-                        align-items: center; justify-content: center;
-                    `;
-                    document.body.appendChild(progressOverlay);
-    
-                    // Create progress modal
-                    const progressModal = document.createElement('div');
-                    progressModal.style.cssText = `
-                        background: white; padding: 20px; border-radius: 8px;
-                        width: 400px; position: relative;
-                    `;
-                    progressOverlay.appendChild(progressModal);
-    
-                    // Close button for progress (optional, since auto-closes on complete)
-                    const progressCloseBtn = document.createElement('button');
-                    progressCloseBtn.textContent = 'Cancel';
-                    progressCloseBtn.style.cssText = `position: absolute; top: 10px; right: 10px;`;
-                    progressCloseBtn.addEventListener('click', () => progressOverlay.remove());
-                    progressModal.appendChild(progressCloseBtn);
-    
-                    // Container for progress view
-                    const progressContainer = document.createElement('div');
-                    progressModal.appendChild(progressContainer);
-    
-                    // Instantiate progress view
-                    const progressView = new NeonovaProgressView(progressContainer);
-                    progressView.render();
-    
-                    // Call controller to generate report data
-                    this.controller.generateReportData(
-                        username,
-                        friendlyName,
-                        new Date(startIso),
-                        new Date(endIso),
-                        (entries, page) => {
-                            const percent = Math.min(100, (page / 50) * 100); // Assuming max 50 pages
-                            progressView.updateProgress(percent, `Fetched ${entries} entries (page ${page})`);
-                        }
-                    ).then(data => {
-                        // Close progress modal
-                        progressOverlay.remove();
-    
-                        // Generate report HTML
-                        const reportView = new NeonovaReportView(data.username, data.friendlyName, data.metrics, data.entries.length, data.metrics.longDisconnects);
-                        const reportHTML = reportView.generateReportHTML('');
-    
-                        // Open in new tab
-                        const newTab = window.open('', '_blank');
-                        newTab.document.write(reportHTML);
-                        newTab.document.close();
-                    }).catch(error => {
-                        progressView.showError(error.message);
-                        // Keep modal open for user to see error and close manually
-                    });
-                };
-            });
-        });
     }
-    
-    update() {
-        this.render();
+
+    openReportModal(username, friendlyName) {
+        console.log('openReportModal started for', username);
+
+        // Dark overlay
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed; inset: 0;
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(12px);
+            z-index: 10000; display: flex; align-items: center; justify-content: center;
+        `;
+        document.body.appendChild(overlay);
+
+        // Modal with proper flex layout
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            background: #18181b; border: 1px solid #27272a; border-radius: 24px;
+            width: 780px; max-width: 92%; max-height: 92vh;
+            overflow: hidden; box-shadow: 0 25px 70px rgba(0,0,0,0.95);
+            display: flex; flex-direction: column;
+            font-family: system-ui;
+        `;
+        overlay.appendChild(modal);
+
+        // Header
+        const header = document.createElement('div');
+        header.style.cssText = `
+            padding: 24px 32px; border-bottom: 1px solid #27272a;
+            background: #09090b; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: space-between;
+        `;
+        header.innerHTML = `
+            <div>
+                <div class="text-emerald-400 text-xs font-mono tracking-widest">GENERATE REPORT</div>
+                <div class="text-2xl font-semibold text-white mt-1">${friendlyName || username}</div>
+            </div>
+            <button id="report-close-btn" class="px-6 py-2.5 text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-white rounded-2xl flex items-center gap-2 transition">
+                <i class="fas fa-times"></i> Close
+            </button>
+        `;
+        modal.appendChild(header);
+
+        // Content container – now flex-1 so it always fills the remaining space
+        const content = document.createElement('div');
+        content.style.cssText = `
+            flex: 1 1 auto; overflow-y: auto; padding: 32px;
+            background: #18181b;
+        `;
+        modal.appendChild(content);
+
+        // === Render the form ===
+        try {
+            const orderView = new NeonovaReportOrderView(content, username, friendlyName);
+        } catch (err) {
+            console.error('ReportOrderView failed to render:', err);
+            content.innerHTML = `<div class="text-red-400">Error rendering report form: ${err.message}</div>`;
+        }
+
+        // Close handlers
+        const closeModal = () => overlay.remove();
+        modal.querySelector('#report-close-btn').addEventListener('click', closeModal);
+        overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+
+        console.log('openReportModal finished');
     }
 
     toggleMinimize() {
-        this.controller.toggleMinimize();
-    }
+        console.log('toggleMinimize called - was minimized:', this.isMinimized);
+        
+        const dash = this.panel;
+        const bar = this.minimizeBar;
+        this.isMinimized = !this.isMinimized;
 
-    toggle() {
-        if (this.panel) {
-            const isVisible = this.panel.style.display !== 'none';
-            if (isVisible) {
-                this.panel.style.display = 'none';
-                this.minimizeBar.style.display = 'block';
-            } else {
-                this.panel.style.display = 'block';
-                this.minimizeBar.style.display = 'none';
-            }
-        }
-    }
-
-    updateMinimize() {
-        if (this.controller.minimized) {
-            this.panel.style.width = '50px';
-            this.panel.style.height = '30px';
-            this.panel.innerHTML = '<div style="text-align:center;">▼</div>';
+        if (this.isMinimized) {
+            // SLIDE DOWN → off screen
+            dash.style.transform = 'translate(-50%, 100%)';
+            
+            // Hide panel + show minimize bar AFTER animation finishes
+            setTimeout(() => {
+                dash.style.display = 'none';
+                bar.style.display = 'flex';
+            }, 480);   // slightly longer than transition
         } else {
-            this.render();  // re-render full panel
+            // MAXIMIZE → SLIDE UP
+            bar.style.display = 'none';
+            dash.style.display = 'block';
+            
+            // Start completely off-screen at the bottom
+            dash.style.transform = 'translate(-50%, 100%)';
+            
+            // Force browser to read the new transform (reflow)
+            void dash.offsetWidth;
+            
+            // Now animate it up to centered position
+            requestAnimationFrame(() => {
+                dash.style.transform = 'translateX(-50%)';
+            });
         }
-    }
-    
-    show() {
-        if (this.panel) {
-            this.panel.style.display = 'block';
-        }
-        this.updateMinimize();
     }
 
-    hide() {
-        if (this.panel) {
-            this.panel.style.display = 'none';
-        }
-        this.updateMinimize();
+    update() { this.render(); }
+/*
+    updatePollingButton() {
+        const btn = this.panel.querySelector('#poll-toggle-btn');
+        if (!btn) return;
+    
+        if (this.controller.isPollingPaused) {
+            btn.innerHTML = '<i class="fas fa-play"></i> Resume Polling';
+        } else {
+            btn.innerHTML = '<i class="fas fa-pause"></i> Pause Polling';
+            }
     }
+    */
 }

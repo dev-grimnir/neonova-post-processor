@@ -35,19 +35,5 @@
     // Instantiate the controller (it creates its own view internally)
     const dashboardController = new NeonovaDashboardController();
 
-    const openBtn = document.createElement('button');
-    openBtn.textContent = 'Dashboard';
-    openBtn.style.cssText = `
-    position: fixed; bottom: 10px; left: 10px; z-index: 9999;
-    padding: 10px 20px; background: #1e40af; color: white; border: none;
-    border-radius: 6px; cursor: pointer; font-family: Arial; font-size: 16px;
-`;
-    openBtn.onclick = () => {
-        try {
-            dashboardController.togglePanel();
-        } catch (err) {
-        }
-    };
-    document.body.appendChild(openBtn);
 })();
 

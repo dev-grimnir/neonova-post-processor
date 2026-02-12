@@ -1,145 +1,245 @@
-class NeonovaReportOrderView {
+class NeonovaReportOrderView extends BaseNeonovaView {
     constructor(container, username, friendlyName) {
-        this.container = container;
+        super(container);
+
         this.username = username;
         this.friendlyName = friendlyName || username;
         this.onGenerateRequested = null;
     }
 
-    renderOrderForm() {
+    showModal() {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
+            z-index: 10000; display: flex; align-items: center; justify-content: center;
+        `;
+        document.body.appendChild(overlay);
+
+        const modal = document.createElement('div');
+        modal.classList.add('neonova-modal');           // ← this stops the double-click
+        modal.style.cssText = `
+            background: #18181b; border: 1px solid #27272a; border-radius: 24px;
+            width: 820px; max-width: 92vw; max-height: 92vh;
+            overflow: hidden; box-shadow: 0 25px 70px rgba(0,0,0,0.95);
+            display: flex; flex-direction: column;
+        `;
+        overlay.appendChild(modal);
+
+        const header = document.createElement('div');
+        header.style.cssText = `
+            padding: 24px 32px; border-bottom: 1px solid #27272a;
+            background: #09090b; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: space-between;
+        `;
+        header.innerHTML = `
+            <div>
+                <div class="text-emerald-400 text-xs font-mono tracking-widest">GENERATE REPORT</div>
+                <div class="text-2xl font-semibold text-white mt-1">${this.friendlyName}</div>
+            </div>
+            <button class="close-btn px-6 py-2.5 text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-white rounded-2xl flex items-center gap-2 transition">
+                <i class="fas fa-times"></i> Close
+            </button>
+        `;
+        
+        modal.appendChild(header);
+
+        const content = document.createElement('div');
+        content.style.cssText = `flex: 1; overflow-y: auto; padding: 32px 40px; background: #18181b;`;
+        modal.appendChild(content);
+
+        this.container = content;
+        this.render();
+        this.attachListeners();
+
+        // Wire up the buttons so they actually do something
+        this.onGenerateRequested = (startIso, endIso) => {
+            overlay.remove();
+    
+            const progressView = new NeonovaProgressView(this.username, this.friendlyName);
+            progressView.showModal();
+    
+            this.controller.generateReportData(
+                this.username,
+                this.friendlyName,
+                new Date(startIso),
+                new Date(endIso),
+                (totalEntries, currentPage) => {
+                    progressView.updateProgress(totalEntries, currentPage, `Fetching page ${currentPage}`);
+                }
+            ).then(data => {
+                progressView.finish(data);
+            }).catch(err => {
+                progressView.showError(err.message);
+            });
+        };
+
+        const close = () => overlay.remove();
+        header.querySelector('.close-btn').addEventListener('click', close);
+        overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+    }
+    
+        render() {
+        if (!this.container) {
+            console.log('render() called too early — container not set yet');
+            return;
+        }
+
+        console.log('ReportOrderView.render() called – this =', this);
+
         this.container.innerHTML = `
-            <h1>Report Request - ${this.friendlyName} (${this.username})</h1>
-    
-            <div class="quick-buttons">
-                <button class="quick-btn" data-hours="24">Last 24 hours</button>
-                <button class="quick-btn" data-hours="48">Last 48 hours</button>
-                <button class="quick-btn" data-hours="72">Last 72 hours</button>
-            </div>
-    
-            <div class="quick-buttons">
-                <button class="quick-btn" data-days="7">Last 1 week</button>
-                <button class="quick-btn" data-days="30">Last 30 days</button>
-                <button class="quick-btn" data-days="90">Last 90 days</button>
-            </div>
-    
-            <div class="custom-range">
-                <label>Custom Start Date:</label>
-                <select id="start-month"></select>
-                <select id="start-day"></select>
-                <select id="start-year"></select>
-    
-                <label>Custom End Date:</label>
-                <select id="end-month"></select>
-                <select id="end-day"></select>
-                <select id="end-year"></select>
-    
-                <button id="generate-custom">Generate Custom Report</button>
+            <div class="p-6 space-y-8">
+                <h2 class="text-3xl font-bold mb-8 text-white" 
+                    style="text-shadow: 0 0 25px ${this.theme.accentColor};">
+                    Generate Report for ${this.friendlyName}
+                </h2>
+
+                <!-- Quick Presets -->
+                <div class="flex flex-wrap gap-3">
+                    <button class="quick-btn px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-black font-medium rounded-2xl text-sm transition flex items-center gap-2 shadow-md" data-days="1">
+                        <i class="fas fa-calendar-day"></i> Last 1 day
+                    </button>
+                    <button class="quick-btn px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-black font-medium rounded-2xl text-sm transition flex items-center gap-2 shadow-md" data-days="7">
+                        <i class="fas fa-calendar-week"></i> Last 7 days
+                    </button>
+                    <button class="quick-btn px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-black font-medium rounded-2xl text-sm transition flex items-center gap-2 shadow-md" data-days="30">
+                        <i class="fas fa-calendar"></i> Last 30 days
+                    </button>
+                    <button class="quick-btn px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-black font-medium rounded-2xl text-sm transition flex items-center gap-2 shadow-md" data-days="90">
+                        <i class="fas fa-calendar-alt"></i> Last 90 days
+                    </button>
+                </div>
+
+                <!-- Custom Date Range -->
+                <div class="grid grid-cols-2 gap-8">
+                    <div>
+                        <label class="block text-xs uppercase tracking-widest text-zinc-500 mb-3">Start Date</label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <select id="start-year" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 text-sm"></select>
+                            <select id="start-month" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 text-sm"></select>
+                            <select id="start-day" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 text-sm"></select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase tracking-widest text-zinc-500 mb-3">End Date</label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <select id="end-year" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 text-sm"></select>
+                            <select id="end-month" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 text-sm"></select>
+                            <select id="end-day" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 text-sm"></select>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="generate-custom" class="w-full bg-emerald-500 hover:bg-emerald-600 text-black font-semibold py-4 rounded-2xl transition text-lg">
+                    Generate Report
+                </button>
             </div>
         `;
-    
-        // Populate dropdowns
+
+        // Populate dropdowns (same as before)
         const today = new Date();
         const currentYear = today.getFullYear();
-        const previousYear = currentYear - 1;
         const currentMonth = today.getMonth() + 1;
-    
+        const currentDay = today.getDate();
+
         const populateYears = (select, defaultYear) => {
-            for (let y = previousYear; y <= currentYear; y++) {
-                select.add(new Option(y, y, y === defaultYear));
-            }
-        };
-    
-        const populateMonths = (select, defaultMonth) => {
-            for (let m = 1; m <= 12; m++) {
-                select.add(new Option(new Date(2000, m-1, 1).toLocaleString('default', { month: 'long' }), m.toString().padStart(2, '0'), m === defaultMonth));
-            }
-        };
-    
-        const getDaysInMonth = (year, month) => {
-            return new Date(year, month, 0).getDate();
-        };
-    
-        const populateDays = (select, year, month, defaultDay) => {
-            const daysInMonth = getDaysInMonth(year, month);
+            if (!select) return;
             select.innerHTML = '';
-            for (let d = 1; d <= daysInMonth; d++) {
-                select.add(new Option(d, d.toString().padStart(2, '0'), d === defaultDay));
+            for (let y = currentYear - 1; y <= currentYear + 1; y++) {
+                const opt = new Option(y, y);
+                select.add(opt);
             }
+            select.value = defaultYear;
         };
-    
-        const updateDays = (daySelectId, yearSelectId, monthSelectId, defaultDay) => {
-            const year = parseInt(this.container.querySelector(`#${yearSelectId}`).value);
-            const month = parseInt(this.container.querySelector(`#${monthSelectId}`).value);
-            const select = this.container.querySelector(`#${daySelectId}`);
-            const currentValue = parseInt(select.value) || defaultDay;
-            populateDays(select, year, month, defaultDay);
-            select.value = Math.min(currentValue, getDaysInMonth(year, month)).toString().padStart(2, '0');
+
+        const populateMonths = (select, defaultMonth) => {
+            if (!select) return;
+            select.innerHTML = '';
+            for (let m = 1; m <= 12; m++) {
+                const name = new Date(2000, m-1, 1).toLocaleString('default', { month: 'long' });
+                const opt = new Option(name, m.toString().padStart(2, '0'));
+                select.add(opt);
+            }
+            select.value = defaultMonth.toString().padStart(2, '0');
         };
-    
-        // Start date dropdowns
-        const startYearSelect = this.container.querySelector('#start-year');
-        populateYears(startYearSelect, previousYear);
-    
-        const startMonthSelect = this.container.querySelector('#start-month');
-        populateMonths(startMonthSelect, currentMonth);
-    
-        const startDaySelect = this.container.querySelector('#start-day');
-        const initialStartYear = parseInt(startYearSelect.value);
-        const initialStartMonth = parseInt(startMonthSelect.value);
-        populateDays(startDaySelect, initialStartYear, initialStartMonth, 1);
-    
-        startYearSelect.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month', 1));
-        startMonthSelect.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month', 1));
-    
-        // End date dropdowns
-        const endYearSelect = this.container.querySelector('#end-year');
-        populateYears(endYearSelect, currentYear);
-    
-        const endMonthSelect = this.container.querySelector('#end-month');
-        populateMonths(endMonthSelect, currentMonth);
-    
-        const endDaySelect = this.container.querySelector('#end-day');
-        const initialEndYear = parseInt(endYearSelect.value);
-        const initialEndMonth = parseInt(endMonthSelect.value);
-        populateDays(endDaySelect, initialEndYear, initialEndMonth, 1);
-    
-        endYearSelect.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month', 1));
-        endMonthSelect.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month', 1));
-    
-        // Quick buttons
+
+        const getDaysInMonth = (y, m) => new Date(y, m, 0).getDate();
+
+        const populateDays = (select, year, month, defaultDay) => {
+            if (!select) return;
+            select.innerHTML = '';
+            const days = getDaysInMonth(year, month);
+            for (let d = 1; d <= days; d++) {
+                const opt = new Option(d, d.toString().padStart(2, '0'));
+                select.add(opt);
+            }
+            select.value = Math.min(defaultDay, days).toString().padStart(2, '0');
+        };
+
+        // Start date = 1st of current month
+        const sy = this.container.querySelector('#start-year');
+        const sm = this.container.querySelector('#start-month');
+        const sd = this.container.querySelector('#start-day');
+        if (sy) populateYears(sy, currentYear);
+        if (sm) populateMonths(sm, currentMonth);
+        if (sd) populateDays(sd, currentYear, currentMonth, 1);
+
+        // End date = today
+        const ey = this.container.querySelector('#end-year');
+        const em = this.container.querySelector('#end-month');
+        const ed = this.container.querySelector('#end-day');
+        if (ey) populateYears(ey, currentYear);
+        if (em) populateMonths(em, currentMonth);
+        if (ed) populateDays(ed, currentYear, currentMonth, currentDay);
+
+        // Listeners
+        const updateDays = (dayId, yearId, monthId) => {
+            const y = this.container.querySelector(`#${yearId}`);
+            const m = this.container.querySelector(`#${monthId}`);
+            const d = this.container.querySelector(`#${dayId}`);
+            if (!y || !m || !d) return;
+            populateDays(d, parseInt(y.value), parseInt(m.value), parseInt(d.value) || 1);
+        };
+
+        sy?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
+        sm?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
+        ey?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
+        em?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
+
+    }
+
+    attachListeners() {
+        // Quick preset buttons
         this.container.querySelectorAll('.quick-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const hours = parseInt(btn.dataset.hours);
+            btn.addEventListener('click', (e) => {
                 const days = parseInt(btn.dataset.days);
                 let start = new Date();
                 const end = new Date();
-                if (hours) start.setHours(start.getHours() - hours);
                 if (days) start.setDate(start.getDate() - days);
                 if (this.onGenerateRequested) this.onGenerateRequested(start.toISOString(), end.toISOString());
             });
         });
-    
-        // Custom button
-        this.container.querySelector('#generate-custom').addEventListener('click', () => {
-            const startY = parseInt(this.container.querySelector('#start-year').value);
-            const startM = parseInt(this.container.querySelector('#start-month').value) - 1;
-            const startD = parseInt(this.container.querySelector('#start-day').value);
+
+        // Generate button
+        const genBtn = this.container.querySelector('#generate-custom');
+        if (genBtn) genBtn.addEventListener('click', (e) => {
+            const startY = parseInt(this.container.querySelector('#start-year')?.value);
+            const startM = parseInt(this.container.querySelector('#start-month')?.value) - 1;
+            const startD = parseInt(this.container.querySelector('#start-day')?.value);
             const start = new Date(startY, startM, startD);
-    
-            const endY = parseInt(this.container.querySelector('#end-year').value);
-            const endM = parseInt(this.container.querySelector('#end-month').value) - 1;
-            const endD = parseInt(this.container.querySelector('#end-day').value);
+
+            const endY = parseInt(this.container.querySelector('#end-year')?.value);
+            const endM = parseInt(this.container.querySelector('#end-month')?.value) - 1;
+            const endD = parseInt(this.container.querySelector('#end-day')?.value);
             const end = new Date(endY, endM, endD);
-    
-            // Set end time to end of day
             end.setHours(23, 59, 59, 999);
-    
+
             if (start > end) {
                 alert('Start date must be before end date.');
                 return;
             }
-    
             if (this.onGenerateRequested) this.onGenerateRequested(start.toISOString(), end.toISOString());
         });
     }
+    
 }

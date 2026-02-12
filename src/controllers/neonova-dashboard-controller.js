@@ -2,8 +2,6 @@ class NeonovaDashboardController extends BaseNeonovaController{
     constructor() {
         super();
         this.customers = this.load();
-        this.panelVisible = false;
-        this.minimized = false;
         this.pollingIntervalMinutes = 5;
         this.pollIntervalMs = 5 * 60 * 1000;
         this.pollInterval = null;  
@@ -54,24 +52,6 @@ class NeonovaDashboardController extends BaseNeonovaController{
         this.view?.update();                 // refresh button text
     }
 
-    togglePanel() {
-        this.panelVisible = !this.panelVisible;
-        if (this.panelVisible) {
-            if (!this.view) {
-                try {
-                    this.view = new NeonovaDashboardView(this);
-                } catch (err) {
-                    return;
-                }
-            }
-            this.view.show();
-            this.startPolling();
-        } else {
-            this.view?.hide();
-            this.stopPolling();
-        }
-    }
-
     load() {
         const data = localStorage.getItem('novaDashboardCustomers');
         if (!data) return [];
@@ -88,7 +68,6 @@ class NeonovaDashboardController extends BaseNeonovaController{
 
     add(radiusUsername, friendlyName) {
         if (!radiusUsername?.trim()) {
-            alert('RADIUS username required');
             return;
         }
         if (this.customers.some(c => c.radiusUsername === radiusUsername.trim())) {
@@ -105,11 +84,6 @@ class NeonovaDashboardController extends BaseNeonovaController{
         this.customers = this.customers.filter(c => c.radiusUsername !== radiusUsername);
         this.save();
         if (this.view) this.view.render();
-    }
-
-    toggleMinimize() {
-        this.minimized = !this.minimized;
-        //if (this.view) this.view.updateMinimize();
     }
 
     async poll() {
