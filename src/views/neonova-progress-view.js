@@ -7,46 +7,45 @@ class NeonovaProgressView extends BaseNeonovaView {
         this._close = null;
     }
 
-    showModal() {
-        const overlay = document.createElement('div');
-        overlay.style.cssText = `
-            position: fixed; inset: 0;
-            background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
-            z-index: 10001; display: flex; align-items: center; justify-content: center;
-        `;
-        document.body.appendChild(overlay);
-
-        const modal = document.createElement('div');
-        modal.style.cssText = `
-            background: #18181b; border: 1px solid #27272a; border-radius: 24px;
-            width: 460px; padding: 32px; box-shadow: 0 25px 70px rgba(0,0,0,0.95);
-            text-align: center;
-        `;
-        overlay.appendChild(modal);
-
-        modal.innerHTML = `
-            <div class="text-emerald-400 text-xs font-mono tracking-widest mb-2">GENERATING REPORT</div>
-            <div class="text-2xl font-semibold text-white mb-8">${this.friendlyName}</div>
-            
-            <div id="progress-container" class="mb-6">
-                <div class="h-2 bg-zinc-800 rounded-full overflow-hidden">
-                    <div id="progress-bar" class="h-full bg-emerald-500 transition-all duration-300" style="width: 0%"></div>
-                </div>
-            </div>
-            
-            <div id="status" class="font-mono text-emerald-400 text-sm mb-8">Starting fetch...</div>
-            
-            <button id="cancel-btn" class="px-8 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-2xl text-sm font-medium transition">
-                Cancel
-            </button>
-        `;
-
-        this.container = modal;
-        this._close = () => overlay.remove();
-
-        modal.querySelector('#cancel-btn').addEventListener('click', this._close);
-        overlay.addEventListener('click', e => { if (e.target === overlay) this._close(); });
-    }
+        showModal() {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed; inset: 0;
+                background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
+                z-index: 10001; display: flex; align-items: center; justify-content: center;
+                opacity: 0; transition: opacity 0.3s ease;
+            `;
+    
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                background: #18181b; border: 1px solid #27272a; border-radius: 24px;
+                width: 460px; padding: 32px; box-shadow: 0 25px 70px rgba(0,0,0,0.95);
+                text-align: center;
+                transform: translateX(-40px); opacity: 0; transition: all 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+            `;
+    
+            document.body.appendChild(overlay);
+            overlay.appendChild(modal);
+    
+            // Trigger animations
+            requestAnimationFrame(() => {
+                overlay.style.opacity = '1';
+                modal.style.transform = 'translateX(0)';
+                modal.style.opacity = '1';
+            });
+    
+            this.container = modal;
+            this._close = () => {
+                overlay.style.opacity = '0';
+                modal.style.transform = 'translateX(-40px)';
+                modal.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 400);
+            };
+    
+            // ... rest of your modal.innerHTML and listeners ...
+            modal.querySelector('#cancel-btn').addEventListener('click', this._close);
+            overlay.addEventListener('click', e => { if (e.target === overlay) this._close(); });
+        }
 
     /**
      * New signature matches the updated callback from paginateReportLogs:
