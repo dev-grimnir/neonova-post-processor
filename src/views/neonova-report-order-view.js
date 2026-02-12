@@ -157,7 +157,25 @@ class NeonovaReportOrderView extends BaseNeonovaView {
                     select.add(opt);
                 });
             
-                // No need to set select.value or manually force selected anymore
+                console.log('=== YEAR DROPDOWN DIAGNOSTICS ===');
+                console.log('Current year detected:', currentYear);
+                
+                const logSelect = (id) => {
+                    const sel = this.container.querySelector(`#${id}`);
+                    if (sel) {
+                        console.log(`${id} options:`, Array.from(sel.options).map(o => ({
+                            value: o.value,
+                            text: o.text,
+                            selected: o.selected
+                        })));
+                        console.log(`${id} selected value:`, sel.value);
+                    }
+                };
+                
+                logSelect('start-year');
+                logSelect('end-year');
+                console.log('=== END DIAGNOSTICS ===');
+                
             };
 
         const populateMonths = (select, defaultMonth) => {
