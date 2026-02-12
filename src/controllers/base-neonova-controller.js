@@ -259,85 +259,43 @@ parsePageRows(doc) {
                 const pageEntries = this.parsePageRows(doc);
 
                 if (page === 1) {
-                    console.log('=== FIRST PAGE TOTAL SCRAPE DEBUG START ===');
-                    console.log('Full page HTML length:', html.length);  // Rough check we have real content
-                    console.log('doc.body.querySelectorAll("table").length:', doc.body.querySelectorAll('table').length);  // How many tables total?
+                    // Robust selector: bgcolor is on the <tr>, not the table
+                    let statusRow = doc.querySelector('tr[bgcolor="gray"]') ||
+                                    doc.querySelector('tr[bgcolor="GRAY"]') ||
+                                    doc.querySelector('tr[bgcolor="grey"]');
                 
-                    // Primary selector
-                    let statusTable = doc.querySelector('table[bgcolor="gray"] > tbody > tr');
-                    console.log('Primary selector table[bgcolor="gray"] > tbody > tr found:', !!statusTable);
-                
-                    // Fallback 1: Direct tr under table[bgcolor="gray"]
-                    if (!statusTable) {
-                        statusTable = doc.querySelector('table[bgcolor="gray"] > tr');
-                        console.log('Fallback 1: table[bgcolor="gray"] > tr found:', !!statusTable);
-                    }
-                
-                    // Fallback 2: Case-insensitive or "grey"
-                    if (!statusTable) {
-                        statusTable = doc.querySelector('table[bgcolor="grey"] > tbody > tr') || doc.querySelector('table[bgcolor="GRAY"] > tbody > tr');
-                        console.log('Fallback 2: grey/GRAY variants found:', !!statusTable);
-                    }
-                
-                    // Fallback 3: Any table containing "Search Results" text (broad but safe)
-                    if (!statusTable) {
-                        const allTables = doc.querySelectorAll('table');
-                        for (let t of allTables) {
-                            if (t.textContent.includes('Search Results') && t.textContent.includes('of')) {
-                                statusTable = t.querySelector('tr');
-                                console.log('Fallback 3: Found table by "Search Results" text content:', !!statusTable);
+                    // Ultimate fallback: text content search (what saved us in debug)
+                    if (!statusRow) {
+                        const allRows = doc.querySelectorAll('tr');
+                        for (let row of allRows) {
+                            if (row.textContent.includes('Search Results') && row.textContent.includes('of')) {
+                                statusRow = row;
                                 break;
                             }
                         }
                     }
                 
-                    if (statusTable) {
-                        console.log('statusTable outerHTML:', statusTable.outerHTML.substring(0, 500) + '...');  // Truncated for safety
-                
-                        const cells = statusTable.querySelectorAll('td');
-                        console.log('cells.length:', cells.length);
-                        cells.forEach((cell, i) => {
-                            console.log(`cells[${i}] textContent raw: "${cell.textContent}"`);
-                            console.log(`cells[${i}] innerHTML: "${cell.innerHTML}"`);
-                        });
-                
+                    if (statusRow) {
+                        const cells = statusRow.querySelectorAll('td');
                         if (cells.length >= 5) {
-                            const totalCell = cells[cells.length - 1];
-                            console.log('totalCell raw textContent:', totalCell.textContent);
-                            console.log('totalCell innerHTML:', totalCell.innerHTML);
-                
-                            let totalText = totalCell.textContent.trim();
-                            console.log('totalText after trim():', `"${totalText}"`);
-                
-                            totalText = totalText.replace(/&nbsp;/g, ' ');
-                            console.log('totalText after &nbsp; replace:', `"${totalText}"`);
-                
-                            // Extra cleanup: remove any remaining whitespace clutter
-                            totalText = totalText.replace(/\s+/g, ' ').trim();
-                            console.log('totalText final cleaned:', `"${totalText}"`);
+                            let totalText = cells[cells.length - 1].textContent
+                                .trim()
+                                .replace(/&nbsp;/g, ' ')
+                                .replace(/\s+/g, ' ')
+                                .trim();
                 
                             knownTotal = parseInt(totalText, 10);
-                            console.log('parseInt result:', knownTotal);
-                            console.log('isNaN(knownTotal):', isNaN(knownTotal));
                 
-                            if (!isNaN(knownTotal) && knownTotal > 0) {
-                                console.log(`SUCCESS: Scraped exact total rows: ${knownTotal}`);
+                            if (!isNaN(knownTotal) && knownTotal >= 0) {
+                                console.log(`Scraped exact total rows: ${knownTotal}`);  // Keep this for now — useful confirmation
                                 if (knownTotal === 0) {
-                                    console.log('Zero results detected — early exit');
                                     break;
                                 }
-                            } else {
-                                console.log('FAILED to parse valid knownTotal — falling back to estimate');
                             }
-                        } else {
-                            console.log('Not enough cells (>=5) — cannot scrape total');
                         }
-                    } else {
-                        console.log('NO status table found with any selector — cannot scrape total');
                     }
                 
-                    console.log('knownTotal final value:', knownTotal);
-                    console.log('=== FIRST PAGE TOTAL SCRAPE DEBUG END ===');
+                    // If we still fail to scrape (very unlikely now), knownTotal stays null → falls back to old estimate behavior
                 }
                 
                 entries.push(...pageEntries);
