@@ -195,7 +195,7 @@ class NeonovaReportView extends BaseNeonovaView {
                 </div>
 
                 <script>
-                    const accentColor = '${this.accentColor}';
+                    const accentHex = '${this.theme.accentColor}';   // ← this is the fix (#34d399)
 
                     // Hourly Chart
                     new Chart(document.getElementById('hourlyChart'), {
@@ -205,7 +205,7 @@ class NeonovaReportView extends BaseNeonovaView {
                             datasets: [{
                                 label: 'Disconnects',
                                 data: ${JSON.stringify(this.metrics.hourlyDisconnects || Array(24).fill(0))},
-                                backgroundColor: accentColor
+                                backgroundColor: accentHex
                             }]
                         },
                         options: {
@@ -223,7 +223,7 @@ class NeonovaReportView extends BaseNeonovaView {
                             datasets: [{
                                 label: 'Disconnects',
                                 data: ${JSON.stringify(this.metrics.dailyDisconnects || [])},
-                                backgroundColor: accentColor
+                                backgroundColor: accentHex
                             }]
                         },
                         options: {
@@ -241,7 +241,7 @@ class NeonovaReportView extends BaseNeonovaView {
                             datasets: [{
                                 label: '7-Day Rolling Disconnects',
                                 data: ${JSON.stringify(this.metrics.rolling7Day || [])},
-                                borderColor: accentColor,
+                                borderColor: accentHex,
                                 borderWidth: 3,
                                 tension: 0.3,
                                 fill: false
