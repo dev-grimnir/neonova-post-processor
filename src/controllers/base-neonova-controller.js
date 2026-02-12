@@ -187,95 +187,95 @@ parsePageRows(doc) {
          * @returns {Promise<Array<{timestamp: string, status: string, sessionTime: string, dateObj: Date}>>}
          */
         async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
-        // Handle legacy calls where second arg might be onProgress
-        if (typeof startDate === 'function') {
-            onProgress = startDate;
-            startDate = null;
-            endDate = null;
-        } else if (typeof endDate === 'function') {
-            onProgress = endDate;
-            endDate = null;
-        }
+            // Handle legacy calls where second arg might be onProgress
+            if (typeof startDate === 'function') {
+                onProgress = startDate;
+                startDate = null;
+                endDate = null;
+            } else if (typeof endDate === 'function') {
+                onProgress = endDate;
+                endDate = null;
+            }
     
-        const entries = [];
-        let page = 1;
-        let offset = 0;
-        const hitsPerPage = 50;
-        const maxPages = 50; // safety cap
+            const entries = [];
+            let page = 1;
+            let offset = 0;
+            const hitsPerPage = 50;
+            const maxPages = 50; // safety cap
     
-        const now = new Date();
-        const sDate = startDate || new Date(now.getFullYear(), now.getMonth(), 1); // Start of current month if null
-        const eDate = endDate || now;
+            const now = new Date();
+            const sDate = startDate || new Date(now.getFullYear(), now.getMonth(), 1); // Start of current month if null
+            const eDate = endDate || now;
     
-        while (page <= maxPages) {
-            const params = new URLSearchParams({
-                acctsearch: '2',
-                sd: 'fairpoint.net',
-                iuserid: username,
-                ip: '',
-                session: '',
-                nasip: '',
-                statusview: 'both',
-                syear: sDate.getFullYear().toString(),
-                smonth: (sDate.getMonth() + 1).toString().padStart(2, '0'),
-                sday: sDate.getDate().toString().padStart(2, '0'),
-                shour: '00',
-                smin: '00',
-                eyear: eDate.getFullYear().toString(),
-                emonth: (eDate.getMonth() + 1).toString().padStart(2, '0'),
-                eday: eDate.getDate().toString().padStart(2, '0'),
-                ehour: '23',
-                emin: '59',
-                order: 'date',
-                hits: hitsPerPage.toString(),
-                location: offset.toString(),
-                direction: '0', // forward/next
-                dump: ''
-            });
+            while (page <= maxPages) {
+                const params = new URLSearchParams({
+                    acctsearch: '2',
+                    sd: 'fairpoint.net',
+                    iuserid: username,
+                    ip: '',
+                    session: '',
+                    nasip: '',
+                    statusview: 'both',
+                    syear: sDate.getFullYear().toString(),
+                    smonth: (sDate.getMonth() + 1).toString().padStart(2, '0'),
+                    sday: sDate.getDate().toString().padStart(2, '0'),
+                    shour: '00',
+                    smin: '00',
+                    eyear: eDate.getFullYear().toString(),
+                    emonth: (eDate.getMonth() + 1).toString().padStart(2, '0'),
+                    eday: eDate.getDate().toString().padStart(2, '0'),
+                    ehour: '23',
+                    emin: '59',
+                    order: 'date',
+                    hits: hitsPerPage.toString(),
+                    location: offset.toString(),
+                    direction: '0', // forward/next
+                    dump: ''
+                });
     
-            const url = `https://admin.neonova.net/rat/index.php?${params.toString()}`;
-            const res = await fetch(url, {
-                credentials: 'include',
-                cache: 'no-cache',
-                headers: {
-                    'Referer': url,
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.5',
-                    'Sec-Fetch-Dest': 'document',
-                    'Sec-Fetch-Mode': 'navigate',
-                    'Sec-Fetch-Site': 'same-origin',
-                    'Upgrade-Insecure-Requests': '1'
+                const url = `https://admin.neonova.net/rat/index.php?${params.toString()}`;
+                const res = await fetch(url, {
+                    credentials: 'include',
+                    cache: 'no-cache',
+                    headers: {
+                        'Referer': url,
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': 'en-US,en;q=0.5',
+                        'Sec-Fetch-Dest': 'document',
+                        'Sec-Fetch-Mode': 'navigate',
+                        'Sec-Fetch-Site': 'same-origin',
+                        'Upgrade-Insecure-Requests': '1'
+                    }
+                });
+    
+                if (!res.ok) {
+                    break;
                 }
-            });
     
-            if (!res.ok) {
-                break;
+                const html = await res.text();
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+        
+                const pageEntries = this.parsePageRows(doc);
+                entries.push(...pageEntries);
+        
+                if (typeof onProgress === 'function') {
+                    onProgress(entries.length, page);
+                }
+        
+                // Stop when fewer than full page (last page)
+                if (pageEntries.length < hitsPerPage) {
+                    break;
+                }
+    
+                offset += hitsPerPage;
+                page++;
             }
     
-            const html = await res.text();
-            const doc = new DOMParser().parseFromString(html, 'text/html');
-    
-            const pageEntries = this.parsePageRows(doc);
-            entries.push(...pageEntries);
-    
-            if (typeof onProgress === 'function') {
-                onProgress(entries.length, page);
-            }
-    
-            // Stop when fewer than full page (last page)
-            if (pageEntries.length < hitsPerPage) {
-                break;
-            }
-    
-            offset += hitsPerPage;
-            page++;
+            // Sort newest first (important for status)
+            entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+        
+            return entries;
         }
-    
-        // Sort newest first (important for status)
-        entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
-    
-        return entries;
-    }
 
     
 /**
