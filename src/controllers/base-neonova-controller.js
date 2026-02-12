@@ -259,43 +259,30 @@ parsePageRows(doc) {
                 const pageEntries = this.parsePageRows(doc);
 
                 if (page === 1) {
-                    // Robust selector: bgcolor is on the <tr>, not the table
-                    let statusRow = doc.querySelector('tr[bgcolor="gray"]') ||
-                                    doc.querySelector('tr[bgcolor="GRAY"]') ||
-                                    doc.querySelector('tr[bgcolor="grey"]');
-                
-                    // Ultimate fallback: text content search (what saved us in debug)
-                    if (!statusRow) {
-                        const allRows = doc.querySelectorAll('tr');
-                        for (let row of allRows) {
-                            if (row.textContent.includes('Search Results') && row.textContent.includes('of')) {
-                                statusRow = row;
-                                break;
-                            }
-                        }
-                    }
-                
+                    // Find the status row by its unique text content (this is what worked in debug)
+                    const statusRow = Array.from(doc.querySelectorAll('tr'))
+                        .find(tr => tr.textContent.includes('Search Results') && tr.textContent.includes('of'));
+        
                     if (statusRow) {
                         const cells = statusRow.querySelectorAll('td');
                         if (cells.length >= 5) {
                             let totalText = cells[cells.length - 1].textContent
                                 .trim()
-                                .replace(/&nbsp;/g, ' ')
-                                .replace(/\s+/g, ' ')
-                                .trim();
-                
+                                .replace(/&nbsp;/g, '')
+                                .replace(/\s+/g, '');
+        
                             knownTotal = parseInt(totalText, 10);
-                
-                            if (!isNaN(knownTotal) && knownTotal >= 0) {
-                                console.log(`Scraped exact total rows: ${knownTotal}`);  // Keep this for now — useful confirmation
+        
+                            if (!isNaN(knownTotal)) {
+                                console.log(`Scraped exact total rows: ${knownTotal}`);
                                 if (knownTotal === 0) {
                                     break;
                                 }
                             }
                         }
+                    } else {
+                        console.log('WARNING: Status row not found on first page — falling back to estimate');
                     }
-                
-                    // If we still fail to scrape (very unlikely now), knownTotal stays null → falls back to old estimate behavior
                 }
                 
                 entries.push(...pageEntries);
