@@ -200,7 +200,7 @@ parsePageRows(doc) {
             const entries = [];
             let page = 1;
             let offset = 0;
-            const hitsPerPage = 50;
+            const hitsPerPage = 100;
             const maxPages = 50; // safety cap
         
             const now = new Date();
