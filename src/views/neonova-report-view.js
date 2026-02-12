@@ -1,6 +1,6 @@
 class NeonovaReportView extends BaseNeonovaView {
     constructor(username, friendlyName, metrics, numEntries, longDisconnects) {
-        super(null);   // inherit theme (no panel needed)
+        super(null);   // inherit theme
 
         this.username = username;
         this.friendlyName = friendlyName;
@@ -13,16 +13,15 @@ class NeonovaReportView extends BaseNeonovaView {
         if (this.longDisconnects.length === 0) return '';
 
         let html = `
-            <div id="longDisconnectsContainer" class="mt-8 bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden">
-                <table class="w-full">
-                    <thead>
-                        <tr class="bg-zinc-800">
-                            <th class="p-6 text-left text-zinc-400 font-medium">Disconnected At</th>
-                            <th class="p-6 text-left text-zinc-400 font-medium">Reconnected At</th>
-                            <th class="p-6 text-right text-zinc-400 font-medium">Duration</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-zinc-700">`;
+            <table class="w-full border-collapse bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden">
+                <thead>
+                    <tr class="bg-zinc-800">
+                        <th class="p-6 text-left text-zinc-400 font-medium">Disconnected At</th>
+                        <th class="p-6 text-left text-zinc-400 font-medium">Reconnected At</th>
+                        <th class="p-6 text-right text-zinc-400 font-medium">Duration</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-700">`;
 
         this.longDisconnects.forEach(ld => {
             const durationStr = formatDuration(ld.durationSec);
@@ -34,7 +33,7 @@ class NeonovaReportView extends BaseNeonovaView {
                 </tr>`;
         });
 
-        html += `</tbody></table></div>`;
+        html += `</tbody></table>`;
         return html;
     }
 
@@ -44,13 +43,15 @@ class NeonovaReportView extends BaseNeonovaView {
         }
 
         return `
-            <div onclick="toggleLongDisconnects()" 
-                 class="bg-zinc-800 hover:bg-zinc-700 transition-colors p-6 rounded-3xl cursor-pointer flex justify-between items-center text-${this.accent}-400 font-medium mb-8">
-                <span>Long Disconnects (>30 minutes): ${this.longDisconnects.length}</span>
-                <span class="text-xs text-zinc-500">click to toggle</span>
-            </div>
-            ${this.generateLongDisconnectsHTML()}
-        `;
+            <details class="group mb-16" open>
+                <summary class="bg-zinc-800 hover:bg-zinc-700 transition-colors p-6 rounded-3xl cursor-pointer flex justify-between items-center text-${this.accent}-400 font-medium list-none">
+                    <span>Long Disconnects (>30 minutes): ${this.longDisconnects.length}</span>
+                    <span class="text-xs text-zinc-500 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <div class="mt-4">
+                    ${this.generateLongDisconnectsHTML()}
+                </div>
+            </details>`;
     }
 
     generateCsvContent() {
@@ -96,6 +97,7 @@ class NeonovaReportView extends BaseNeonovaView {
                         transition: all 0.2s; font-size: 13px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3);
                     }
                     .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+                    details summary::-webkit-details-marker { display: none; }
                 </style>
             </head>
             <body class="bg-zinc-950 text-zinc-200">
@@ -183,7 +185,7 @@ class NeonovaReportView extends BaseNeonovaView {
                         </div>
                     </div>
 
-                    <!-- Long Disconnects -->
+                    <!-- Long Disconnects (header is now part of the table) -->
                     ${longDisconnSection}
 
                     <!-- Export Buttons -->
@@ -195,63 +197,33 @@ class NeonovaReportView extends BaseNeonovaView {
                 </div>
 
                 <script>
-                    const accentHex = '${this.theme.accentColor}';   // ← this is the fix (#34d399)
+                    const accentHex = '${this.theme.accentColor}';
 
-                    // Hourly Chart
                     new Chart(document.getElementById('hourlyChart'), {
                         type: 'bar',
                         data: {
                             labels: Array.from({length: 24}, (_, i) => \`\${i}:00\`),
-                            datasets: [{
-                                label: 'Disconnects',
-                                data: ${JSON.stringify(this.metrics.hourlyDisconnects || Array(24).fill(0))},
-                                backgroundColor: accentHex
-                            }]
+                            datasets: [{ label: 'Disconnects', data: ${JSON.stringify(this.metrics.hourlyDisconnects || Array(24).fill(0))}, backgroundColor: accentHex }]
                         },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: { y: { beginAtZero: true } }
-                        }
+                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
                     });
 
-                    // Daily Chart
                     new Chart(document.getElementById('dailyChart'), {
                         type: 'bar',
                         data: {
                             labels: ${JSON.stringify(this.metrics.dailyLabels || [])},
-                            datasets: [{
-                                label: 'Disconnects',
-                                data: ${JSON.stringify(this.metrics.dailyDisconnects || [])},
-                                backgroundColor: accentHex
-                            }]
+                            datasets: [{ label: 'Disconnects', data: ${JSON.stringify(this.metrics.dailyDisconnects || [])}, backgroundColor: accentHex }]
                         },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: { y: { beginAtZero: true } }
-                        }
+                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
                     });
 
-                    // Rolling Chart
                     new Chart(document.getElementById('rollingChart'), {
                         type: 'line',
                         data: {
                             labels: ${JSON.stringify(this.metrics.rollingLabels || [])},
-                            datasets: [{
-                                label: '7-Day Rolling Disconnects',
-                                data: ${JSON.stringify(this.metrics.rolling7Day || [])},
-                                borderColor: accentHex,
-                                borderWidth: 3,
-                                tension: 0.3,
-                                fill: false
-                            }]
+                            datasets: [{ label: '7-Day Rolling Disconnects', data: ${JSON.stringify(this.metrics.rolling7Day || [])}, borderColor: accentHex, borderWidth: 3, tension: 0.3, fill: false }]
                         },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: { y: { beginAtZero: true } }
-                        }
+                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
                     });
 
                     const csvContent = \`${csvContent.replace(/`/g, '\\`').replace(/\n/g, '\\n')}\`;
@@ -280,11 +252,6 @@ class NeonovaReportView extends BaseNeonovaView {
                         const imgHeight = (canvas.height * imgWidth) / canvas.width;
                         pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
                         pdf.save('radius_report.pdf');
-                    }
-
-                    function toggleLongDisconnects() {
-                        const el = document.getElementById('longDisconnectsContainer');
-                        if (el) el.style.display = (el.style.display === 'none') ? 'block' : 'none';
                     }
                 </script>
             </body>
