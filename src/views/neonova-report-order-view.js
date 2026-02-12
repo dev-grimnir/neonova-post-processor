@@ -1,18 +1,14 @@
 class NeonovaReportOrderView extends BaseNeonovaView {
     constructor(container, username, friendlyName) {
         super(container);
+
         this.username = username;
         this.friendlyName = friendlyName || username;
         this.onGenerateRequested = null;
-        console.log('NeonovaReportOrderView.constructor() -> this.username = ' + this.username);
-        console.log('NeonovaReportOrderView.constructor() -> this.friendlyName = ' + this.friendlyName);
-        this.render();
     }
 
     showModal() {
-        // Overlay
         const overlay = document.createElement('div');
-        modal.classList.add('neonova-modal'); 
         overlay.style.cssText = `
             position: fixed; inset: 0;
             background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
@@ -20,8 +16,8 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         `;
         document.body.appendChild(overlay);
 
-        // Modal shell
         const modal = document.createElement('div');
+        modal.classList.add('neonova-modal');           // ← this stops the double-click
         modal.style.cssText = `
             background: #18181b; border: 1px solid #27272a; border-radius: 24px;
             width: 820px; max-width: 92vw; max-height: 92vh;
@@ -30,7 +26,6 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         `;
         overlay.appendChild(modal);
 
-        // Header (fixed)
         const header = document.createElement('div');
         header.style.cssText = `
             padding: 24px 32px; border-bottom: 1px solid #27272a;
@@ -48,16 +43,13 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         `;
         modal.appendChild(header);
 
-        // Content area → render() will fill this
         const content = document.createElement('div');
         content.style.cssText = `flex: 1; overflow-y: auto; padding: 32px 40px; background: #18181b;`;
         modal.appendChild(content);
 
-        // Give the view its container and render the form
         this.container = content;
         this.render();
 
-        // Close handlers
         const close = () => overlay.remove();
         header.querySelector('.close-btn').addEventListener('click', close);
         overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
