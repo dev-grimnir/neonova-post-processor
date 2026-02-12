@@ -12,6 +12,7 @@ class NeonovaReportOrderView extends BaseNeonovaView {
     showModal() {
         // Overlay
         const overlay = document.createElement('div');
+        modal.classList.add('neonova-modal'); 
         overlay.style.cssText = `
             position: fixed; inset: 0;
             background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
