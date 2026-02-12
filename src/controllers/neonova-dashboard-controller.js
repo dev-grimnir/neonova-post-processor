@@ -14,14 +14,12 @@ class NeonovaDashboardController extends BaseNeonovaController{
         if (this.pollInterval) return;                     // ← guard (good)
         this.poll();                                       // first poll now
         this.pollInterval = setInterval(() => this.poll(), this.pollIntervalMs);  // ← use variable, not 60000
-        console.log(`Polling timer started – every ${this.pollingIntervalMinutes} min`);
     }
 
     stopPolling() {
         if (this.pollInterval) {
             clearInterval(this.pollInterval);
             this.pollInterval = null;
-            console.log('Polling stopped');
         }
     }
 
@@ -30,23 +28,18 @@ class NeonovaDashboardController extends BaseNeonovaController{
         this.pollingIntervalMinutes = minutes;
         this.pollIntervalMs = minutes * 60 * 1000;
     
-        console.log(`Slider → ${minutes} min (${this.pollIntervalMs} ms)`);
-    
         if (this.pollInterval) {
             clearInterval(this.pollInterval);
             this.pollInterval = setInterval(() => this.poll(), this.pollIntervalMs);
-            console.log('Interval restarted with new value');
         }
     }
 
     togglePolling() {
         if (!this.isPollingPaused) {
             this.isPollingPaused = true;
-            console.log('togglePolling → now paused');
         } else {
             this.isPollingPaused = false;
             this.poll();
-            console.log('togglePolling → now unpaused');
         }
 
         this.view?.update();                 // refresh button text
@@ -87,7 +80,6 @@ class NeonovaDashboardController extends BaseNeonovaController{
     }
 
     async poll() {
-        console.log("NeonovaDashboardController.poll - polling now with interval " + this.pollingIntervalMinutes);
         if (this.isPollingPaused) {
             return;
         }
