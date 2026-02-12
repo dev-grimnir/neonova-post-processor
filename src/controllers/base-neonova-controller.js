@@ -259,23 +259,85 @@ parsePageRows(doc) {
                 const pageEntries = this.parsePageRows(doc);
 
                 if (page === 1) {
-                    // Scrape the exact total from the status table: last <td> in the specific gray row
-                    const statusTable = doc.querySelector('table[bgcolor="gray"] > tbody > tr');
-                    if (statusTable) {
-                        const cells = statusTable.querySelectorAll('td');
-                        if (cells.length >= 5) {
-                            const totalText = cells[cells.length - 1].textContent.trim().replace(/&nbsp;/g, '');
-                            knownTotal = parseInt(totalText, 10);
-                            if (!isNaN(knownTotal)) {
-                                console.log(`Scraped exact total rows: ${knownTotal}`);
-                                // Early exit if zero results
-                                if (knownTotal === 0) {
-                                    entries.push(...pageEntries);  // still add any (should be none)
-                                    break;
-                                }
+                    console.log('=== FIRST PAGE TOTAL SCRAPE DEBUG START ===');
+                    console.log('Full page HTML length:', html.length);  // Rough check we have real content
+                    console.log('doc.body.querySelectorAll("table").length:', doc.body.querySelectorAll('table').length);  // How many tables total?
+                
+                    // Primary selector
+                    let statusTable = doc.querySelector('table[bgcolor="gray"] > tbody > tr');
+                    console.log('Primary selector table[bgcolor="gray"] > tbody > tr found:', !!statusTable);
+                
+                    // Fallback 1: Direct tr under table[bgcolor="gray"]
+                    if (!statusTable) {
+                        statusTable = doc.querySelector('table[bgcolor="gray"] > tr');
+                        console.log('Fallback 1: table[bgcolor="gray"] > tr found:', !!statusTable);
+                    }
+                
+                    // Fallback 2: Case-insensitive or "grey"
+                    if (!statusTable) {
+                        statusTable = doc.querySelector('table[bgcolor="grey"] > tbody > tr') || doc.querySelector('table[bgcolor="GRAY"] > tbody > tr');
+                        console.log('Fallback 2: grey/GRAY variants found:', !!statusTable);
+                    }
+                
+                    // Fallback 3: Any table containing "Search Results" text (broad but safe)
+                    if (!statusTable) {
+                        const allTables = doc.querySelectorAll('table');
+                        for (let t of allTables) {
+                            if (t.textContent.includes('Search Results') && t.textContent.includes('of')) {
+                                statusTable = t.querySelector('tr');
+                                console.log('Fallback 3: Found table by "Search Results" text content:', !!statusTable);
+                                break;
                             }
                         }
                     }
+                
+                    if (statusTable) {
+                        console.log('statusTable outerHTML:', statusTable.outerHTML.substring(0, 500) + '...');  // Truncated for safety
+                
+                        const cells = statusTable.querySelectorAll('td');
+                        console.log('cells.length:', cells.length);
+                        cells.forEach((cell, i) => {
+                            console.log(`cells[${i}] textContent raw: "${cell.textContent}"`);
+                            console.log(`cells[${i}] innerHTML: "${cell.innerHTML}"`);
+                        });
+                
+                        if (cells.length >= 5) {
+                            const totalCell = cells[cells.length - 1];
+                            console.log('totalCell raw textContent:', totalCell.textContent);
+                            console.log('totalCell innerHTML:', totalCell.innerHTML);
+                
+                            let totalText = totalCell.textContent.trim();
+                            console.log('totalText after trim():', `"${totalText}"`);
+                
+                            totalText = totalText.replace(/&nbsp;/g, ' ');
+                            console.log('totalText after &nbsp; replace:', `"${totalText}"`);
+                
+                            // Extra cleanup: remove any remaining whitespace clutter
+                            totalText = totalText.replace(/\s+/g, ' ').trim();
+                            console.log('totalText final cleaned:', `"${totalText}"`);
+                
+                            knownTotal = parseInt(totalText, 10);
+                            console.log('parseInt result:', knownTotal);
+                            console.log('isNaN(knownTotal):', isNaN(knownTotal));
+                
+                            if (!isNaN(knownTotal) && knownTotal > 0) {
+                                console.log(`SUCCESS: Scraped exact total rows: ${knownTotal}`);
+                                if (knownTotal === 0) {
+                                    console.log('Zero results detected — early exit');
+                                    break;
+                                }
+                            } else {
+                                console.log('FAILED to parse valid knownTotal — falling back to estimate');
+                            }
+                        } else {
+                            console.log('Not enough cells (>=5) — cannot scrape total');
+                        }
+                    } else {
+                        console.log('NO status table found with any selector — cannot scrape total');
+                    }
+                
+                    console.log('knownTotal final value:', knownTotal);
+                    console.log('=== FIRST PAGE TOTAL SCRAPE DEBUG END ===');
                 }
                 
                 entries.push(...pageEntries);
