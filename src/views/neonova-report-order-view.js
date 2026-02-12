@@ -180,7 +180,7 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         const sy = this.container.querySelector('#start-year');
         const sm = this.container.querySelector('#start-month');
         const sd = this.container.querySelector('#start-day');
-        if (sy) populateYears(sy, currentYear);
+        if (sy) populateYears(sy, currentYear - 1);
         if (sm) populateMonths(sm, currentMonth);
         if (sd) populateDays(sd, currentYear, currentMonth, 1);
 
