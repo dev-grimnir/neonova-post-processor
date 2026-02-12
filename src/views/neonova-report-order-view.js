@@ -64,8 +64,8 @@ class NeonovaReportOrderView extends BaseNeonovaView {
                 this.friendlyName,
                 new Date(startIso),
                 new Date(endIso),
-                (totalEntries, currentPage) => {
-                    progressView.updateProgress(totalEntries, currentPage, `Fetching page ${currentPage}`);
+                (totalRows, currentEntries, currentPage) => {  
+                    progressView.updateProgress(totalRows, currentEntries, currentPage);
                 }
             ).then(data => {
                 progressView.finish(data);
