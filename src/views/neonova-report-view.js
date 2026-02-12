@@ -16,6 +16,11 @@ class NeonovaReportView extends BaseNeonovaView {
             <table class="w-full border-collapse">
                 <thead>
                     <tr class="bg-zinc-800">
+                        <th colspan="3" class="p-6 text-${this.accent}-400 font-medium text-left border-b border-zinc-700">
+                            Long Disconnects (>30 minutes): ${this.longDisconnects.length}
+                        </th>
+                    </tr>
+                    <tr class="bg-zinc-800 border-b border-zinc-700">
                         <th class="p-6 text-left text-zinc-400 font-medium">Disconnected At</th>
                         <th class="p-6 text-left text-zinc-400 font-medium">Reconnected At</th>
                         <th class="p-6 text-right text-zinc-400 font-medium">Duration</th>
@@ -44,11 +49,13 @@ class NeonovaReportView extends BaseNeonovaView {
 
         return `
             <details class="group mb-16" open>
-                <summary class="bg-zinc-800 hover:bg-zinc-700 transition-colors p-6 rounded-t-3xl cursor-pointer flex justify-between items-center text-${this.accent}-400 font-medium list-none">
-                    <span>Long Disconnects (>30 minutes): ${this.longDisconnects.length}</span>
-                    <span class="text-xs text-zinc-500 group-open:rotate-180 transition-transform">▼</span>
+                <summary class="list-none">
+                    <div class="bg-zinc-800 hover:bg-zinc-700 transition-colors p-6 rounded-t-3xl cursor-pointer flex justify-between items-center text-${this.accent}-400 font-medium">
+                        <span>Long Disconnects (>30 minutes): ${this.longDisconnects.length}</span>
+                        <span class="text-xs text-zinc-500 group-open:rotate-180 transition-transform">▼</span>
+                    </div>
                 </summary>
-                <div class="bg-zinc-900 border border-zinc-700 border-t-0 rounded-b-3xl overflow-hidden">
+                <div class="mt-0 bg-zinc-900 border border-zinc-700 border-t-0 rounded-b-3xl overflow-hidden">
                     ${this.generateLongDisconnectsHTML()}
                 </div>
             </details>`;
@@ -163,4 +170,99 @@ class NeonovaReportView extends BaseNeonovaView {
                                     <tr><td class="p-6">Longest Session</td><td class="p-6 text-right">${this.metrics.longestSessionMin ? formatDuration(this.metrics.longestSessionMin * 60) : 'N/A'}</td></tr>
                                     <tr><td class="p-6">Shortest Session</td><td class="p-6 text-right">${this.metrics.shortestSessionMin ? formatDuration(this.metrics.shortestSessionMin * 60) : 'N/A'}</td></tr>
                                     <tr><td class="p-6">Median Reconnect Time</td><td class="p-6 text-right">${this.metrics.medianReconnectMin ? formatDuration(this.metrics.medianReconnectMin * 60) : 'N/A'}</td></tr>
-                                    <tr><td class="p-6">95th Percentile Reconnect Time</td><td class="p-6 text-right">${this.metrics.p95
+                                    <tr><td class="p-6">95th Percentile Reconnect Time</td><td class="p-6 text-right">${this.metrics.p95ReconnectMin ? formatDuration(this.metrics.p95ReconnectMin * 60) : 'N/A'}</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="space-y-16">
+                        <div>
+                            <h2 class="text-3xl font-semibold text-white mb-6">Disconnects by Hour of Day</h2>
+                            <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8"><canvas id="hourlyChart" class="w-full h-96"></canvas></div>
+                        </div>
+                        <div>
+                            <h2 class="text-3xl font-semibold text-white mb-6">Disconnects by Day</h2>
+                            <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8"><canvas id="dailyChart" class="w-full h-96"></canvas></div>
+                        </div>
+                        <div>
+                            <h2 class="text-3xl font-semibold text-white mb-6">Rolling 7-Day Disconnects</h2>
+                            <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8"><canvas id="rollingChart" class="w-full h-96"></canvas></div>
+                        </div>
+                    </div>
+
+                    <!-- Long Disconnects – title is now the top row of the table card -->
+                    ${longDisconnSection}
+
+                    <!-- Export Buttons -->
+                    <div class="flex justify-center gap-4 mt-20">
+                        <button onclick="exportToHTML()" class="px-10 py-4 bg-${this.accent}-600 hover:bg-${this.accent}-500 text-black font-semibold rounded-2xl transition">Export as HTML</button>
+                        <button onclick="exportToCSV()" class="px-10 py-4 bg-${this.accent}-600 hover:bg-${this.accent}-500 text-black font-semibold rounded-2xl transition">Export as CSV</button>
+                        <button onclick="exportToPDF()" class="px-10 py-4 bg-${this.accent}-600 hover:bg-${this.accent}-500 text-black font-semibold rounded-2xl transition">Export as PDF</button>
+                    </div>
+                </div>
+
+                <script>
+                    const accentHex = '${this.theme.accentColor}';
+
+                    new Chart(document.getElementById('hourlyChart'), {
+                        type: 'bar',
+                        data: {
+                            labels: Array.from({length: 24}, (_, i) => \`\${i}:00\`),
+                            datasets: [{ label: 'Disconnects', data: ${JSON.stringify(this.metrics.hourlyDisconnects || Array(24).fill(0))}, backgroundColor: accentHex }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                    });
+
+                    new Chart(document.getElementById('dailyChart'), {
+                        type: 'bar',
+                        data: {
+                            labels: ${JSON.stringify(this.metrics.dailyLabels || [])},
+                            datasets: [{ label: 'Disconnects', data: ${JSON.stringify(this.metrics.dailyDisconnects || [])}, backgroundColor: accentHex }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                    });
+
+                    new Chart(document.getElementById('rollingChart'), {
+                        type: 'line',
+                        data: {
+                            labels: ${JSON.stringify(this.metrics.rollingLabels || [])},
+                            datasets: [{ label: '7-Day Rolling Disconnects', data: ${JSON.stringify(this.metrics.rolling7Day || [])}, borderColor: accentHex, borderWidth: 3, tension: 0.3, fill: false }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                    });
+
+                    const csvContent = \`${csvContent.replace(/`/g, '\\`').replace(/\n/g, '\\n')}\`;
+
+                    function exportToHTML() {
+                        const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = 'radius_report.html';
+                        a.click();
+                    }
+
+                    function exportToCSV() {
+                        const blob = new Blob([csvContent], { type: 'text/csv' });
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = 'radius_report.csv';
+                        a.click();
+                    }
+
+                    async function exportToPDF() {
+                        const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+                        const canvas = await html2canvas(document.body, { scale: 2 });
+                        const imgData = canvas.toDataURL('image/png');
+                        const imgWidth = pdf.internal.pageSize.getWidth();
+                        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                        pdf.save('radius_report.pdf');
+                    }
+                </script>
+            </body>
+            </html>
+        `;
+    }
+}
