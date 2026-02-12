@@ -62,7 +62,7 @@ class NeonovaDashboardView extends BaseNeonovaView{
         this.minimizeBar.style.display = 'flex';
         this.panel.style.display = 'none';
 
-        document.body.addEventListener('click', this.handleGlobalClick.bind(this), true);
+        document.body.addEventListener('click', this.handleGlobalClick.bind(this);
 
         // Beautiful emerald scrollbar (matches the whole UI)
         if (!document.getElementById('neonova-scroll-style')) {
