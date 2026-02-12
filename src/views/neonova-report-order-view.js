@@ -81,12 +81,8 @@ class NeonovaReportOrderView extends BaseNeonovaView {
     
         render() {
         if (!this.container) {
-            console.log('!!! THIS IS THE FEB2026 DEBUG VERSION - NEW CODE LOADED !!!');
-            console.log('render() called too early — container not set yet');
             return;
         }
-
-        console.log('ReportOrderView.render() called – this =', this);
 
         this.container.innerHTML = `
             <div class="p-6 space-y-8">
@@ -158,26 +154,15 @@ class NeonovaReportOrderView extends BaseNeonovaView {
                     }
                     select.add(opt);
                 });
-            
-                console.log('=== YEAR DROPDOWN DIAGNOSTICS ===');
-                console.log('Current year detected:', currentYear);
                 
                 const logSelect = (id) => {
                     const sel = this.container.querySelector(`#${id}`);
                     if (sel) {
-                        console.log(`${id} options:`, Array.from(sel.options).map(o => ({
-                            value: o.value,
-                            text: o.text,
-                            selected: o.selected
-                        })));
-                        console.log(`${id} selected value:`, sel.value);
                     }
                 };
                 
                 logSelect('start-year');
                 logSelect('end-year');
-                console.log('=== END DIAGNOSTICS ===');
-                
             };
 
         const populateMonths = (select, defaultMonth) => {
