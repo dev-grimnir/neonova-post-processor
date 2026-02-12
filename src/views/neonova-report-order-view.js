@@ -204,13 +204,25 @@ class NeonovaReportOrderView extends BaseNeonovaView {
                 select.value = Math.min(defaultDay, days).toString().padStart(2, '0');
             };
 
-            // Start date = 1st of previous year/month
+            // Calculate defaults
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            const currentMonth = today.getMonth() + 1;  // 1-12
+            const currentDay = today.getDate();
+
+            const oneYearAgo = new Date(today);
+            oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+            const defaultStartYear = oneYearAgo.getFullYear();
+            const defaultStartMonth = oneYearAgo.getMonth() + 1;
+            let defaultStartDay = oneYearAgo.getDate();  // Will be clamped below if needed
+
+            // Start date = exactly one year ago (clamped)
             const sy = this.container.querySelector('#start-year');
             const sm = this.container.querySelector('#start-month');
             const sd = this.container.querySelector('#start-day');
-            if (sy) populateYears(sy, currentYear - 1);
-            if (sm) populateMonths(sm, currentMonth);
-            if (sd) populateDays(sd, currentYear - 1, currentMonth, 1);  // use previous year here too
+            if (sy) populateYears(sy, defaultStartYear);
+            if (sm) populateMonths(sm, defaultStartMonth);
+            if (sd) populateDays(sd, defaultStartYear, defaultStartMonth, defaultStartDay);
 
             // End date = today
             const ey = this.container.querySelector('#end-year');
