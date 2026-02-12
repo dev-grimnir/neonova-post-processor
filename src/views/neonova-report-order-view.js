@@ -52,30 +52,20 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         this.render();
         this.attachListeners();
 
-                // Wire up the buttons so they actually do something
+        // Wire up the buttons so they actually do something
         this.onGenerateRequested = (startIso, endIso) => {
-            overlay.remove();  // close order modal
-
+            overlay.remove();
+    
             const progressView = new NeonovaProgressView(this.username, this.friendlyName);
             progressView.showModal();
-
-            let totalPages = null;
-
+    
             this.controller.generateReportData(
                 this.username,
                 this.friendlyName,
                 new Date(startIso),
                 new Date(endIso),
-                (currentPage, response) => {  // ← changed: receive currentPage + full response
-                    if (totalPages === null && response && response.data && response.data.pages) {
-                        totalPages = response.data.pages;  // ← capture total pages from first response
-                    }
-
-                    progressView.updateProgress(
-                        currentPage,
-                        totalPages,
-                        `Fetching page ${currentPage}${totalPages ? ' of ' + totalPages : ''}`
-                    );
+                (totalEntries, currentPage) => {
+                    progressView.updateProgress(totalEntries, currentPage, `Fetching page ${currentPage}`);
                 }
             ).then(data => {
                 progressView.finish(data);
