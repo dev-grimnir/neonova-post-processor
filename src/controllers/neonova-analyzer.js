@@ -18,7 +18,7 @@ class NeonovaAnalyzer {
         this.analyze();
     }
 
-    static function getSessionBonus(metricMin) {
+    static getSessionBonus(metricMin) {
         const metricHours = parseFloat(metricMin) / 60 || 0;
         return 25 * Math.tanh(metricHours / 6);
     }
