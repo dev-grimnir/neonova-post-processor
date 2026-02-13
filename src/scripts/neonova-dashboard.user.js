@@ -33,7 +33,6 @@
         return;
     }
 
-    // Instantiate the controller (it creates its own view internally)
     const dashboardController = new NeonovaDashboardController();
 
 })();
