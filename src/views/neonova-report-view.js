@@ -1,4 +1,5 @@
 class NeonovaReportView extends BaseNeonovaView {
+    console.log('=== NeonovaReportView CLASS LOADED ===');
     constructor(username, friendlyName, metrics, numEntries, longDisconnects) {
         super(null);
 
