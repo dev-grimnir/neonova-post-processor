@@ -1,7 +1,6 @@
 class NeonovaReportOrderView extends BaseNeonovaView {
     constructor(container, username, friendlyName) {
         super(container);
-        console.log("NeonovaReportOrderView -> start");
         this.username = username;
         this.friendlyName = friendlyName || username;
         this.onGenerateRequested = null;
@@ -77,7 +76,6 @@ class NeonovaReportOrderView extends BaseNeonovaView {
                             progressView.updateProgress(totalRows, currentEntries, currentPage);
                         }
                     ).then(data => {
-                        console.log("NeonovaReportOrderView.showModal -> calling this.progressView.finish");
                         progressView.finish(data);
                     }).catch(err => {
                         progressView.showError(err.message);
