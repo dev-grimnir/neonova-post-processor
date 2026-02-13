@@ -93,6 +93,10 @@ class NeonovaProgressView extends BaseNeonovaView {
     }
 
     finish(data) {
+        console.log('Progress finish() received data:', data);
+        console.log('data.metrics keys:', Object.keys(data.metrics || {}));
+        console.log('uptimeComponent exists?', 'uptimeComponent' in (data.metrics || {}));
+        console.log('uptimeComponent value:', data.metrics?.uptimeComponent);
         this._close && this._close();
 
         const reportView = new NeonovaReportView(
