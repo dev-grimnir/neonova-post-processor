@@ -7,6 +7,9 @@ class NeonovaReportView extends BaseNeonovaView {
         this.metrics = metrics;
         this.numEntries = numEntries;
         this.longDisconnects = longDisconnects;
+
+        console.log('ReportView constructor received metrics:', metrics);
+        console.log('metrics.uptimeComponent:', metrics?.uptimeComponent);
     }
 
     generateLongDisconnectsHTML() {
