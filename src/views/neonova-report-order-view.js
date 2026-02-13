@@ -1,92 +1,113 @@
 class NeonovaReportOrderView extends BaseNeonovaView {
     constructor(container, username, friendlyName) {
         super(container);
-
+        console.log("NeonovaReportOrderView -> start");
         this.username = username;
         this.friendlyName = friendlyName || username;
         this.onGenerateRequested = null;
     }
 
-    showModal() {
-        const overlay = document.createElement('div');
-        overlay.style.cssText = `
-            position: fixed; inset: 0;
-            background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
-            z-index: 10000; display: flex; align-items: center; justify-content: center;
-        `;
-        document.body.appendChild(overlay);
-
-        const modal = document.createElement('div');
-        modal.classList.add('neonova-modal');           // ← this stops the double-click
-        modal.style.cssText = `
-            background: #18181b; border: 1px solid #27272a; border-radius: 24px;
-            width: 820px; max-width: 92vw; max-height: 92vh;
-            overflow: hidden; box-shadow: 0 25px 70px rgba(0,0,0,0.95);
-            display: flex; flex-direction: column;
-        `;
-        overlay.appendChild(modal);
-
-        const header = document.createElement('div');
-        header.style.cssText = `
-            padding: 24px 32px; border-bottom: 1px solid #27272a;
-            background: #09090b; flex-shrink: 0;
-            display: flex; align-items: center; justify-content: space-between;
-        `;
-        header.innerHTML = `
-            <div>
-                <div class="text-emerald-400 text-xs font-mono tracking-widest">GENERATE REPORT</div>
-                <div class="text-2xl font-semibold text-white mt-1">${this.friendlyName}</div>
-            </div>
-            <button class="close-btn px-6 py-2.5 text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-white rounded-2xl flex items-center gap-2 transition">
-                <i class="fas fa-times"></i> Close
-            </button>
-        `;
-        
-        modal.appendChild(header);
-
-        const content = document.createElement('div');
-        content.style.cssText = `flex: 1; overflow-y: auto; padding: 32px 40px; background: #18181b;`;
-        modal.appendChild(content);
-
-        this.container = content;
-        this.render();
-        this.attachListeners();
-
-        // Wire up the buttons so they actually do something
-        this.onGenerateRequested = (startIso, endIso) => {
-            overlay.remove();
+        showModal() {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed; inset: 0;
+                background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
+                z-index: 10000; display: flex; align-items: center; justify-content: center;
+                opacity: 0; transition: opacity 400ms ease;
+            `;
     
-            const progressView = new NeonovaProgressView(this.username, this.friendlyName);
-            progressView.showModal();
+            const modal = document.createElement('div');
+            modal.classList.add('neonova-modal');
+            modal.style.cssText = `
+                background: #18181b; border: 1px solid #27272a; border-radius: 24px;
+                width: 820px; max-width: 92vw; max-height: 92vh;
+                overflow: hidden; box-shadow: 0 25px 70px rgba(0,0,0,0.95);
+                display: flex; flex-direction: column;
+                transform: translateX(60px); opacity: 0; transition: all 500ms cubic-bezier(0.32, 0.72, 0, 1);
+            `;
     
-            this.controller.generateReportData(
-                this.username,
-                this.friendlyName,
-                new Date(startIso),
-                new Date(endIso),
-                (totalEntries, currentPage) => {
-                    progressView.updateProgress(totalEntries, currentPage, `Fetching page ${currentPage}`);
-                }
-            ).then(data => {
-                progressView.finish(data);
-            }).catch(err => {
-                progressView.showError(err.message);
+            document.body.appendChild(overlay);
+            overlay.appendChild(modal);
+    
+            // Create header (this was missing in the previous snippet)
+            const header = document.createElement('div');
+            header.style.cssText = `
+                padding: 24px 32px; border-bottom: 1px solid #27272a;
+                background: #09090b; flex-shrink: 0;
+                display: flex; align-items: center; justify-content: space-between;
+            `;
+            header.innerHTML = `
+                <div>
+                    <div class="text-emerald-400 text-xs font-mono tracking-widest">GENERATE REPORT</div>
+                    <div class="text-2xl font-semibold text-white mt-1">${this.friendlyName}</div>
+                </div>
+                <button class="close-btn px-6 py-2.5 text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-white rounded-2xl flex items-center gap-2 transition">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            `;
+            modal.appendChild(header);
+    
+            // Content
+            const content = document.createElement('div');
+            content.style.cssText = `flex: 1; overflow-y: auto; padding: 32px 40px; background: #18181b;`;
+            modal.appendChild(content);
+    
+            this.container = content;
+            this.render();
+            this.attachListeners();
+    
+            // Wire up generate
+            this.onGenerateRequested = (startIso, endIso) => {
+                overlay.style.opacity = '0';
+                modal.style.transform = 'translateX(60px)';
+                modal.style.opacity = '0';
+    
+                setTimeout(() => {
+                    overlay.remove();
+    
+                    const progressView = new NeonovaProgressView(this.username, this.friendlyName);
+                    progressView.showModal();
+    
+                    this.controller.generateReportData(
+                        this.username,
+                        this.friendlyName,
+                        new Date(startIso),
+                        new Date(endIso),
+                        (totalRows, currentEntries, currentPage) => {
+                            progressView.updateProgress(totalRows, currentEntries, currentPage);
+                        }
+                    ).then(data => {
+                        console.log("NeonovaReportOrderView.showModal -> calling this.progressView.finish");
+                        progressView.finish(data);
+                    }).catch(err => {
+                        progressView.showError(err.message);
+                    });
+                }, 500);
+            };
+    
+            // Close with animation
+            const close = () => {
+                overlay.style.opacity = '0';
+                modal.style.transform = 'translateX(60px)';
+                modal.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 500);
+            };
+    
+            header.querySelector('.close-btn').addEventListener('click', close);
+            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+    
+            // Trigger entrance animation
+            requestAnimationFrame(() => {
+                overlay.style.opacity = '1';
+                modal.style.transform = 'translateX(0)';
+                modal.style.opacity = '1';
             });
-        };
-
-        const close = () => overlay.remove();
-        header.querySelector('.close-btn').addEventListener('click', close);
-        overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
-    }
+        }
     
-        render() {
+    render() {
         if (!this.container) {
-            console.log('!!! THIS IS THE FEB2026 DEBUG VERSION - NEW CODE LOADED !!!');
-            console.log('render() called too early — container not set yet');
             return;
         }
-
-        console.log('ReportOrderView.render() called – this =', this);
 
         this.container.innerHTML = `
             <div class="p-6 space-y-8">
@@ -158,26 +179,15 @@ class NeonovaReportOrderView extends BaseNeonovaView {
                     }
                     select.add(opt);
                 });
-            
-                console.log('=== YEAR DROPDOWN DIAGNOSTICS ===');
-                console.log('Current year detected:', currentYear);
                 
                 const logSelect = (id) => {
                     const sel = this.container.querySelector(`#${id}`);
                     if (sel) {
-                        console.log(`${id} options:`, Array.from(sel.options).map(o => ({
-                            value: o.value,
-                            text: o.text,
-                            selected: o.selected
-                        })));
-                        console.log(`${id} selected value:`, sel.value);
                     }
                 };
                 
                 logSelect('start-year');
                 logSelect('end-year');
-                console.log('=== END DIAGNOSTICS ===');
-                
             };
 
         const populateMonths = (select, defaultMonth) => {

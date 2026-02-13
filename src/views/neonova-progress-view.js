@@ -8,25 +8,25 @@ class NeonovaProgressView extends BaseNeonovaView {
     }
 
     showModal() {
-        // Overlay
         const overlay = document.createElement('div');
         overlay.style.cssText = `
             position: fixed; inset: 0;
             background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
             z-index: 10001; display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 400ms ease;
         `;
-        document.body.appendChild(overlay);
 
-        // Modal
         const modal = document.createElement('div');
         modal.style.cssText = `
             background: #18181b; border: 1px solid #27272a; border-radius: 24px;
             width: 460px; padding: 32px; box-shadow: 0 25px 70px rgba(0,0,0,0.95);
             text-align: center;
+            transform: translateX(-60px); opacity: 0; transition: all 500ms cubic-bezier(0.32, 0.72, 0, 1);
         `;
+
+        document.body.appendChild(overlay);
         overlay.appendChild(modal);
 
-        // Header
         modal.innerHTML = `
             <div class="text-emerald-400 text-xs font-mono tracking-widest mb-2">GENERATING REPORT</div>
             <div class="text-2xl font-semibold text-white mb-8">${this.friendlyName}</div>
@@ -44,41 +44,59 @@ class NeonovaProgressView extends BaseNeonovaView {
             </button>
         `;
 
-        // Give the progress view a container so updateProgress etc. still work
         this.container = modal;
 
-        // Render the inner content (in case you ever override render())
-        this.render();
+        // Trigger entrance
+        requestAnimationFrame(() => {
+            overlay.style.opacity = '1';
+            modal.style.transform = 'translateX(0)';
+            modal.style.opacity = '1';
+        });
 
-        // Close handlers
-        const close = () => overlay.remove();
-        this._close = close;
+        this._close = () => {
+            overlay.style.opacity = '0';
+            modal.style.transform = 'translateX(-60px)';
+            modal.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 500);
+        };
 
-        modal.querySelector('#cancel-btn').addEventListener('click', close);
-        overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+        modal.querySelector('#cancel-btn').addEventListener('click', this._close);
+        overlay.addEventListener('click', e => { if (e.target === overlay) this._close(); });
     }
 
-    render() {
-        // Optional – you can put anything here if you ever want to re-render the whole thing
-        // For now we leave it empty because we already built the HTML in showModal()
-    }
-
-    updateProgress(totalEntries, currentPage, message = 'Fetching...') {
+    /**
+     * New signature matches the updated callback from paginateReportLogs:
+     * onProgress(totalRows, currentEntries, currentPage)
+     */
+    updateProgress(totalRows, currentEntries, currentPage) {
         const bar = this.container.querySelector('#progress-bar');
         const status = this.container.querySelector('#status');
 
-        // Rough percentage: assume ~50 per page until we know more
-        const estimatedPercent = Math.min(99, Math.round(currentPage * 2));  // cap at 99% until done
-        // Or use totalEntries if you have a rough max (optional)
-        // const estimatedPercent = Math.min(99, Math.round(totalEntries / 5000 * 100));  // e.g. if 5000 entries is typical max
+        let percent = 0;
+        let statusText = 'Starting fetch...';
 
-        if (bar) bar.style.width = estimatedPercent + '%';
-        if (status) {
-            status.textContent = `${message} (${totalEntries} entries, page ${currentPage})`;
+        if (totalRows && totalRows > 0) {
+            percent = Math.min(99, Math.round((currentEntries / totalRows) * 100));
+            const totalPages = Math.ceil(totalRows / 100);
+
+            statusText = `Page ${currentPage} of ${totalPages} — ` +
+                        `${currentEntries.toLocaleString()} / ${totalRows.toLocaleString()} entries ` +
+                        `(${percent}%)`;
+        } else {
+            // fallback (should never happen now)
+            percent = Math.min(99, currentPage * 2);
+            statusText = `Fetching page ${currentPage}...`;
         }
+
+        if (bar) bar.style.width = percent + '%';
+        if (status) status.textContent = statusText;
     }
 
     finish(data) {
+        console.log('Progress finish() received data:', data);
+        console.log('data.metrics keys:', Object.keys(data.metrics || {}));
+        console.log('uptimeComponent exists?', 'uptimeComponent' in (data.metrics || {}));
+        console.log('uptimeComponent value:', data.metrics?.uptimeComponent);
         this._close && this._close();
 
         const reportView = new NeonovaReportView(

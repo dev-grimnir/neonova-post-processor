@@ -55,7 +55,8 @@ class NeonovaDashboardView extends BaseNeonovaView{
                 background: #09090b; border: 1px solid #27272a;
                 border-radius: 24px; box-shadow: 0 8px 40px rgba(0,0,0,0.8);
                 padding: 0; font-family: system-ui; z-index: 9999; display: none;
-                overflow: hidden;  /* important for internal scrolling */
+                overflow: hidden;  
+                transition: transform 500ms cubic-bezier(0.32, 0.72, 0, 1);
         `;
         document.body.appendChild(this.panel);
 
@@ -382,7 +383,6 @@ class NeonovaDashboardView extends BaseNeonovaView{
     }
 
     openReportModal(username, friendlyName) {
-        console.log('openReportModal started for', username);
 
         // Dark overlay
         const overlay = document.createElement('div');
@@ -442,13 +442,9 @@ class NeonovaDashboardView extends BaseNeonovaView{
         const closeModal = () => overlay.remove();
         modal.querySelector('#report-close-btn').addEventListener('click', closeModal);
         overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
-
-        console.log('openReportModal finished');
     }
 
     toggleMinimize() {
-        console.log('toggleMinimize called - was minimized:', this.isMinimized);
-        
         const dash = this.panel;
         const bar = this.minimizeBar;
         this.isMinimized = !this.isMinimized;
