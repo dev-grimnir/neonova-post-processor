@@ -12,40 +12,50 @@ class NeonovaReportView extends BaseNeonovaView {
         console.log('metrics.uptimeComponent:', metrics?.uptimeComponent);
     }
 
-    generateLongDisconnectsHTML() {
-        if (this.longDisconnects.length === 0) return '';
+        generateLongDisconnectsHTML() {
+            if (this.longDisconnects.length === 0) return '';
+        
+            let html = `
+                <table class="w-full border-collapse">
+                    <thead>
+                        <tr class="bg-zinc-800 border-b border-zinc-700">
+                            <th class="p-6 text-left text-zinc-400 font-medium">Disconnected At</th>
+                            <th class="p-6 text-left text-zinc-400 font-medium">Reconnected At</th>
+                            <th class="p-6 text-right text-zinc-400 font-medium">Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-zinc-700">`;
+        
+            this.longDisconnects.forEach(ld => {
+                const durationStr = formatDuration(ld.durationSec);
+                html += `
+                    <tr class="hover:bg-zinc-800/70 transition-colors">
+                        <td class="p-6 text-zinc-200">${ld.stopDate.toLocaleString()}</td>
+                        <td class="p-6 text-zinc-200">${ld.startDate.toLocaleString()}</td>
+                        <td class="p-6 text-right font-semibold text-${this.accent}-400">${durationStr}</td>
+                    </tr>`;
+            });
+        
+            html += `</tbody></table>`;
+            return html;
+        }
 
-        let html = `
-            <table class="w-full border-collapse">
-                <thead>
-                    <!-- Title row (part of the table) -->
-                    <tr class="bg-zinc-800">
-                        <th colspan="3" class="p-6 text-${this.accent}-400 font-medium text-left border-b border-zinc-700">
-                            Long Disconnects (>30 minutes): ${this.longDisconnects.length}
-                        </th>
-                    </tr>
-                    <!-- Column headers -->
-                    <tr class="bg-zinc-800 border-b border-zinc-700">
-                        <th class="p-6 text-left text-zinc-400 font-medium">Disconnected At</th>
-                        <th class="p-6 text-left text-zinc-400 font-medium">Reconnected At</th>
-                        <th class="p-6 text-right text-zinc-400 font-medium">Duration</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-zinc-700">`;
-
-        this.longDisconnects.forEach(ld => {
-            const durationStr = formatDuration(ld.durationSec);
-            html += `
-                <tr class="hover:bg-zinc-800/70 transition-colors">
-                    <td class="p-6 text-zinc-200">${ld.stopDate.toLocaleString()}</td>
-                    <td class="p-6 text-zinc-200">${ld.startDate.toLocaleString()}</td>
-                    <td class="p-6 text-right font-semibold text-${this.accent}-400">${durationStr}</td>
-                </tr>`;
-        });
-
-        html += `</tbody></table>`;
-        return html;
+generateLongDisconnSection() {
+    if (this.longDisconnects.length === 0) {
+        return `<p class="text-zinc-400 italic text-center py-12">No disconnects longer than 30 minutes.</p>`;
     }
+
+    return `
+        <details class="group mt-16 mb-16" open>
+            <summary class="bg-zinc-800 hover:bg-zinc-700 transition-colors p-6 rounded-t-3xl cursor-pointer flex justify-between items-center text-${this.accent}-400 font-medium list-none">
+                <span>Long Disconnects (>30 minutes): ${this.longDisconnects.length}</span>
+                <span class="text-xs text-zinc-500 group-open:rotate-180 transition-transform">▼</span>
+            </summary>
+            <div class="bg-zinc-900 border border-zinc-700 border-t-0 rounded-b-3xl overflow-hidden">
+                ${this.generateLongDisconnectsHTML()}
+            </div>
+        </details>`;
+}
 
     generateLongDisconnSection() {
         if (this.longDisconnects.length === 0) {
