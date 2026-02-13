@@ -82,7 +82,7 @@ class NeonovaAnalyzer {
     }
 
     computeMetrics() {
-        console.log('=== USING NEW SCORING v3 - UPDATING STABILITY SCORES ===');
+        console.log('NeonovaAnalyzer.computeMetrics - entry');
         const sortedKeys = Object.keys(this.dailyCount).sort((a, b) => new Date(a) - new Date(b));
         const sortedDailyDisconnects = sortedKeys.map(k => this.dailyCount[k]);
 
@@ -139,11 +139,8 @@ class NeonovaAnalyzer {
         }
 
         const avgReconnectMin = this.reconnectSeconds.length ? (this.reconnectSeconds.reduce((a, b) => a + b, 0) / this.reconnectSeconds.length / 60).toFixed(1) : 'N/A';
-
         const quickReconnects = this.reconnectSeconds.filter(s => s <= 300).length;
-
         const daysSpanned = totalRangeSec / 86400;
-
         const uptimeScore = parseFloat(percentConnected) || 0;
 
         let sessionSecondsSorted = [...this.sessionSeconds].sort((a, b) => a - b);
@@ -245,6 +242,7 @@ class NeonovaAnalyzer {
         this.metrics.medianStabilityScore = Math.round(rawMedianScore);
 
         // Return metrics
+        console.log("NeonovaAnalyzer.computeMetrics() finished");
         return {
             peakHourStr,
             peakDayStr,
