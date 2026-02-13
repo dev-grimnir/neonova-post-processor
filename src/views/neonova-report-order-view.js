@@ -77,7 +77,7 @@ class NeonovaReportOrderView extends BaseNeonovaView {
                             progressView.updateProgress(totalRows, currentEntries, currentPage);
                         }
                     ).then(data => {
-                        console.log("NeonovaReportOrderView.showModal -> calling this.progressView.finish")
+                        console.log("NeonovaReportOrderView.showModal -> calling this.progressView.finish");
                         progressView.finish(data);
                     }).catch(err => {
                         progressView.showError(err.message);
