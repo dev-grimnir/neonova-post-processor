@@ -156,7 +156,7 @@ class NeonovaAnalyzer {
             if (reconn.sec < 30) dailyData[dayKey].fast++;
             if (reconn.sec <= 300) dailyData[dayKey].quick++;
         });
-
+        /*
         let totalFastBonus = 0;
         let totalFlappingPenalty = 0;
         Object.values(dailyData).forEach(daily => {
@@ -172,6 +172,7 @@ class NeonovaAnalyzer {
         const scaleFactor = Math.max(1, daysSpanned / 30);
         let flappingPenalty = totalFlappingPenalty / scaleFactor;
         let longOutagePenalty = this.longDisconnects.length * 10 / scaleFactor;
+        */
 
         // ──────────────────────────────────────────────
         // NEW SCORING - Uptime dominant, penalties capped, realistic
