@@ -77,6 +77,7 @@ class NeonovaAnalyzer {
     }
 
     computeMetrics() {
+        console.log('=== USING NEW SCORING v2 - Feb12 ===');
         const sortedKeys = Object.keys(this.dailyCount).sort((a, b) => new Date(a) - new Date(b));
         const sortedDailyDisconnects = sortedKeys.map(k => this.dailyCount[k]);
 
