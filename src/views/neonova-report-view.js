@@ -1,4 +1,7 @@
 class NeonovaReportView extends BaseNeonovaView {
+        static {
+        console.log('🚨 NEONOVA-REPORT-VIEW v99 LOADED - Feb 13 2026');
+    }
     constructor(username, friendlyName, metrics, numEntries, longDisconnects) {
         super(null);
 
