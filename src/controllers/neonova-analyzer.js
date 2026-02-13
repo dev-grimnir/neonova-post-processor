@@ -18,11 +18,6 @@ class NeonovaAnalyzer {
         this.analyze();
     }
 
-    static getSessionBonus(metricMin) {
-        const metricHours = parseFloat(metricMin) / 60 || 0;
-        return 25 * Math.tanh(metricHours / 6);
-    }
-
     analyze() {
         let currentState = null;
         let lastTransitionTime = null;
@@ -82,7 +77,6 @@ class NeonovaAnalyzer {
     }
 
     computeMetrics() {
-        console.log('=== USING NEW SCORING v2 - Feb12 ===');
         const sortedKeys = Object.keys(this.dailyCount).sort((a, b) => new Date(a) - new Date(b));
         const sortedDailyDisconnects = sortedKeys.map(k => this.dailyCount[k]);
 
@@ -162,75 +156,31 @@ class NeonovaAnalyzer {
             if (reconn.sec <= 300) dailyData[dayKey].quick++;
         });
 
-        // ──────────────────────────────────────────────
-        // NEW SCORING - Uptime dominant, penalties capped, realistic
-        // ──────────────────────────────────────────────
-        
-        // Tunable constants
-        const UPTIME_WEIGHT = 0.90;           // Uptime drives ~90% of the score
-        const SESSION_BONUS_MAX = 20;         // Cap on session length reward
-        const FAST_RECOVERY_MAX = 12;         // Cap on quick reconnect reward
-        const FLAPPING_PENALTY_MAX = 22;      // Max subtract for short flaps
-        const LONG_OUTAGE_PENALTY_MAX = 28;   // Max subtract for long outages
-        const MIN_SCORE_FLOOR = 30;           // High-uptime modems can't go below this
-        
-        const days = Math.max(this.metrics.daysSpanned || 1, 1);
-        
-        // 1. Uptime base (almost 1:1)
-        const uptimePoints = parseFloat(percentConnected) * UPTIME_WEIGHT;
-        
-        // 2. Session quality bonus (using your existing tanh function)
-        const sessionBonusMeanRaw = NeonovaAnalyzer.getSessionBonus(avgSessionMin) || 0;   // or just getSessionBonus() if global
-        const sessionBonusMean = Math.min(SESSION_BONUS_MAX, sessionBonusMeanRaw * (30 / days));
-        
-        const sessionBonusMedianRaw = NeonovaAnalyzer.getSessionBonus(medianSessionMin) || 0;
-        const sessionBonusMedian = Math.min(SESSION_BONUS_MAX, sessionBonusMedianRaw * (30 / days));
-        
-        // 3. Fast recovery bonus (quick reconnects after disconnects)
-        const totalReconnects = this.reconnectSeconds.length;
-        const quickRatio = totalReconnects > 0 
-            ? this.reconnectSeconds.filter(s => s <= 300).length / totalReconnects 
-            : 0;
-        const fastBonus = Math.min(FAST_RECOVERY_MAX, quickRatio * 50);   // 60% quick → ~30 (capped at 12)
-        
-        // 4. Flapping penalty (short/frequent disconnects, normalized)
-        const shortDisconnects = this.disconnects - this.longDisconnects.length;
-        const flapsPerDay = shortDisconnects / days;
-        const flappingPenalty = -Math.min(FLAPPING_PENALTY_MAX, Math.pow(flapsPerDay + 1, 1.5) * 5);
-        
-        // 5. Long outage penalty (multi-hour outages, normalized)
-        const longOutagesPerWeek = (this.longDisconnects.length / days) * 7;
-        const longOutagePenalty = -Math.min(LONG_OUTAGE_PENALTY_MAX, longOutagesPerWeek * 12);
-        
-        // ──────────────────────────────────────────────
-        // Compute final scores
-        // ──────────────────────────────────────────────
-        
-        // Mean version (avg session length)
-        let rawMeanScore = uptimePoints + sessionBonusMean + fastBonus + flappingPenalty + longOutagePenalty;
-        if (parseFloat(percentConnected) >= 90) {
-            rawMeanScore = Math.max(MIN_SCORE_FLOOR, rawMeanScore);
-        }
-        rawMeanScore = Math.max(0, Math.min(100, rawMeanScore));
-        
-        // Median version (median session length)
-        let rawMedianScore = uptimePoints + sessionBonusMedian + fastBonus + flappingPenalty + longOutagePenalty;
-        if (parseFloat(percentConnected) >= 90) {
-            rawMedianScore = Math.max(MIN_SCORE_FLOOR, rawMedianScore);
-        }
-        rawMedianScore = Math.max(0, Math.min(100, rawMedianScore));
-        
-        // Assign to metrics
-        this.metrics.uptimeComponent = uptimePoints.toFixed(1);
-        this.metrics.sessionBonusMean = sessionBonusMean.toFixed(1);
-        this.metrics.sessionBonusMedian = sessionBonusMedian.toFixed(1);
-        this.metrics.totalFastBonus = fastBonus.toFixed(1);
-        this.metrics.flappingPenalty = Math.abs(flappingPenalty).toFixed(1);
-        this.metrics.longOutagePenalty = Math.abs(longOutagePenalty).toFixed(1);
-        this.metrics.rawMeanScore = rawMeanScore.toFixed(1);
-        this.metrics.meanStabilityScore = Math.round(rawMeanScore);
-        this.metrics.rawMedianScore = rawMedianScore.toFixed(1);
-        this.metrics.medianStabilityScore = Math.round(rawMedianScore);
+        let totalFastBonus = 0;
+        let totalFlappingPenalty = 0;
+        Object.values(dailyData).forEach(daily => {
+            const bonus = Math.min(daily.fast * 3, 18);
+            totalFastBonus += bonus;
+
+            const excessFast = Math.max(0, daily.fast - 6);
+            const nonFastQuick = daily.quick - daily.fast;
+            const dailyPenalty = (excessFast + nonFastQuick) * 5;
+            totalFlappingPenalty += dailyPenalty;
+        });
+
+        const scaleFactor = Math.max(1, daysSpanned / 30);
+        let flappingPenalty = totalFlappingPenalty / scaleFactor;
+        let longOutagePenalty = this.longDisconnects.length * 10 / scaleFactor;
+
+        const uptimeComponent = uptimeScore * 0.6;
+
+        const sessionBonusMean = getSessionBonus(avgSessionMin);
+        const rawMeanScore = uptimeComponent + sessionBonusMean + totalFastBonus - flappingPenalty - longOutagePenalty;
+        const meanStabilityScore = Math.max(0, Math.min(100, rawMeanScore)).toFixed(0);
+
+        const sessionBonusMedian = getSessionBonus(medianSessionMin);
+        const rawMedianScore = uptimeComponent + sessionBonusMedian + totalFastBonus - flappingPenalty - longOutagePenalty;
+        const medianStabilityScore = Math.max(0, Math.min(100, rawMedianScore)).toFixed(0);
 
         // Return metrics
         return {
