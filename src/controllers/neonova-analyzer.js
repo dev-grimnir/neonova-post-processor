@@ -264,6 +264,7 @@ class NeonovaAnalyzer {
             avgReconnectMin,
             quickReconnects,
             daysSpanned,
+            uptimeComponent: uptimePoints.toFixed(1),
             uptimeComponent,
             sessionBonusMean,
             sessionBonusMedian,
