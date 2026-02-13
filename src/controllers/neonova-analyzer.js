@@ -265,7 +265,6 @@ class NeonovaAnalyzer {
             quickReconnects,
             daysSpanned,
             uptimeComponent: uptimePoints.toFixed(1),
-            uptimeComponent,
             sessionBonusMean,
             sessionBonusMedian,
             totalFastBonus,
