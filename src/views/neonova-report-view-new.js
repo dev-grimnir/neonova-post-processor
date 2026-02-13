@@ -40,32 +40,21 @@ class NeonovaReportView extends BaseNeonovaView {
             return html;
         }
 
-generateLongDisconnSection() {
-    if (this.longDisconnects.length === 0) {
-        return `<p class="text-zinc-400 italic text-center py-12">No disconnects longer than 30 minutes.</p>`;
-    }
-
-    return `
-        <details class="group mt-16 mb-16" open>
-            <summary class="bg-zinc-800 hover:bg-zinc-700 transition-colors p-6 rounded-t-3xl cursor-pointer flex justify-between items-center text-${this.accent}-400 font-medium list-none">
-                <span>Long Disconnects (>30 minutes): ${this.longDisconnects.length}</span>
-                <span class="text-xs text-zinc-500 group-open:rotate-180 transition-transform">▼</span>
-            </summary>
-            <div class="bg-zinc-900 border border-zinc-700 border-t-0 rounded-b-3xl overflow-hidden">
-                ${this.generateLongDisconnectsHTML()}
-            </div>
-        </details>`;
-}
-
     generateLongDisconnSection() {
         if (this.longDisconnects.length === 0) {
             return `<p class="text-zinc-400 italic text-center py-12">No disconnects longer than 30 minutes.</p>`;
         }
 
         return `
-            <div class="mt-16 bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden">
-                ${this.generateLongDisconnectsHTML()}
-            </div>`;
+            <details class="group mt-16 mb-16" open>
+                <summary class="bg-zinc-800 hover:bg-zinc-700 transition-colors p-6 rounded-t-3xl cursor-pointer flex justify-between items-center text-${this.accent}-400 font-medium list-none">
+                    <span>Long Disconnects (>30 minutes): ${this.longDisconnects.length}</span>
+                    <span class="text-xs text-zinc-500 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <div class="bg-zinc-900 border border-zinc-700 border-t-0 rounded-b-3xl overflow-hidden">
+                    ${this.generateLongDisconnectsHTML()}
+                </div>
+            </details>`;
     }
 
     generateCsvContent() {
