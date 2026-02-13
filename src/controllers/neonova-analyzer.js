@@ -169,10 +169,6 @@ class NeonovaAnalyzer {
             totalFlappingPenalty += dailyPenalty;
         });
 
-        const scaleFactor = Math.max(1, daysSpanned / 30);
-        let flappingPenalty = totalFlappingPenalty / scaleFactor;
-        let longOutagePenalty = this.longDisconnects.length * 10 / scaleFactor;
-
         // ──────────────────────────────────────────────
         // NEW SCORING - Uptime dominant, penalties capped, realistic
         // ──────────────────────────────────────────────
