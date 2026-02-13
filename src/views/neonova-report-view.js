@@ -79,194 +79,191 @@ class NeonovaReportView extends BaseNeonovaView {
         return csv;
     }
 
-    generateReportHTML() {
-        console.log('=== REPORT VIEW v4 - Feb 13 - START ===');
-        const csvContent = this.generateCsvContent();
-        const meanStabilityScore = Number(Math.max(0, Math.min(100, this.metrics.rawMeanScore || 0)).toFixed(1));
-        const medianStabilityScore = Number(Math.max(0, Math.min(100, this.metrics.rawMedianScore || 0)).toFixed(1));
-            
-        console.log("NeonovaReportView.generateReportHTML -> rawMeanScore = " + this.metrics.rawMeanScore);
-        console.log("NeonovaReportView.generateReportHTML -> meanStabilityScore = " + meanStabilityScore);
-            
-        const longDisconnSection = this.generateLongDisconnSection();
-
-        return `
-            <!DOCTYPE html>
-            <html lang="en" class="dark">
-            <head>
-                <meta charset="UTF-8">
-                <title>RADIUS Connection Report for ${this.username}</title>
-                <script src="https://cdn.tailwindcss.com"></script>
-                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-                <style>
-                    .tooltip { position: relative; }
-                    .tooltip .tooltiptext {
-                        visibility: hidden; width: 420px; background: #27272a; color: #e5e5e5;
-                        text-align: left; border-radius: 12px; padding: 16px; position: absolute;
-                        z-index: 10; top: 100%; left: 50%; margin-left: -210px; opacity: 0;
-                        transition: all 0.2s; font-size: 13px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3);
-                    }
-                    .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
-                </style>
-            </head>
-            <body class="bg-zinc-950 text-zinc-200">
-                <div class="max-w-6xl mx-auto px-8 py-12">
-                    <h1 class="text-5xl font-bold text-white text-center tracking-tight">RADIUS Connection Report</h1>
-                    <p class="text-${this.accent}-400 text-center text-2xl mt-2 mb-3">${this.friendlyName || this.username}</p>
-                    <p class="text-center text-zinc-400 mb-16">Monitoring period: ${this.metrics.monitoringPeriod || 'N/A'} (${Number(this.metrics.daysSpanned || 0).toFixed(1)} days)</p>
-
-                    <!-- Stability Scores -->
-                    <div class="grid grid-cols-2 gap-8 mb-16">
-                        <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-10 text-center tooltip">
-                            <div class="text-7xl font-bold text-${this.accent}-400">${meanStabilityScore}/100</div>
-                            <span class="tooltiptext text-left">
-                                <strong>How this score is calculated (using average session length):</strong><br><br>
-                                • Uptime component: ${Number(this.metrics.percentConnected || 0).toFixed(1)}% * 0.6 = ${Number(this.metrics.uptimeComponent || 0).toFixed(1)}<br>
-                                • Session quality bonus: ${Number(this.metrics.sessionBonusMean || 0).toFixed(1)}<br>
-                                • Fast recovery bonus: ${Number(this.metrics.totalFastBonus || 0).toFixed(1)}<br>
-                                • Flapping penalty: -${Number(this.metrics.flappingPenalty || 0).toFixed(1)}<br>
-                                • Long outage penalty: -${Number(this.metrics.longOutagePenalty || 0).toFixed(1)}<br><br>
-                                Raw score: ${Number(this.metrics.rawMeanScore || 0).toFixed(1)}<br>
-                                Displayed score: ${meanStabilityScore}/100
-                            </span>
-                            <p class="text-zinc-400 text-lg mt-4">Mean Stability Score</p>
+        generateReportHTML() {
+            console.log('=== REPORT VIEW generateReportHTML() STARTED ===');
+            console.log('this.metrics:', this.metrics);
+        
+            const csvContent = this.generateCsvContent();
+            const longDisconnSection = this.generateLongDisconnSection();
+        
+            return `
+                <!DOCTYPE html>
+                <html lang="en" class="dark">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>RADIUS Connection Report for ${this.username}</title>
+                    <script src="https://cdn.tailwindcss.com"></script>
+                    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+                    <style>
+                        .tooltip { position: relative; }
+                        .tooltip .tooltiptext {
+                            visibility: hidden; width: 420px; background: #27272a; color: #e5e5e5;
+                            text-align: left; border-radius: 12px; padding: 16px; position: absolute;
+                            z-index: 10; top: 100%; left: 50%; margin-left: -210px; opacity: 0;
+                            transition: all 0.2s; font-size: 13px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3);
+                        }
+                        .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+                    </style>
+                </head>
+                <body class="bg-zinc-950 text-zinc-200">
+                    <div class="max-w-6xl mx-auto px-8 py-12">
+                        <h1 class="text-5xl font-bold text-white text-center tracking-tight">RADIUS Connection Report</h1>
+                        <p class="text-${this.accent}-400 text-center text-2xl mt-2 mb-3">${this.friendlyName || this.username}</p>
+                        <p class="text-center text-zinc-400 mb-16">Monitoring period: ${this.metrics.monitoringPeriod || 'N/A'} (${Number(this.metrics.daysSpanned || 0).toFixed(1)} days)</p>
+        
+                        <!-- Stability Scores -->
+                        <div class="grid grid-cols-2 gap-8 mb-16">
+                            <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-10 text-center tooltip">
+                                <div class="text-7xl font-bold text-${this.accent}-400">${Math.round(this.metrics.rawMeanScore || 0)}/100</div>
+                                <span class="tooltiptext text-left">
+                                    <strong>How this score is calculated (using average session length):</strong><br><br>
+                                    • Uptime component: ${Number(this.metrics.percentConnected || 0).toFixed(1)}% × 0.9 = ${Number(this.metrics.uptimeComponent || (Number(this.metrics.percentConnected || 0) * 0.9)).toFixed(1)}<br>
+                                    • Session quality bonus: ${Number(this.metrics.sessionBonusMean || 0).toFixed(1)}<br>
+                                    • Fast recovery bonus: ${Number(this.metrics.totalFastBonus || 0).toFixed(1)}<br>
+                                    • Flapping penalty: -${Number(this.metrics.flappingPenalty || 0).toFixed(1)}<br>
+                                    • Long outage penalty: -${Number(this.metrics.longOutagePenalty || 0).toFixed(1)}<br><br>
+                                    Raw score: ${Number(this.metrics.rawMeanScore || 0).toFixed(1)}<br>
+                                    Displayed score: ${Math.round(this.metrics.rawMeanScore || 0)}/100
+                                </span>
+                                <p class="text-zinc-400 text-lg mt-4">Mean Stability Score</p>
+                            </div>
+        
+                            <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-10 text-center tooltip">
+                                <div class="text-7xl font-bold text-${this.accent}-400">${Math.round(this.metrics.rawMedianScore || 0)}/100</div>
+                                <span class="tooltiptext text-left">
+                                    <strong>How this score is calculated (using median session length):</strong><br><br>
+                                    • Uptime component: ${Number(this.metrics.percentConnected || 0).toFixed(1)}% × 0.9 = ${Number(this.metrics.uptimeComponent || (Number(this.metrics.percentConnected || 0) * 0.9)).toFixed(1)}<br>
+                                    • Session quality bonus: ${Number(this.metrics.sessionBonusMedian || 0).toFixed(1)}<br>
+                                    • Fast recovery bonus: ${Number(this.metrics.totalFastBonus || 0).toFixed(1)}<br>
+                                    • Flapping penalty: -${Number(this.metrics.flappingPenalty || 0).toFixed(1)}<br>
+                                    • Long outage penalty: -${Number(this.metrics.longOutagePenalty || 0).toFixed(1)}<br><br>
+                                    Raw score: ${Number(this.metrics.rawMedianScore || 0).toFixed(1)}<br>
+                                    Displayed score: ${Math.round(this.metrics.rawMedianScore || 0)}/100
+                                </span>
+                                <p class="text-zinc-400 text-lg mt-4">Median Stability Score</p>
+                            </div>
                         </div>
-
-                        <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-10 text-center tooltip">
-                            <div class="text-7xl font-bold text-${this.accent}-400">${medianStabilityScore}/100</div>
-                            <span class="tooltiptext text-left">
-                                <strong>How this score is calculated (using median session length):</strong><br><br>
-                                • Uptime component: ${Number(this.metrics.percentConnected || 0).toFixed(1)}% * 0.6 = ${Number(this.metrics.uptimeComponent || 0).toFixed(1)}<br>
-                                • Session quality bonus: ${Number(this.metrics.sessionBonusMedian || 0).toFixed(1)}<br>
-                                • Fast recovery bonus: ${Number(this.metrics.totalFastBonus || 0).toFixed(1)}<br>
-                                • Flapping penalty: -${Number(this.metrics.flappingPenalty || 0).toFixed(1)}<br>
-                                • Long outage penalty: -${Number(this.metrics.longOutagePenalty || 0).toFixed(1)}<br><br>
-                                Raw score: ${Number(this.metrics.rawMedianScore || 0).toFixed(1)}<br>
-                                Displayed score: ${medianStabilityScore}/100
-                            </span>
-                            <p class="text-zinc-400 text-lg mt-4">Median Stability Score</p>
+        
+                        <!-- Key Statistics -->
+                        <div class="mb-16">
+                            <h2 class="text-3xl font-semibold text-white mb-8">Key Statistics</h2>
+                            <div class="bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden">
+                                <table class="w-full">
+                                    <thead>
+                                        <tr class="border-b border-zinc-700 bg-zinc-800">
+                                            <th class="p-6 text-left text-zinc-400 font-medium">Metric</th>
+                                            <th class="p-6 text-right text-zinc-400 font-medium">Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-zinc-700 text-sm">
+                                        <tr><td class="p-6">Total Disconnects</td><td class="p-6 text-right font-mono">${this.metrics.disconnects || 0}</td></tr>
+                                        <tr><td class="p-6">Average Session Duration</td><td class="p-6 text-right">${this.metrics.avgSessionMin ? formatDuration(this.metrics.avgSessionMin * 60) : 'N/A'}</td></tr>
+                                        <tr><td class="p-6">Average Reconnect Time</td><td class="p-6 text-right">${this.metrics.avgReconnectMin ? formatDuration(this.metrics.avgReconnectMin * 60) : 'N/A'}</td></tr>
+                                        <tr><td class="p-6">Percent Connected</td><td class="p-6 text-right">${Number(this.metrics.percentConnected || 0).toFixed(1)}%</td></tr>
+                                        <tr><td class="p-6">Business Hours Disconnects</td><td class="p-6 text-right">${this.metrics.businessDisconnects || 0}</td></tr>
+                                        <tr><td class="p-6">Off-Hours Disconnects</td><td class="p-6 text-right">${this.metrics.offHoursDisconnects || 0}</td></tr>
+                                        <tr><td class="p-6">Time Since Last Disconnect</td><td class="p-6 text-right">${this.metrics.timeSinceLastStr || 'N/A'}</td></tr>
+                                        <tr><td class="p-6">Peak Disconnect Hour</td><td class="p-6 text-right">${this.metrics.peakHourStr || 'None'}</td></tr>
+                                        <tr><td class="p-6">Peak Disconnect Day</td><td class="p-6 text-right">${this.metrics.peakDayStr || 'None'}</td></tr>
+                                        <tr><td class="p-6">Longest Session</td><td class="p-6 text-right">${this.metrics.longestSessionMin ? formatDuration(this.metrics.longestSessionMin * 60) : 'N/A'}</td></tr>
+                                        <tr><td class="p-6">Shortest Session</td><td class="p-6 text-right">${this.metrics.shortestSessionMin ? formatDuration(this.metrics.shortestSessionMin * 60) : 'N/A'}</td></tr>
+                                        <tr><td class="p-6">Median Reconnect Time</td><td class="p-6 text-right">${this.metrics.medianReconnectMin ? formatDuration(this.metrics.medianReconnectMin * 60) : 'N/A'}</td></tr>
+                                        <tr><td class="p-6">95th Percentile Reconnect Time</td><td class="p-6 text-right">${this.metrics.p95ReconnectMin ? formatDuration(this.metrics.p95ReconnectMin * 60) : 'N/A'}</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+        
+                        <!-- Charts -->
+                        <div class="space-y-16">
+                            <div>
+                                <h2 class="text-3xl font-semibold text-white mb-6">Disconnects by Hour of Day</h2>
+                                <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8"><canvas id="hourlyChart" class="w-full h-96"></canvas></div>
+                            </div>
+                            <div>
+                                <h2 class="text-3xl font-semibold text-white mb-6">Disconnects by Day</h2>
+                                <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8"><canvas id="dailyChart" class="w-full h-96"></canvas></div>
+                            </div>
+                            <div>
+                                <h2 class="text-3xl font-semibold text-white mb-6">Rolling 7-Day Disconnects</h2>
+                                <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8"><canvas id="rollingChart" class="w-full h-96"></canvas></div>
+                            </div>
+                        </div>
+        
+                        <!-- Long Disconnects -->
+                        ${longDisconnSection}
+        
+                        <!-- Export Buttons -->
+                        <div class="flex justify-center gap-4 mt-20">
+                            <button onclick="exportToHTML()" class="px-10 py-4 bg-${this.accent}-600 hover:bg-${this.accent}-500 text-black font-semibold rounded-2xl transition">Export as HTML</button>
+                            <button onclick="exportToCSV()" class="px-10 py-4 bg-${this.accent}-600 hover:bg-${this.accent}-500 text-black font-semibold rounded-2xl transition">Export as CSV</button>
+                            <button onclick="exportToPDF()" class="px-10 py-4 bg-${this.accent}-600 hover:bg-${this.accent}-500 text-black font-semibold rounded-2xl transition">Export as PDF</button>
                         </div>
                     </div>
+        
+                    <script>
+                        const accentHex = '${this.theme.accentColor}';
+        
+                        new Chart(document.getElementById('hourlyChart'), {
+                            type: 'bar',
+                            data: {
+                                labels: Array.from({length: 24}, (_, i) => \`\${i}:00\`),
+                                datasets: [{ label: 'Disconnects', data: ${JSON.stringify(this.metrics.hourlyDisconnects || Array(24).fill(0))}, backgroundColor: accentHex }]
+                            },
+                            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                        });
+        
+                        new Chart(document.getElementById('dailyChart'), {
+                            type: 'bar',
+                            data: {
+                                labels: ${JSON.stringify(this.metrics.dailyLabels || [])},
+                                datasets: [{ label: 'Disconnects', data: ${JSON.stringify(this.metrics.dailyDisconnects || [])}, backgroundColor: accentHex }]
+                            },
+                            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                        });
+        
+                        new Chart(document.getElementById('rollingChart'), {
+                            type: 'line',
+                            data: {
+                                labels: ${JSON.stringify(this.metrics.rollingLabels || [])},
+                                datasets: [{ label: '7-Day Rolling Disconnects', data: ${JSON.stringify(this.metrics.rolling7Day || [])}, borderColor: accentHex, borderWidth: 3, tension: 0.3, fill: false }]
+                            },
+                            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                        });
+        
+                        const csvContent = \`${csvContent.replace(/`/g, '\\`').replace(/\n/g, '\\n')}\`;
+        
+                        function exportToHTML() {
+                            const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
+                            const a = document.createElement('a');
+                            a.href = URL.createObjectURL(blob);
+                            a.download = 'radius_report.html';
+                            a.click();
+                        }
+        
+                        function exportToCSV() {
+                            const blob = new Blob([csvContent], { type: 'text/csv' });
+                            const a = document.createElement('a');
+                            a.href = URL.createObjectURL(blob);
+                            a.download = 'radius_report.csv';
+                            a.click();
+                        }
+        
+                        async function exportToPDF() {
+                            const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+                            const canvas = await html2canvas(document.body, { scale: 2 });
+                            const imgData = canvas.toDataURL('image/png');
+                            const imgWidth = pdf.internal.pageSize.getWidth();
+                            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                            pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                            pdf.save('radius_report.pdf');
+                        }
+                    </script>
+                </body>
+                </html>
+            `;
+        }
 
-                    <!-- Key Statistics -->
-                    <div class="mb-16">
-                        <h2 class="text-3xl font-semibold text-white mb-8">Key Statistics</h2>
-                        <div class="bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden">
-                            <table class="w-full">
-                                <thead>
-                                    <tr class="border-b border-zinc-700 bg-zinc-800">
-                                        <th class="p-6 text-left text-zinc-400 font-medium">Metric</th>
-                                        <th class="p-6 text-right text-zinc-400 font-medium">Value</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-zinc-700 text-sm">
-                                    <tr><td class="p-6">Total Disconnects</td><td class="p-6 text-right font-mono">${this.metrics.disconnects || 0}</td></tr>
-                                    <tr><td class="p-6">Average Session Duration</td><td class="p-6 text-right">${this.metrics.avgSessionMin ? formatDuration(this.metrics.avgSessionMin * 60) : 'N/A'}</td></tr>
-                                    <tr><td class="p-6">Average Reconnect Time</td><td class="p-6 text-right">${this.metrics.avgReconnectMin ? formatDuration(this.metrics.avgReconnectMin * 60) : 'N/A'}</td></tr>
-                                    <tr><td class="p-6">Percent Connected</td><td class="p-6 text-right">${Number(this.metrics.percentConnected || 0).toFixed(1)}%</td></tr>
-                                    <tr><td class="p-6">Business Hours Disconnects</td><td class="p-6 text-right">${this.metrics.businessDisconnects || 0}</td></tr>
-                                    <tr><td class="p-6">Off-Hours Disconnects</td><td class="p-6 text-right">${this.metrics.offHoursDisconnects || 0}</td></tr>
-                                    <tr><td class="p-6">Time Since Last Disconnect</td><td class="p-6 text-right">${this.metrics.timeSinceLastStr || 'N/A'}</td></tr>
-                                    <tr><td class="p-6">Peak Disconnect Hour</td><td class="p-6 text-right">${this.metrics.peakHourStr || 'None'}</td></tr>
-                                    <tr><td class="p-6">Peak Disconnect Day</td><td class="p-6 text-right">${this.metrics.peakDayStr || 'None'}</td></tr>
-                                    <tr><td class="p-6">Longest Session</td><td class="p-6 text-right">${this.metrics.longestSessionMin ? formatDuration(this.metrics.longestSessionMin * 60) : 'N/A'}</td></tr>
-                                    <tr><td class="p-6">Shortest Session</td><td class="p-6 text-right">${this.metrics.shortestSessionMin ? formatDuration(this.metrics.shortestSessionMin * 60) : 'N/A'}</td></tr>
-                                    <tr><td class="p-6">Median Reconnect Time</td><td class="p-6 text-right">${this.metrics.medianReconnectMin ? formatDuration(this.metrics.medianReconnectMin * 60) : 'N/A'}</td></tr>
-                                    <tr><td class="p-6">95th Percentile Reconnect Time</td><td class="p-6 text-right">${this.metrics.p95ReconnectMin ? formatDuration(this.metrics.p95ReconnectMin * 60) : 'N/A'}</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Charts -->
-                    <div class="space-y-16">
-                        <div>
-                            <h2 class="text-3xl font-semibold text-white mb-6">Disconnects by Hour of Day</h2>
-                            <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8"><canvas id="hourlyChart" class="w-full h-96"></canvas></div>
-                        </div>
-                        <div>
-                            <h2 class="text-3xl font-semibold text-white mb-6">Disconnects by Day</h2>
-                            <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8"><canvas id="dailyChart" class="w-full h-96"></canvas></div>
-                        </div>
-                        <div>
-                            <h2 class="text-3xl font-semibold text-white mb-6">Rolling 7-Day Disconnects</h2>
-                            <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8"><canvas id="rollingChart" class="w-full h-96"></canvas></div>
-                        </div>
-                    </div>
-
-                    <!-- Long Disconnects – title is now the top row of the table -->
-                    ${longDisconnSection}
-
-                    <!-- Export Buttons -->
-                    <div class="flex justify-center gap-4 mt-20">
-                        <button onclick="exportToHTML()" class="px-10 py-4 bg-${this.accent}-600 hover:bg-${this.accent}-500 text-black font-semibold rounded-2xl transition">Export as HTML</button>
-                        <button onclick="exportToCSV()" class="px-10 py-4 bg-${this.accent}-600 hover:bg-${this.accent}-500 text-black font-semibold rounded-2xl transition">Export as CSV</button>
-                        <button onclick="exportToPDF()" class="px-10 py-4 bg-${this.accent}-600 hover:bg-${this.accent}-500 text-black font-semibold rounded-2xl transition">Export as PDF</button>
-                    </div>
-                </div>
-
-                <script>
-                    const accentHex = '${this.theme.accentColor}';
-
-                    new Chart(document.getElementById('hourlyChart'), {
-                        type: 'bar',
-                        data: {
-                            labels: Array.from({length: 24}, (_, i) => \`\${i}:00\`),
-                            datasets: [{ label: 'Disconnects', data: ${JSON.stringify(this.metrics.hourlyDisconnects || Array(24).fill(0))}, backgroundColor: accentHex }]
-                        },
-                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-                    });
-
-                    new Chart(document.getElementById('dailyChart'), {
-                        type: 'bar',
-                        data: {
-                            labels: ${JSON.stringify(this.metrics.dailyLabels || [])},
-                            datasets: [{ label: 'Disconnects', data: ${JSON.stringify(this.metrics.dailyDisconnects || [])}, backgroundColor: accentHex }]
-                        },
-                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-                    });
-
-                    new Chart(document.getElementById('rollingChart'), {
-                        type: 'line',
-                        data: {
-                            labels: ${JSON.stringify(this.metrics.rollingLabels || [])},
-                            datasets: [{ label: '7-Day Rolling Disconnects', data: ${JSON.stringify(this.metrics.rolling7Day || [])}, borderColor: accentHex, borderWidth: 3, tension: 0.3, fill: false }]
-                        },
-                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-                    });
-
-                    const csvContent = \`${csvContent.replace(/`/g, '\\`').replace(/\n/g, '\\n')}\`;
-
-                    function exportToHTML() {
-                        const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
-                        const a = document.createElement('a');
-                        a.href = URL.createObjectURL(blob);
-                        a.download = 'radius_report.html';
-                        a.click();
-                    }
-
-                    function exportToCSV() {
-                        const blob = new Blob([csvContent], { type: 'text/csv' });
-                        const a = document.createElement('a');
-                        a.href = URL.createObjectURL(blob);
-                        a.download = 'radius_report.csv';
-                        a.click();
-                    }
-
-                    async function exportToPDF() {
-                        const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-                        const canvas = await html2canvas(document.body, { scale: 2 });
-                        const imgData = canvas.toDataURL('image/png');
-                        const imgWidth = pdf.internal.pageSize.getWidth();
-                        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-                        pdf.save('radius_report.pdf');
-                    }
-                </script>
-            </body>
-            </html>
-        `;
-    }
 }
