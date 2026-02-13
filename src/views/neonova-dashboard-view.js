@@ -55,7 +55,8 @@ class NeonovaDashboardView extends BaseNeonovaView{
                 background: #09090b; border: 1px solid #27272a;
                 border-radius: 24px; box-shadow: 0 8px 40px rgba(0,0,0,0.8);
                 padding: 0; font-family: system-ui; z-index: 9999; display: none;
-                overflow: hidden;  /* important for internal scrolling */
+                overflow: hidden;  
+                transition: transform 500ms cubic-bezier(0.32, 0.72, 0, 1);
         `;
         document.body.appendChild(this.panel);
 
