@@ -77,6 +77,7 @@ class NeonovaReportView extends BaseNeonovaView {
     }
 
     generateReportHTML() {
+        console.log('=== REPORT VIEW v4 - Feb 13 - START ===');
         const csvContent = this.generateCsvContent();
         const meanStabilityScore = Number(Math.max(0, Math.min(100, this.metrics.rawMeanScore || 0)).toFixed(1));
         const medianStabilityScore = Number(Math.max(0, Math.min(100, this.metrics.rawMedianScore || 0)).toFixed(1));
