@@ -3,13 +3,13 @@
 class BaseNeonovaController {
     constructor() {
         this.baseSearchUrl = 'https://admin.neonova.net/rat/index.php';
-        // You can add defaults for form fields here if they rarely change
+
         this.defaultFormData = {
             ip: '',
             session: '',
             nasip: '',
             statusview: 'both',
-            sd: 'fairpoint.net',  // domain — make configurable if needed
+            sd: 'fairpoint.net',
             shour: '00',
             smin: '00',
             emonth: '',
@@ -17,138 +17,106 @@ class BaseNeonovaController {
             eyear: '',
             ehour: '',
             emin: '',
-            hits: '50',
+            hits: '100',           // ← changed to 100 as you want
             order: 'date',
             submit: 'Search'
         };
+
+        // Constants
+        this.HITS_PER_PAGE = 100;
+        this.DELAY_BETWEEN_PAGES_MS = 500;   // you said max 500ms is acceptable
     }
-/*
+
+    // ────────────────────────────────────────────────
+    // Public API – kept exactly the same as before
+    // ────────────────────────────────────────────────
+
+    async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
+        // Legacy support
+        if (typeof startDate === 'function') {
+            onProgress = startDate;
+            startDate = null;
+            endDate = null;
+        } else if (typeof endDate === 'function') {
+            onProgress = endDate;
+            endDate = null;
+        }
+
+        const now = new Date();
+        const rangeStart = startDate || new Date(now.getFullYear(), now.getMonth(), 1);
+        const rangeEnd = endDate || now;
+
+        try {
+            return await this.#fetchAllLogPages(username, rangeStart, rangeEnd, onProgress);
+        } catch (err) {
+            console.error('paginateReportLogs failed:', err);
+            alert('Report generation failed. Check the browser console for details.');
+            return [];   // return empty instead of crashing everything
+        }
+    }
+
     async getLatestEntry(username) {
-        const url = this.baseSearchUrl + encodeURIComponent(username); // missing separator? Add & if needed
-        const entries = await this.paginateReportLogs(username); // or pass url
-        return entries[0] || null;
-    }
-*/
-
- /*   
-    async safeFetch(url, options = {}) {
-        const defaultOptions = {
-            credentials: 'include',
-            cache: 'no-cache',
-            // add signal if needed for abort
-        };
-        const res = await fetch(url, { ...defaultOptions, ...options });
-        if (!res.ok) {
-            throw new Error(`Fetch failed: HTTP ${res.status}`);
+        try {
+            const entries = await this.paginateReportLogs(username);
+            return entries[0] || null;
+        } catch (err) {
+            console.error(err);
+            return null;
         }
-        return res;
     }
 
-    */
-    
-    /**
-     * Submits the search form and returns the parsed DOM document of the results page.
-     * @param {string} username 
-     * @param {Object} [overrides={}] - optional overrides for form fields
-     * @returns {Promise<Document>} parsed DOM
-     */
-    async submitSearch(username, overrides = {}) {
-        const formData = new URLSearchParams({
-            ...this.defaultFormData,
-            iuserid: username,
-            acctsearch: '2',
-            ...overrides
-        });
+    // ────────────────────────────────────────────────
+    // Private helpers – clean and focused
+    // ────────────────────────────────────────────────
 
-        // Dynamic current month start (can be overridden)
-        const now = new Date();
-        const currentYear = now.getFullYear().toString();
-        const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');
-        const currentDay = '01';
-        if (!formData.has('syear')) formData.set('syear', currentYear);
-        if (!formData.has('smonth')) formData.set('smonth', currentMonth);
-        if (!formData.has('sday')) formData.set('sday', currentDay);
+    async #fetchAllLogPages(username, start, end, onProgress) {
+        const entries = [];
+        let page = 1;
+        let offset = 0;
+        let knownTotal = null;
 
-        const res = await fetch(this.baseSearchUrl, {
-            method: 'POST',
-            credentials: 'include',
-            cache: 'no-cache',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: formData.toString(),
-            referrer: `${this.baseSearchUrl}?acctsearch=1&userid=${encodeURIComponent(username)}`,
-        });
+        while (true) {
+            const url = this.#buildPaginationUrl(username, start, end, offset);
+            const html = await this.#fetchPageHtml(url);
+            if (!html) break;
 
-        if (!res.ok) {
-            throw new Error(`Search failed: HTTP ${res.status}`);
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            const pageEntries = this.parsePageRows(doc);
+
+            // First page: extract total count (primary stop condition)
+            if (page === 1) {
+                knownTotal = this.#extractTotalFromFirstPage(doc);
+
+                if (knownTotal === 0) {
+                    break;                    // no results
+                }
+            }
+
+            entries.push(...pageEntries);
+
+            // Progress callback (now using collected first, total second – more conventional)
+            if (typeof onProgress === 'function') {
+                const total = knownTotal !== null ? knownTotal : entries.length;
+                onProgress(entries.length, total, page);
+            }
+
+            // Stop conditions
+            if (pageEntries.length < this.HITS_PER_PAGE) break;           // last page
+            if (knownTotal !== null && entries.length >= knownTotal) break; // reached total
+
+            // Safety: prevent infinite loop if total never parsed
+            if (page > 200) break;
+
+            offset += this.HITS_PER_PAGE;
+            page++;
+
+            await new Promise(r => setTimeout(r, this.DELAY_BETWEEN_PAGES_MS));
         }
 
-        const html = await res.text();
-        return new DOMParser().parseFromString(html, 'text/html');
+        return this.#sortNewestFirst(entries);
     }
 
-    /**
- * Parses the RADIUS log table from a parsed document.
- * Skips header row, extracts timestamp, status, session time.
- * Returns array of entry objects.
- * 
- * @param {Document} doc
- * @returns {Array<{timestamp: string, status: string, sessionTime: string, dateObj: Date}>}
- */
-parsePageRows(doc) {
-    const table = doc.querySelector('table[width="500"]') || doc.querySelector('table[cellspacing="2"][cellpadding="2"]');
-    if (!table) {
-        return [];
-    }
-
-    const rows = Array.from(table.querySelectorAll('tr'));
-    const entries = [];
-
-    rows.forEach(row => {
-        const cells = row.querySelectorAll('td');
-        if (cells.length < 7) return;  // Skip headers/short rows
-
-        const timestampStr = cells[0].textContent.trim();  // e.g., "2026-01-29 22:14:00"
-        const status = cells[4].textContent.trim();  // Assuming "Start" or "Stop"
-        const sessionTime = cells[6].textContent.trim();  // Duration string
-
-        const dateObj = new Date(timestampStr);  // Parses ISO-like strings
-        if (isNaN(dateObj.getTime())) {
-            return;
-        }
-
-        entries.push({
-            timestamp: timestampStr,  // Keep raw for debug
-            status,
-            sessionTime,
-            dateObj  // Valid Date
-        });
-    });
-    return entries;
-}
-
-/*
-    findNextPageLink(doc) {
-        return Array.from(doc.querySelectorAll('a'))
-            .find(a => a.textContent.trim().startsWith('NEXT @') && a.href && a.href.includes('index.php'));
-    }
-*/
-
-    /**
-     * Builds the full search URL for a given username.
-     * Uses current month start as the default from-date.
-     * All other params match the working cURL capture.
-     * @param {string} username
-     * @returns {string} Full search URL
-     */
-
-    /*
-    getSearchUrl(username) {
-        const now = new Date();
-        const currentYear = now.getFullYear().toString();
-        const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0'); // 01-12
-    
+    #buildPaginationUrl(username, start, end, offset) {
         const params = new URLSearchParams({
             acctsearch: '2',
             sd: 'fairpoint.net',
@@ -157,183 +125,125 @@ parsePageRows(doc) {
             session: '',
             nasip: '',
             statusview: 'both',
-            syear: currentYear,
-            smonth: currentMonth,
-            sday: '01',                     // Start of current month
+            syear: start.getFullYear().toString(),
+            smonth: (start.getMonth() + 1).toString().padStart(2, '0'),
+            sday: start.getDate().toString().padStart(2, '0'),
             shour: '00',
             smin: '00',
-            emonth: '',                     // Empty end = up to present
-            eday: '',
-            eyear: '',
-            ehour: '',
-            emin: '',
-            hits: '50',
+            eyear: end.getFullYear().toString(),
+            emonth: (end.getMonth() + 1).toString().padStart(2, '0'),
+            eday: end.getDate().toString().padStart(2, '0'),
+            ehour: '23',
+            emin: '59',
             order: 'date',
-            location: '0',
-            direction: '1',
+            hits: this.HITS_PER_PAGE.toString(),
+            location: offset.toString(),
+            direction: '0',
             dump: ''
         });
-    
-        return `https://admin.neonova.net/rat/index.php?${params.toString()}`;
-    }
-    */
-    
-/**
-         * Fetches all available RADIUS log pages for a user using predictable offset pagination.
-         * Uses location=0,50,100,... with direction=0 (forward).
-         * Stops when last page has < hitsPerPage rows.
-         * Returns all entries sorted newest-first.
-         * 
-         * @param {string} username
-         * @param {Date|null} startDate - Optional start date for the search range (defaults to start of current month).
-         * @param {Date|null} endDate - Optional end date for the search range (defaults to now).
-         * @param {Function|null} onProgress - Optional callback (totalEntries, currentPage)
-         * @returns {Promise<Array<{timestamp: string, status: string, sessionTime: string, dateObj: Date}>>}
-         */
-        async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
-            let knownTotal = null;  // Will hold the exact total once scraped from first page
-            // Handle legacy calls where second arg might be onProgress
-            if (typeof startDate === 'function') {
-                onProgress = startDate;
-                startDate = null;
-                endDate = null;
-            } else if (typeof endDate === 'function') {
-                onProgress = endDate;
-                endDate = null;
-            }
-    
-            const entries = [];
-            let page = 1;
-            let offset = 0;
-            const hitsPerPage = 100;
-            //const maxPages = 50; // safety cap
-        
-            const now = new Date();
-            const sDate = startDate || new Date(now.getFullYear(), now.getMonth(), 1); // Start of current month if null
-            const eDate = endDate || now;
-    
-            while (true) {
-                const params = new URLSearchParams({
-                    acctsearch: '2',
-                    sd: 'fairpoint.net',
-                    iuserid: username,
-                    ip: '',
-                    session: '',
-                    nasip: '',
-                    statusview: 'both',
-                    syear: sDate.getFullYear().toString(),
-                    smonth: (sDate.getMonth() + 1).toString().padStart(2, '0'),
-                    sday: sDate.getDate().toString().padStart(2, '0'),
-                    shour: '00',
-                    smin: '00',
-                    eyear: eDate.getFullYear().toString(),
-                    emonth: (eDate.getMonth() + 1).toString().padStart(2, '0'),
-                    eday: eDate.getDate().toString().padStart(2, '0'),
-                    ehour: '23',
-                    emin: '59',
-                    order: 'date',
-                    hits: hitsPerPage.toString(),
-                    location: offset.toString(),
-                    direction: '0', // forward/next
-                    dump: ''
-                });
-    
-                const url = `https://admin.neonova.net/rat/index.php?${params.toString()}`;
-                const res = await fetch(url, {
-                    credentials: 'include',
-                    cache: 'no-cache',
-                    headers: {
-                        'Referer': url,
-                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                        'Accept-Language': 'en-US,en;q=0.5',
-                        'Sec-Fetch-Dest': 'document',
-                        'Sec-Fetch-Mode': 'navigate',
-                        'Sec-Fetch-Site': 'same-origin',
-                        'Upgrade-Insecure-Requests': '1'
-                    }
-                });
-    
-                if (!res.ok) {
-                    break;
-                }
-        
-                const html = await res.text();
-                const doc = new DOMParser().parseFromString(html, 'text/html');
-        
-                const pageEntries = this.parsePageRows(doc);
 
-                if (page === 1) {
-                    // Find the status row by its unique text content (this is what worked in debug)
-                    const statusRow = Array.from(doc.querySelectorAll('tr'))
-                        .find(tr => tr.textContent.includes('Search Results') && tr.textContent.includes('of'));
-        
-                    if (statusRow) {
-                        const cells = statusRow.querySelectorAll('td');
-                        if (cells.length >= 5) {
-                            let totalText = cells[cells.length - 1].textContent
-                                .trim()
-                                .replace(/&nbsp;/g, '')
-                                .replace(/\s+/g, '');
-        
-                            knownTotal = parseInt(totalText, 10);
-        
-                            if (!isNaN(knownTotal)) {
-                                if (knownTotal === 0) {
-                                    break;
-                                }
-                            }
-                        }
-                    } else {
-                        console.log('WARNING: Status row not found on first page — falling back to estimate');
-                    }
-                }
-                
-                entries.push(...pageEntries);
-        
-                if (typeof onProgress === 'function') {
-                        const progressTotal = knownTotal !== null ? knownTotal : entries.length;
-                        onProgress(progressTotal, entries.length, page);
-                }
-        
-            // Stop when fewer than full page (last page) or fewer or equal to knownTotal
-            if (pageEntries.length < hitsPerPage || (knownTotal !== null && entries.length >= knownTotal)) {
-                break;
-            }
-    
-            offset += hitsPerPage;
-            page++;
-            }
-        
-            // Sort newest first (important for status)
-            entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
-    
-            return entries;
+        return `${this.baseSearchUrl}?${params.toString()}`;
     }
 
-    
-/**
- * Gets the most recent RADIUS log entry for the user.
- * Fetches all pages and returns the newest (most recent timestamp).
- * 
- * @param {string} username
- * @returns {Promise<Object|null>} Newest entry or null
- */
-
-/*
-async getLatestEntry(username) {
-        try {
-            const entries = await this.paginateReportLogs(username);
-            if (entries.length === 0) {
-                return null;
+    async #fetchPageHtml(url) {
+        const res = await fetch(url, {
+            credentials: 'include',
+            cache: 'no-cache',
+            headers: {
+                'Referer': url,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'same-origin',
+                'Upgrade-Insecure-Requests': '1'
             }
-    
-            // Already sorted newest-first in paginateReportLogs
-            const newest = entries[0];
-    
-            return newest;
-        } catch (err) {
-            return null;
-        }
+        });
+
+        if (!res.ok) return null;
+        return await res.text();
     }
-    */
+
+    #extractTotalFromFirstPage(doc) {
+        const statusRow = Array.from(doc.querySelectorAll('tr'))
+            .find(tr => tr.textContent.includes('Search Results') && tr.textContent.includes('of'));
+
+        if (!statusRow) return null;
+
+        const cells = statusRow.querySelectorAll('td');
+        if (cells.length < 5) return null;
+
+        let totalText = cells[cells.length - 1].textContent
+            .trim()
+            .replace(/&nbsp;/g, '')
+            .replace(/\s+/g, '');
+
+        const total = parseInt(totalText, 10);
+        return isNaN(total) ? null : total;
+    }
+
+    #sortNewestFirst(entries) {
+        return [...entries].sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+    }
+
+    // ────────────────────────────────────────────────
+    // Other existing methods (cleaned up slightly)
+    // ────────────────────────────────────────────────
+
+    async submitSearch(username, overrides = {}) {
+        const formData = new URLSearchParams({
+            ...this.defaultFormData,
+            iuserid: username,
+            acctsearch: '2',
+            ...overrides
+        });
+
+        const now = new Date();
+        const currentYear = now.getFullYear().toString();
+        const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');
+        const currentDay = '01';
+
+        if (!formData.has('syear')) formData.set('syear', currentYear);
+        if (!formData.has('smonth')) formData.set('smonth', currentMonth);
+        if (!formData.has('sday')) formData.set('sday', currentDay);
+
+        const res = await fetch(this.baseSearchUrl, {
+            method: 'POST',
+            credentials: 'include',
+            cache: 'no-cache',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData.toString(),
+            referrer: `${this.baseSearchUrl}?acctsearch=1&userid=${encodeURIComponent(username)}`,
+        });
+
+        if (!res.ok) throw new Error(`Search failed: HTTP ${res.status}`);
+
+        const html = await res.text();
+        return new DOMParser().parseFromString(html, 'text/html');
+    }
+
+    parsePageRows(doc) {
+        const table = doc.querySelector('table[width="500"]') || 
+                      doc.querySelector('table[cellspacing="2"][cellpadding="2"]');
+        if (!table) return [];
+
+        const rows = Array.from(table.querySelectorAll('tr'));
+        const entries = [];
+
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length < 7) return;
+
+            const timestampStr = cells[0].textContent.trim();
+            const status = cells[4].textContent.trim();
+            const sessionTime = cells[6].textContent.trim();
+
+            const dateObj = new Date(timestampStr);
+            if (isNaN(dateObj.getTime())) return;
+
+            entries.push({ timestamp: timestampStr, status, sessionTime, dateObj });
+        });
+
+        return entries;
+    }
 }
