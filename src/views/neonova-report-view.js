@@ -49,6 +49,20 @@ class NeonovaReportView extends BaseNeonovaView {
         return html;
     }
 
+        /**
+         * Opens the generated report in a new browser tab.
+         */
+        openInNewTab() {
+            const reportHTML = this.generateReportHTML();
+            const newTab = window.open('', '_blank');
+            if (newTab) {
+                newTab.document.write(reportHTML);
+                newTab.document.close();
+            } else {
+                alert('Popup blocked. Please allow popups for this site to view the report.');
+            }
+        }
+
     /**
      * Generates the long disconnects section (table or "none" message).
      */
