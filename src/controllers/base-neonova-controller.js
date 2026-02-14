@@ -22,13 +22,13 @@ class BaseNeonovaController {
             submit: 'Search'
         };
     }
-/*
+
     async getLatestEntry(username) {
         const url = this.baseSearchUrl + encodeURIComponent(username); // missing separator? Add & if needed
         const entries = await this.paginateReportLogs(username); // or pass url
         return entries[0] || null;
     }
-*/
+
 
  /*   
     async safeFetch(url, options = {}) {
