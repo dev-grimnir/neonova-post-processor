@@ -18,6 +18,164 @@ class NeonovaAnalyzer {
         this.analyze();
     }
 
+        /**
+     * Main entry point for analysis.
+     * Orchestrates the entire state-machine processing of RADIUS log entries.
+     * This method is now short and readable — it no longer contains the actual logic.
+     */
+    analyze() {
+        // Reset all data structures
+        this.disconnects = 0;
+        this.sessionSeconds = [];
+        this.reconnectSeconds = [];
+        this.reconnects = [];
+        this.longDisconnects = [];
+        this.firstDate = null;
+        this.lastDate = null;
+        this.lastDisconnectDate = null;
+        this.hourlyDisconnects = Array(24).fill(0);
+        this.dayOfWeekDisconnects = Array(7).fill(0);
+        this.hourlyCount = Array(24).fill(0);
+        this.dailyCount = {};
+        this.disconnectDates = [];
+
+        // State machine variables
+        let currentState = null;          // "up", "down", or null (before first entry)
+        let lastTransitionTime = null;    // timestamp of the most recent state change
+
+        // Process every log entry in chronological order
+        this.cleanEntries.forEach(entry => {
+            this.#processEntry(entry, currentState, lastTransitionTime);
+            
+            // Update state machine for next iteration
+            if (entry.status === "Start") {
+                currentState = "up";
+                lastTransitionTime = entry.dateObj.getTime();
+            } else if (entry.status === "Stop") {
+                currentState = "down";
+                lastTransitionTime = entry.dateObj.getTime();
+                this.lastDisconnectDate = entry.dateObj;
+            }
+        });
+
+        // Handle any open session at the very end of the log
+        this.#finalizeLastSession(currentState, lastTransitionTime);
+    }
+
+    /**
+     * Routes each log entry to the correct handler based on its status.
+     * Also updates firstDate / lastDate.
+     * 
+     * @param {Object} entry - Raw log entry from cleanedEntries
+     * @param {string|null} currentState - Current state machine state ("up", "down", or null)
+     * @param {number|null} lastTransitionTime - Timestamp of previous state change
+     */
+    #processEntry(entry, currentState, lastTransitionTime) {
+        const date = entry.dateObj;
+        const ts = date.getTime();
+
+        // Track overall time range
+        if (!this.firstDate) this.firstDate = date;
+        this.lastDate = date;
+
+        if (entry.status === "Start") {
+            this.#handleStart(entry, currentState, lastTransitionTime);
+        } 
+        else if (entry.status === "Stop") {
+            this.#handleStop(entry, currentState, lastTransitionTime);
+        }
+    }
+
+    /**
+     * Handles a "Start" event (modem came back online).
+     * If we were previously down, this marks the end of a disconnect/reconnect.
+     */
+    #handleStart(entry, currentState, lastTransitionTime) {
+        if (currentState === "down" && lastTransitionTime !== null) {
+            this.#recordReconnect(lastTransitionTime, entry.dateObj.getTime());
+        }
+    }
+
+    /**
+     * Handles a "Stop" event (modem went offline).
+     * Records the disconnect and, if we were previously up, records the completed session.
+     */
+    #handleStop(entry, currentState, lastTransitionTime) {
+        this.#recordDisconnect(entry);
+
+        if (currentState === "up" && lastTransitionTime !== null) {
+            this.#recordSessionDuration(lastTransitionTime, entry.dateObj.getTime());
+        }
+    }
+
+    /**
+     * Records a reconnect event (end of a disconnect period).
+     * Calculates duration and checks if it qualifies as a long disconnect.
+     */
+    #recordReconnect(downTime, upTime) {
+        const reconnectSec = (upTime - downTime) / 1000;
+        if (reconnectSec <= 0) return;
+
+        this.reconnectSeconds.push(reconnectSec);
+        this.reconnects.push({
+            dateObj: new Date(upTime),
+            sec: reconnectSec
+        });
+
+        if (reconnectSec > 1800) {   // 30 minutes
+            this.longDisconnects.push({
+                stopDate: new Date(downTime),
+                startDate: new Date(upTime),
+                durationSec: reconnectSec
+            });
+        }
+    }
+
+    /**
+     * Records a completed session (from Start → Stop).
+     */
+    #recordSessionDuration(startTime, stopTime) {
+        const duration = (stopTime - startTime) / 1000;
+        if (duration > 0) {
+            this.sessionSeconds.push(duration);
+        }
+    }
+
+    /**
+     * Records all statistical data when a disconnect occurs.
+     * This is the only place that updates hourly, daily, and day-of-week counters.
+     */
+    #recordDisconnect(entry) {
+        this.disconnects++;
+
+        const date = entry.dateObj;
+        const hour = date.getHours();
+
+        this.hourlyDisconnects[hour]++;
+        this.hourlyCount[hour]++;
+
+        const dayKey = date.toLocaleDateString();
+        this.dailyCount[dayKey] = (this.dailyCount[dayKey] || 0) + 1;
+
+        this.dayOfWeekDisconnects[date.getDay()]++;
+
+        this.disconnectDates.push(date);
+    }
+
+    /**
+     * Handles the final open session if the modem was "up" at the end of the log.
+     * This is very important for accurate uptime/session calculations.
+     */
+    #finalizeLastSession(currentState, lastTransitionTime) {
+        if (currentState === "up" && lastTransitionTime !== null && this.lastDate) {
+            const finalDuration = (this.lastDate.getTime() - lastTransitionTime) / 1000;
+            if (finalDuration > 0) {
+                this.sessionSeconds.push(finalDuration);
+            }
+        }
+    }
+    
+    /*
     analyze() {
         let currentState = null;
         let lastTransitionTime = null;
@@ -73,8 +231,8 @@ class NeonovaAnalyzer {
             const finalDuration = (this.lastDate.getTime() - lastTransitionTime) / 1000;
             if (finalDuration > 0) this.sessionSeconds.push(finalDuration);
         }
-
     }
+    */
 
     computeMetrics() {
         const sortedKeys = Object.keys(this.dailyCount).sort((a, b) => new Date(a) - new Date(b));
