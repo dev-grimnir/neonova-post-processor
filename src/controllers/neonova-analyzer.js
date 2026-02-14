@@ -174,66 +174,306 @@ class NeonovaAnalyzer {
             }
         }
     }
+
+        /**
+     * Computes all metrics from the raw analyzed data.
+     * This method is now the orchestrator only — short and readable.
+     * All heavy calculations have been moved to focused private methods.
+     * 
+     * The returned object shape is 100% identical to the previous version.
+     */
+    computeMetrics() {
+        // Step 1: Calculate basic peak and summary stats
+        const peakHourStr = this.#calculatePeakHourStr();
+        const peakDayStr = this.#calculatePeakDayStr();
+
+        const { businessDisconnects, offHoursDisconnects } = this.#calculateBusinessVsOffHours();
+
+        const timeSinceLastStr = this.#calculateTimeSinceLastDisconnect();
+
+        const avgDaily = this.#calculateAverageDailyDisconnects();
+
+        // Step 2: Calculate session and reconnect statistics
+        const sessionStats = this.#calculateSessionStatistics();
+        const reconnectStats = this.#calculateReconnectStatistics();
+
+        // Step 3: Calculate uptime
+        const uptimeStats = this.#calculateUptimeAndPercentConnected();
+
+        // Step 4: Compute the new stability scoring (mean + median)
+        const scoring = this.#computeStabilityScores(
+            uptimeStats.uptimeScore,
+            sessionStats.avgSessionMin,
+            sessionStats.medianSessionMin
+        );
+
+        // Step 5: Build the final return object (exactly the same shape as before)
+        return this.#buildReturnObject({
+            peakHourStr,
+            peakDayStr,
+            businessDisconnects,
+            offHoursDisconnects,
+            timeSinceLastStr,
+            avgDaily,
+            ...uptimeStats,
+            ...sessionStats,
+            ...reconnectStats,
+            ...scoring
+        });
+    }
+
+    // ────────────────────────────────────────────────
+    // Private helper methods — each does one focused job
+    // ────────────────────────────────────────────────
+
+    #calculatePeakHourStr() {
+        const peakHourCount = Math.max(...this.hourlyCount);
+        const peakHour = this.hourlyCount.indexOf(peakHourCount);
+        return peakHourCount > 0 
+            ? `${peakHour}:00-${peakHour + 1}:00 (${peakHourCount} disconnects)` 
+            : 'None';
+    }
+
+    #calculatePeakDayStr() {
+        let peakDayStr = 'None';
+        let peakDayCount = 0;
+
+        for (const [day, count] of Object.entries(this.dailyCount)) {
+            if (count > peakDayCount) {
+                peakDayCount = count;
+                peakDayStr = `${day} (${count} disconnects)`;
+            }
+        }
+        return peakDayStr;
+    }
+
+    #calculateBusinessVsOffHours() {
+        let businessDisconnects = 0;
+        let offHoursDisconnects = 0;
+
+        for (let h = 0; h < 24; h++) {
+            if (h >= 8 && h < 18) {
+                businessDisconnects += this.hourlyDisconnects[h];
+            } else {
+                offHoursDisconnects += this.hourlyDisconnects[h];
+            }
+        }
+        return { businessDisconnects, offHoursDisconnects };
+    }
+
+    #calculateTimeSinceLastDisconnect() {
+        if (!this.lastDisconnectDate) return 'N/A';
+
+        const sinceSec = (new Date() - this.lastDisconnectDate) / 1000;
+        return formatDuration(sinceSec) + ' ago';
+    }
+
+    #calculateAverageDailyDisconnects() {
+        const dailyValues = Object.values(this.dailyCount);
+        return dailyValues.length 
+            ? (dailyValues.reduce((a, b) => a + b, 0) / dailyValues.length).toFixed(1) 
+            : '0';
+    }
+
+    #calculateSessionStatistics() {
+        const numSessions = this.sessionSeconds.length;
+
+        const avgSessionMin = numSessions 
+            ? (this.sessionSeconds.reduce((a, b) => a + b, 0) / numSessions / 60).toFixed(1) 
+            : 'N/A';
+
+        const longestSessionMin = numSessions ? Math.max(...this.sessionSeconds) / 60 : 0;
+        const shortestSessionMin = numSessions 
+            ? Math.min(...this.sessionSeconds.filter(s => s > 0)) / 60 
+            : 'N/A';
+
+        // Median session
+        let medianSessionMin = 'N/A';
+        if (numSessions > 0) {
+            const sorted = [...this.sessionSeconds].sort((a, b) => a - b);
+            const mid = Math.floor(numSessions / 2);
+            const medianSec = numSessions % 2 
+                ? sorted[mid] 
+                : (sorted[mid - 1] + sorted[mid]) / 2;
+            medianSessionMin = (medianSec / 60).toFixed(1);
+        }
+
+        return {
+            numSessions,
+            avgSessionMin,
+            longestSessionMin,
+            shortestSessionMin,
+            medianSessionMin
+        };
+    }
+
+    #calculateReconnectStatistics() {
+        const reconnects = this.reconnectSeconds;
+        const count = reconnects.length;
+
+        const avgReconnectMin = count 
+            ? (reconnects.reduce((a, b) => a + b, 0) / count / 60).toFixed(1) 
+            : 'N/A';
+
+        let medianReconnectMin = 'N/A';
+        let p95ReconnectMin = 'N/A';
+
+        if (count > 0) {
+            const sorted = [...reconnects].sort((a, b) => a - b);
+
+            // Median
+            const mid = Math.floor(count / 2);
+            const medianSec = count % 2 
+                ? sorted[mid] 
+                : (sorted[mid - 1] + sorted[mid]) / 2;
+            medianReconnectMin = (medianSec / 60).toFixed(1);
+
+            // 95th percentile
+            const p95Index = Math.floor(count * 0.95);
+            const p95Sec = sorted[p95Index];
+            p95ReconnectMin = (p95Sec / 60).toFixed(1);
+        }
+
+        const quickReconnects = reconnects.filter(s => s <= 300).length;
+
+        return {
+            avgReconnectMin,
+            medianReconnectMin,
+            p95ReconnectMin,
+            quickReconnects
+        };
+    }
+
+    #calculateUptimeAndPercentConnected() {
+        const totalConnectedSec = this.sessionSeconds.reduce((a, b) => a + b, 0) || 0;
+        const totalRangeSec = this.firstDate && this.lastDate 
+            ? (this.lastDate - this.firstDate) / 1000 
+            : 1;
+
+        const totalDisconnectedSec = totalRangeSec - totalConnectedSec;
+        const percentConnected = totalRangeSec > 0 
+            ? (totalConnectedSec / totalRangeSec * 100).toFixed(1) 
+            : 'N/A';
+
+        const uptimeScore = parseFloat(percentConnected) || 0;
+
+        return {
+            totalConnectedSec,
+            totalDisconnectedSec,
+            percentConnected,
+            uptimeScore
+        };
+    }
+
+    /**
+     * Contains the entire new scoring logic (uptime dominant, capped penalties).
+     * Returns rawMeanScore, rawMedianScore, and all component values.
+     */
+    #computeStabilityScores(uptimeScore, avgSessionMin, medianSessionMin) {
+        const UPTIME_WEIGHT = 0.90;
+        const SESSION_BONUS_MAX = 20;
+        const FAST_RECOVERY_MAX = 12;
+        const FLAPPING_PENALTY_MAX = 22;
+        const LONG_OUTAGE_PENALTY_MAX = 28;
+        const MIN_SCORE_FLOOR = 30;
+
+        const days = Math.max(this.daysSpanned || 1, 1);
+
+        const uptimePoints = uptimeScore * UPTIME_WEIGHT;
+
+        const sessionBonusMean = Math.min(SESSION_BONUS_MAX, getSessionBonus(avgSessionMin) || 0);
+        const sessionBonusMedian = Math.min(SESSION_BONUS_MAX, getSessionBonus(medianSessionMin) || 0);
+
+        const totalReconnects = this.reconnectSeconds.length;
+        const quickRatio = totalReconnects > 0 
+            ? this.reconnectSeconds.filter(s => s <= 300).length / totalReconnects 
+            : 0;
+        const fastBonus = Math.min(FAST_RECOVERY_MAX, quickRatio * 50);
+
+        const shortDisconnects = this.disconnects - this.longDisconnects.length;
+        const flapsPerDay = shortDisconnects / days;
+        const flappingPenalty = -Math.min(FLAPPING_PENALTY_MAX, Math.pow(flapsPerDay + 1, 1.3) * 4);
+
+        const longOutagesPerWeek = (this.longDisconnects.length / days) * 7;
+        const longOutagePenalty = -Math.min(LONG_OUTAGE_PENALTY_MAX, longOutagesPerWeek * 8);
+
+        let rawMeanScore = uptimePoints + sessionBonusMean + fastBonus + flappingPenalty + longOutagePenalty;
+        if (uptimeScore >= 90) rawMeanScore = Math.max(MIN_SCORE_FLOOR, rawMeanScore);
+        rawMeanScore = Math.max(0, Math.min(100, rawMeanScore));
+
+        let rawMedianScore = uptimePoints + sessionBonusMedian + fastBonus + flappingPenalty + longOutagePenalty;
+        if (uptimeScore >= 90) rawMedianScore = Math.max(MIN_SCORE_FLOOR, rawMedianScore);
+        rawMedianScore = Math.max(0, Math.min(100, rawMedianScore));
+
+        return {
+            uptimeComponent: uptimePoints.toFixed(1),
+            sessionBonusMean: sessionBonusMean.toFixed(1),
+            sessionBonusMedian: sessionBonusMedian.toFixed(1),
+            totalFastBonus: fastBonus.toFixed(1),
+            flappingPenalty: Math.abs(flappingPenalty).toFixed(1),
+            longOutagePenalty: Math.abs(longOutagePenalty).toFixed(1),
+            rawMeanScore: rawMeanScore.toFixed(1),
+            meanStabilityScore: Math.round(rawMeanScore),
+            rawMedianScore: rawMedianScore.toFixed(1),
+            medianStabilityScore: Math.round(rawMedianScore)
+        };
+    }
+
+    /**
+     * Builds the final return object.
+     * This method ensures the exact same shape as the original computeMetrics().
+     */
+    #buildReturnObject(stats) {
+        const sortedKeys = Object.keys(this.dailyCount).sort((a, b) => new Date(a) - new Date(b));
+        const sortedDailyDisconnects = sortedKeys.map(k => this.dailyCount[k]);
+
+        return {
+            peakHourStr: stats.peakHourStr,
+            peakDayStr: stats.peakDayStr,
+            businessDisconnects: stats.businessDisconnects,
+            offHoursDisconnects: stats.offHoursDisconnects,
+            timeSinceLastStr: stats.timeSinceLastStr,
+            avgDaily: stats.avgDaily,
+            totalConnectedSec: stats.totalConnectedSec,
+            totalDisconnectedSec: stats.totalDisconnectedSec,
+            percentConnected: stats.percentConnected,
+            numSessions: stats.numSessions,
+            avgSessionMin: stats.avgSessionMin,
+            longestSessionMin: stats.longestSessionMin,
+            shortestSessionMin: stats.shortestSessionMin,
+            medianReconnectMin: stats.medianReconnectMin,
+            p95ReconnectMin: stats.p95ReconnectMin,
+            avgReconnectMin: stats.avgReconnectMin,
+            quickReconnects: stats.quickReconnects,
+            daysSpanned: this.daysSpanned,
+            uptimeComponent: stats.uptimeComponent,
+            sessionBonusMean: stats.sessionBonusMean,
+            sessionBonusMedian: stats.sessionBonusMedian,
+            totalFastBonus: stats.totalFastBonus,
+            flappingPenalty: stats.flappingPenalty,
+            longOutagePenalty: stats.longOutagePenalty,
+            meanStabilityScore: stats.meanStabilityScore,
+            medianStabilityScore: stats.medianStabilityScore,
+            rawMeanScore: stats.rawMeanScore,
+            rawMedianScore: stats.rawMedianScore,
+            monitoringPeriod: this.firstDate && this.lastDate 
+                ? `${this.firstDate.toLocaleString()} to ${this.lastDate.toLocaleString()}` 
+                : 'N/A',
+            sessionBins: this.computeSessionBins(),
+            reconnectBins: this.computeReconnectBins(),
+            rolling7Day: this.computeRolling7Day(),
+            rollingLabels: this.rollingLabels || [],
+            longDisconnects: this.longDisconnects,
+            disconnects: this.disconnects,
+            hourlyDisconnects: this.hourlyDisconnects,
+            cleanedEntriesLength: this.cleanEntries.length,
+            dailyDisconnects: sortedDailyDisconnects,
+            dailyLabels: sortedKeys,
+            hourlyCount: this.hourlyCount
+        };
+    }
     
     /*
-    analyze() {
-        let currentState = null;
-        let lastTransitionTime = null;
-
-        this.cleanEntries.forEach(entry => {
-            const date = entry.dateObj;
-            const ts = date.getTime();
-
-            if (!this.firstDate) this.firstDate = date;
-            this.lastDate = date;
-
-            if (entry.status === "Start") {
-                if (currentState === "down" || currentState === null) {
-                    if (currentState === "down" && lastTransitionTime !== null) {
-                        const reconnectSec = (ts - lastTransitionTime) / 1000;
-                        if (reconnectSec > 0) {
-                            this.reconnectSeconds.push(reconnectSec);
-                            this.reconnects.push({dateObj: date, sec: reconnectSec});
-                            if (reconnectSec > 1800) {
-                                this.longDisconnects.push({
-                                    stopDate: new Date(lastTransitionTime),
-                                    startDate: date,
-                                    durationSec: reconnectSec
-                                });
-                            }
-                        }
-                    }
-                    currentState = "up";
-                    lastTransitionTime = ts;
-                }
-            } else if (entry.status === "Stop") {
-                this.disconnects++;
-                const hour = date.getHours();
-                this.hourlyDisconnects[hour]++;
-                this.hourlyCount[hour]++;
-                const dayKey = date.toLocaleDateString();
-                this.dailyCount[dayKey] = (this.dailyCount[dayKey] || 0) + 1;
-                this.dayOfWeekDisconnects[date.getDay()]++;
-                if (currentState === "up" || currentState === null) {
-                    if (currentState === "up" && lastTransitionTime !== null) {
-                        const duration = (ts - lastTransitionTime) / 1000;
-                        if (duration > 0) this.sessionSeconds.push(duration);
-                    }
-                    currentState = "down";
-                    lastTransitionTime = ts;
-                    this.lastDisconnectDate = date;
-                    this.disconnectDates.push(date);
-                }
-            }
-        });
-
-        if (currentState === "up" && lastTransitionTime !== null && this.lastDate) {
-            const finalDuration = (this.lastDate.getTime() - lastTransitionTime) / 1000;
-            if (finalDuration > 0) this.sessionSeconds.push(finalDuration);
-        }
-    }
-    */
-
     computeMetrics() {
         const sortedKeys = Object.keys(this.dailyCount).sort((a, b) => new Date(a) - new Date(b));
         const sortedDailyDisconnects = sortedKeys.map(k => this.dailyCount[k]);
@@ -414,6 +654,8 @@ class NeonovaAnalyzer {
         };
     }
 
+    */
+
     computeSessionBins() {
         const bins = [0, 0, 0, 0, 0];
         this.sessionSeconds.forEach(sec => {
@@ -462,4 +704,64 @@ class NeonovaAnalyzer {
         }
         return rolling7Day;
     }
+
+        /*
+        analyze() {
+            let currentState = null;
+            let lastTransitionTime = null;
+    
+            this.cleanEntries.forEach(entry => {
+                const date = entry.dateObj;
+                const ts = date.getTime();
+    
+                if (!this.firstDate) this.firstDate = date;
+                this.lastDate = date;
+    
+                if (entry.status === "Start") {
+                    if (currentState === "down" || currentState === null) {
+                        if (currentState === "down" && lastTransitionTime !== null) {
+                            const reconnectSec = (ts - lastTransitionTime) / 1000;
+                            if (reconnectSec > 0) {
+                                this.reconnectSeconds.push(reconnectSec);
+                                this.reconnects.push({dateObj: date, sec: reconnectSec});
+                                if (reconnectSec > 1800) {
+                                    this.longDisconnects.push({
+                                        stopDate: new Date(lastTransitionTime),
+                                        startDate: date,
+                                        durationSec: reconnectSec
+                                    });
+                                }
+                            }
+                        }
+                        currentState = "up";
+                        lastTransitionTime = ts;
+                    }
+                } else if (entry.status === "Stop") {
+                    this.disconnects++;
+                    const hour = date.getHours();
+                    this.hourlyDisconnects[hour]++;
+                    this.hourlyCount[hour]++;
+                    const dayKey = date.toLocaleDateString();
+                    this.dailyCount[dayKey] = (this.dailyCount[dayKey] || 0) + 1;
+                    this.dayOfWeekDisconnects[date.getDay()]++;
+                    if (currentState === "up" || currentState === null) {
+                        if (currentState === "up" && lastTransitionTime !== null) {
+                            const duration = (ts - lastTransitionTime) / 1000;
+                            if (duration > 0) this.sessionSeconds.push(duration);
+                        }
+                        currentState = "down";
+                        lastTransitionTime = ts;
+                        this.lastDisconnectDate = date;
+                        this.disconnectDates.push(date);
+                    }
+                }
+            });
+    
+            if (currentState === "up" && lastTransitionTime !== null && this.lastDate) {
+                const finalDuration = (this.lastDate.getTime() - lastTransitionTime) / 1000;
+                if (finalDuration > 0) this.sessionSeconds.push(finalDuration);
+            }
+        }
+    */
+    
 }
