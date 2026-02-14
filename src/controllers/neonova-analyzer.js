@@ -132,6 +132,17 @@ class NeonovaAnalyzer {
     }
 
     /**
+     * Calculates the number of days spanned by the log data.
+     * This belongs here, not in the builder method.
+     */
+    #calculateDaysSpanned() {
+        if (!this.firstDate || !this.lastDate) return 0;
+
+        const totalRangeSec = (this.lastDate - this.firstDate) / 1000;
+        return totalRangeSec / 86400;   // seconds in a day
+    }
+
+    /**
      * Records a completed session (from Start → Stop).
      */
     #recordSessionDuration(startTime, stopTime) {
@@ -200,14 +211,17 @@ class NeonovaAnalyzer {
         // Step 3: Calculate uptime
         const uptimeStats = this.#calculateUptimeAndPercentConnected();
 
-        // Step 4: Compute the new stability scoring (mean + median)
+        // Step 4: Compute the new stability scoring
         const scoring = this.#computeStabilityScores(
             uptimeStats.uptimeScore,
             sessionStats.avgSessionMin,
             sessionStats.medianSessionMin
         );
 
-        // Step 5: Build the final return object (exactly the same shape as before)
+        // Step 5: Calculate daysSpanned (moved here so it's not in the builder)
+        const daysSpanned = this.#calculateDaysSpanned();
+
+        // Step 6: Build the final return object (pure assembly only)
         return this.#buildReturnObject({
             peakHourStr,
             peakDayStr,
@@ -215,6 +229,7 @@ class NeonovaAnalyzer {
             offHoursDisconnects,
             timeSinceLastStr,
             avgDaily,
+            daysSpanned,                    // ← now passed in
             ...uptimeStats,
             ...sessionStats,
             ...reconnectStats,
@@ -432,13 +447,6 @@ class NeonovaAnalyzer {
         const sortedKeys = Object.keys(this.dailyCount).sort((a, b) => new Date(a) - new Date(b));
         const sortedDailyDisconnects = sortedKeys.map(k => this.dailyCount[k]);
 
-        // Calculate daysSpanned here so it's always correct
-        let daysSpanned = 0;
-        if (this.firstDate && this.lastDate) {
-            const totalRangeSec = (this.lastDate - this.firstDate) / 1000;
-            daysSpanned = totalRangeSec / 86400;   // seconds in a day
-        }
-
         return {
             peakHourStr: stats.peakHourStr,
             peakDayStr: stats.peakDayStr,
@@ -457,7 +465,7 @@ class NeonovaAnalyzer {
             p95ReconnectMin: stats.p95ReconnectMin,
             avgReconnectMin: stats.avgReconnectMin,
             quickReconnects: stats.quickReconnects,
-            daysSpanned: daysSpanned,                    // ← Fixed
+            daysSpanned: stats.daysSpanned,                    // ← now passed in
             uptimeComponent: stats.uptimeComponent,
             sessionBonusMean: stats.sessionBonusMean,
             sessionBonusMedian: stats.sessionBonusMedian,
