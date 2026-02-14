@@ -118,10 +118,7 @@ class NeonovaProgressView extends BaseNeonovaView {
             data.metrics.longDisconnects
         );
 
-        const reportHTML = reportView.generateReportHTML('');
-        const newTab = window.open('', '_blank');
-        newTab.document.write(reportHTML);
-        newTab.document.close();
+        reportView.openInNewTab();
     }
 
     /**
