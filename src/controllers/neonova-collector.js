@@ -159,21 +159,27 @@ class NeonovaCollector {
     }
 
     /**
-     * Removes exact duplicates (same timestamp + status).
+     * Removes consecutive duplicate statuses (e.g., Start→Start→Start becomes one Start).
+     * Preserves the first occurrence in each run of identical statuses.
+     * Assumes entries are already sorted chronologically.
      */
     #deduplicateEntries(entries) {
-        const seen = new Set();
-        const cleaned = [];
+        if (entries.length <= 1) return entries;
 
-        entries.forEach(entry => {
-            const key = `${entry.date}_${entry.status}`;
-            if (!seen.has(key)) {
-                seen.add(key);
-                cleaned.push(entry);
+        const filtered = [entries[0]];  // Always keep the first entry
+
+        for (let i = 1; i < entries.length; i++) {
+            const current = entries[i];
+            const previous = filtered[filtered.length - 1];
+
+            // Only add if status differs from the previous kept entry
+            if (current.status !== previous.status) {
+                filtered.push(current);
             }
-        });
+            // If same status, ignore (collapse the run)
+        }
 
-        return cleaned;
+        return filtered;
     }
 
     /**
