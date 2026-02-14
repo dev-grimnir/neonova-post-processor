@@ -27,10 +27,6 @@ class BaseNeonovaController {
         this.DELAY_BETWEEN_PAGES_MS = 500;   // you said max 500ms is acceptable
     }
 
-    // ────────────────────────────────────────────────
-    // Public API – kept exactly the same as before
-    // ────────────────────────────────────────────────
-
     async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
         // Legacy support
         if (typeof startDate === 'function') {
