@@ -55,12 +55,30 @@ class BaseNeonovaController {
         }
     }
 
+    /**
+     * Gets the most recent RADIUS log entry for the user.
+     * Returns null if no entries or on error.
+     * 
+     * @param {string} username
+     * @returns {Promise<Object|null>} Newest entry or null
+     */
     async getLatestEntry(username) {
         try {
             const entries = await this.paginateReportLogs(username);
-            return entries[0] || null;
+            
+            if (entries.length === 0) {
+                console.log(`getLatestEntry(${username}): No entries found`);
+                return null;
+            }
+    
+            const newest = entries[0];
+            console.log(`getLatestEntry(${username}): Found latest entry at ${newest.timestamp}`);
+            return newest;
+    
         } catch (err) {
-            console.error(err);
+            console.error(`getLatestEntry(${username}) failed:`, err);
+            // Optional: show user-friendly alert only on dashboard path
+            // alert(`Failed to get status for ${username}. Check console.`);
             return null;
         }
     }
