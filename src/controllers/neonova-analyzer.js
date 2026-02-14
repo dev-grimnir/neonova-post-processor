@@ -423,9 +423,21 @@ class NeonovaAnalyzer {
      * Builds the final return object.
      * This method ensures the exact same shape as the original computeMetrics().
      */
+    /**
+     * Builds the final return object.
+     * This method ensures the exact same shape as the original computeMetrics().
+     * Fixed: daysSpanned is now properly calculated from firstDate/lastDate.
+     */
     #buildReturnObject(stats) {
         const sortedKeys = Object.keys(this.dailyCount).sort((a, b) => new Date(a) - new Date(b));
         const sortedDailyDisconnects = sortedKeys.map(k => this.dailyCount[k]);
+
+        // Calculate daysSpanned here so it's always correct
+        let daysSpanned = 0;
+        if (this.firstDate && this.lastDate) {
+            const totalRangeSec = (this.lastDate - this.firstDate) / 1000;
+            daysSpanned = totalRangeSec / 86400;   // seconds in a day
+        }
 
         return {
             peakHourStr: stats.peakHourStr,
@@ -445,7 +457,7 @@ class NeonovaAnalyzer {
             p95ReconnectMin: stats.p95ReconnectMin,
             avgReconnectMin: stats.avgReconnectMin,
             quickReconnects: stats.quickReconnects,
-            daysSpanned: this.daysSpanned,
+            daysSpanned: daysSpanned,                    // ← Fixed
             uptimeComponent: stats.uptimeComponent,
             sessionBonusMean: stats.sessionBonusMean,
             sessionBonusMedian: stats.sessionBonusMedian,
