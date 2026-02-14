@@ -16,6 +16,10 @@ class NeonovaReportView extends BaseNeonovaView {
         this.metrics = metrics;
         this.numEntries = numEntries;
         this.longDisconnects = longDisconnects;
+
+        if (autoOpen) {
+            this.openInNewTab();
+        }
     }
 
     /**
