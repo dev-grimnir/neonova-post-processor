@@ -22,13 +22,15 @@ class BaseNeonovaController {
             submit: 'Search'
         };
     }
-
+/*
     async getLatestEntry(username) {
         const url = this.baseSearchUrl + encodeURIComponent(username); // missing separator? Add & if needed
         const entries = await this.paginateReportLogs(username); // or pass url
         return entries[0] || null;
     }
-    
+*/
+
+ /*   
     async safeFetch(url, options = {}) {
         const defaultOptions = {
             credentials: 'include',
@@ -41,6 +43,8 @@ class BaseNeonovaController {
         }
         return res;
     }
+
+    */
     
     /**
      * Submits the search form and returns the parsed DOM document of the results page.
@@ -124,15 +128,12 @@ parsePageRows(doc) {
     return entries;
 }
 
-    /**
-     * Finds the next page link using the exact logic from the report builder.
-     * @param {Document} doc 
-     * @returns {HTMLAnchorElement|null}
-     */
+/*
     findNextPageLink(doc) {
         return Array.from(doc.querySelectorAll('a'))
             .find(a => a.textContent.trim().startsWith('NEXT @') && a.href && a.href.includes('index.php'));
     }
+*/
 
     /**
      * Builds the full search URL for a given username.
@@ -141,6 +142,8 @@ parsePageRows(doc) {
      * @param {string} username
      * @returns {string} Full search URL
      */
+
+    /*
     getSearchUrl(username) {
         const now = new Date();
         const currentYear = now.getFullYear().toString();
@@ -173,6 +176,7 @@ parsePageRows(doc) {
     
         return `https://admin.neonova.net/rat/index.php?${params.toString()}`;
     }
+    */
     
 /**
          * Fetches all available RADIUS log pages for a user using predictable offset pagination.
@@ -314,6 +318,8 @@ parsePageRows(doc) {
  * @param {string} username
  * @returns {Promise<Object|null>} Newest entry or null
  */
+
+/*
 async getLatestEntry(username) {
         try {
             const entries = await this.paginateReportLogs(username);
@@ -329,4 +335,5 @@ async getLatestEntry(username) {
             return null;
         }
     }
+    */
 }
