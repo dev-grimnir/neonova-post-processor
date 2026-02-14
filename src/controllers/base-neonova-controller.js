@@ -174,7 +174,7 @@ parsePageRows(doc) {
         return `https://admin.neonova.net/rat/index.php?${params.toString()}`;
     }
     
-        /**
+/**
          * Fetches all available RADIUS log pages for a user using predictable offset pagination.
          * Uses location=0,50,100,... with direction=0 (forward).
          * Stops when last page has < hitsPerPage rows.
@@ -187,6 +187,7 @@ parsePageRows(doc) {
          * @returns {Promise<Array<{timestamp: string, status: string, sessionTime: string, dateObj: Date}>>}
          */
         async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
+            let knownTotal = null;  // Will hold the exact total once scraped from first page
             // Handle legacy calls where second arg might be onProgress
             if (typeof startDate === 'function') {
                 onProgress = startDate;
@@ -200,14 +201,14 @@ parsePageRows(doc) {
             const entries = [];
             let page = 1;
             let offset = 0;
-            const hitsPerPage = 50;
-            const maxPages = 50; // safety cap
-    
+            const hitsPerPage = 100;
+            //const maxPages = 50; // safety cap
+        
             const now = new Date();
             const sDate = startDate || new Date(now.getFullYear(), now.getMonth(), 1); // Start of current month if null
             const eDate = endDate || now;
     
-            while (page <= maxPages) {
+            while (true) {
                 const params = new URLSearchParams({
                     acctsearch: '2',
                     sd: 'fairpoint.net',
@@ -251,31 +252,59 @@ parsePageRows(doc) {
                 if (!res.ok) {
                     break;
                 }
-    
+        
                 const html = await res.text();
                 const doc = new DOMParser().parseFromString(html, 'text/html');
         
                 const pageEntries = this.parsePageRows(doc);
+
+                if (page === 1) {
+                    // Find the status row by its unique text content (this is what worked in debug)
+                    const statusRow = Array.from(doc.querySelectorAll('tr'))
+                        .find(tr => tr.textContent.includes('Search Results') && tr.textContent.includes('of'));
+        
+                    if (statusRow) {
+                        const cells = statusRow.querySelectorAll('td');
+                        if (cells.length >= 5) {
+                            let totalText = cells[cells.length - 1].textContent
+                                .trim()
+                                .replace(/&nbsp;/g, '')
+                                .replace(/\s+/g, '');
+        
+                            knownTotal = parseInt(totalText, 10);
+        
+                            if (!isNaN(knownTotal)) {
+                                if (knownTotal === 0) {
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        console.log('WARNING: Status row not found on first page — falling back to estimate');
+                    }
+                }
+                
                 entries.push(...pageEntries);
         
                 if (typeof onProgress === 'function') {
-                    onProgress(entries.length, page);
+                        const progressTotal = knownTotal !== null ? knownTotal : entries.length;
+                        onProgress(progressTotal, entries.length, page);
                 }
         
-                // Stop when fewer than full page (last page)
-                if (pageEntries.length < hitsPerPage) {
-                    break;
-                }
-    
-                offset += hitsPerPage;
-                page++;
+            // Stop when fewer than full page (last page) or fewer or equal to knownTotal
+            if (pageEntries.length < hitsPerPage || (knownTotal !== null && entries.length >= knownTotal)) {
+                break;
             }
     
+            offset += hitsPerPage;
+            page++;
+            }
+        
             // Sort newest first (important for status)
             entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
-        
+    
             return entries;
-        }
+    }
 
     
 /**
