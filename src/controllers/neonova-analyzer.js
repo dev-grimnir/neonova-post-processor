@@ -473,6 +473,115 @@ class NeonovaAnalyzer {
         };
     }
     
+    computeSessionBins() {
+        const bins = [0, 0, 0, 0, 0];
+        this.sessionSeconds.forEach(sec => {
+            const min = sec / 60;
+            if (min <= 5) bins[0]++;
+            else if (min <= 30) bins[1]++;
+            else if (min <= 60) bins[2]++;
+            else if (min <= 240) bins[3]++;
+            else bins[4]++;
+        });
+        return bins;
+    }
+
+    computeReconnectBins() {
+        const bins = [0, 0, 0, 0];
+        this.reconnectSeconds.forEach(sec => {
+            const min = sec / 60;
+            if (min <= 1) bins[0]++;
+            else if (min <= 5) bins[1]++;
+            else if (min <= 30) bins[2]++;
+            else bins[3]++;
+        });
+        return bins;
+    }
+
+    computeRolling7Day() {
+        if (this.disconnectDates === undefined || this.disconnectDates === null) {
+            this.disconnectDates = [];
+        }
+    
+        this.disconnectDates.sort((a, b) => a - b);
+    
+        const rolling7Day = [];
+        this.rollingLabels = [];
+        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    
+        let currentDate = new Date(this.firstDate || Date.now());
+        currentDate.setHours(0,0,0,0);
+    
+        while (currentDate <= (this.lastDate || new Date())) {
+            const windowStart = new Date(currentDate - sevenDaysMs);
+            const count = this.disconnectDates.filter(d => d >= windowStart && d <= currentDate).length;
+            rolling7Day.push(count);
+            this.rollingLabels.push(currentDate.toLocaleDateString());
+            currentDate = new Date(currentDate.getTime() + 24*60*60*1000);
+        }
+        return rolling7Day;
+    }
+
+        /*
+        analyze() {
+            let currentState = null;
+            let lastTransitionTime = null;
+    
+            this.cleanEntries.forEach(entry => {
+                const date = entry.dateObj;
+                const ts = date.getTime();
+    
+                if (!this.firstDate) this.firstDate = date;
+                this.lastDate = date;
+    
+                if (entry.status === "Start") {
+                    if (currentState === "down" || currentState === null) {
+                        if (currentState === "down" && lastTransitionTime !== null) {
+                            const reconnectSec = (ts - lastTransitionTime) / 1000;
+                            if (reconnectSec > 0) {
+                                this.reconnectSeconds.push(reconnectSec);
+                                this.reconnects.push({dateObj: date, sec: reconnectSec});
+                                if (reconnectSec > 1800) {
+                                    this.longDisconnects.push({
+                                        stopDate: new Date(lastTransitionTime),
+                                        startDate: date,
+                                        durationSec: reconnectSec
+                                    });
+                                }
+                            }
+                        }
+                        currentState = "up";
+                        lastTransitionTime = ts;
+                    }
+                } else if (entry.status === "Stop") {
+                    this.disconnects++;
+                    const hour = date.getHours();
+                    this.hourlyDisconnects[hour]++;
+                    this.hourlyCount[hour]++;
+                    const dayKey = date.toLocaleDateString();
+                    this.dailyCount[dayKey] = (this.dailyCount[dayKey] || 0) + 1;
+                    this.dayOfWeekDisconnects[date.getDay()]++;
+                    if (currentState === "up" || currentState === null) {
+                        if (currentState === "up" && lastTransitionTime !== null) {
+                            const duration = (ts - lastTransitionTime) / 1000;
+                            if (duration > 0) this.sessionSeconds.push(duration);
+                        }
+                        currentState = "down";
+                        lastTransitionTime = ts;
+                        this.lastDisconnectDate = date;
+                        this.disconnectDates.push(date);
+                    }
+                }
+            });
+    
+            if (currentState === "up" && lastTransitionTime !== null && this.lastDate) {
+                const finalDuration = (this.lastDate.getTime() - lastTransitionTime) / 1000;
+                if (finalDuration > 0) this.sessionSeconds.push(finalDuration);
+            }
+        }
+    */
+
+    
     /*
     computeMetrics() {
         const sortedKeys = Object.keys(this.dailyCount).sort((a, b) => new Date(a) - new Date(b));
@@ -654,114 +763,6 @@ class NeonovaAnalyzer {
         };
     }
 
-    */
-
-    computeSessionBins() {
-        const bins = [0, 0, 0, 0, 0];
-        this.sessionSeconds.forEach(sec => {
-            const min = sec / 60;
-            if (min <= 5) bins[0]++;
-            else if (min <= 30) bins[1]++;
-            else if (min <= 60) bins[2]++;
-            else if (min <= 240) bins[3]++;
-            else bins[4]++;
-        });
-        return bins;
-    }
-
-    computeReconnectBins() {
-        const bins = [0, 0, 0, 0];
-        this.reconnectSeconds.forEach(sec => {
-            const min = sec / 60;
-            if (min <= 1) bins[0]++;
-            else if (min <= 5) bins[1]++;
-            else if (min <= 30) bins[2]++;
-            else bins[3]++;
-        });
-        return bins;
-    }
-
-    computeRolling7Day() {
-        if (this.disconnectDates === undefined || this.disconnectDates === null) {
-            this.disconnectDates = [];
-        }
-    
-        this.disconnectDates.sort((a, b) => a - b);
-    
-        const rolling7Day = [];
-        this.rollingLabels = [];
-        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-    
-        let currentDate = new Date(this.firstDate || Date.now());
-        currentDate.setHours(0,0,0,0);
-    
-        while (currentDate <= (this.lastDate || new Date())) {
-            const windowStart = new Date(currentDate - sevenDaysMs);
-            const count = this.disconnectDates.filter(d => d >= windowStart && d <= currentDate).length;
-            rolling7Day.push(count);
-            this.rollingLabels.push(currentDate.toLocaleDateString());
-            currentDate = new Date(currentDate.getTime() + 24*60*60*1000);
-        }
-        return rolling7Day;
-    }
-
-        /*
-        analyze() {
-            let currentState = null;
-            let lastTransitionTime = null;
-    
-            this.cleanEntries.forEach(entry => {
-                const date = entry.dateObj;
-                const ts = date.getTime();
-    
-                if (!this.firstDate) this.firstDate = date;
-                this.lastDate = date;
-    
-                if (entry.status === "Start") {
-                    if (currentState === "down" || currentState === null) {
-                        if (currentState === "down" && lastTransitionTime !== null) {
-                            const reconnectSec = (ts - lastTransitionTime) / 1000;
-                            if (reconnectSec > 0) {
-                                this.reconnectSeconds.push(reconnectSec);
-                                this.reconnects.push({dateObj: date, sec: reconnectSec});
-                                if (reconnectSec > 1800) {
-                                    this.longDisconnects.push({
-                                        stopDate: new Date(lastTransitionTime),
-                                        startDate: date,
-                                        durationSec: reconnectSec
-                                    });
-                                }
-                            }
-                        }
-                        currentState = "up";
-                        lastTransitionTime = ts;
-                    }
-                } else if (entry.status === "Stop") {
-                    this.disconnects++;
-                    const hour = date.getHours();
-                    this.hourlyDisconnects[hour]++;
-                    this.hourlyCount[hour]++;
-                    const dayKey = date.toLocaleDateString();
-                    this.dailyCount[dayKey] = (this.dailyCount[dayKey] || 0) + 1;
-                    this.dayOfWeekDisconnects[date.getDay()]++;
-                    if (currentState === "up" || currentState === null) {
-                        if (currentState === "up" && lastTransitionTime !== null) {
-                            const duration = (ts - lastTransitionTime) / 1000;
-                            if (duration > 0) this.sessionSeconds.push(duration);
-                        }
-                        currentState = "down";
-                        lastTransitionTime = ts;
-                        this.lastDisconnectDate = date;
-                        this.disconnectDates.push(date);
-                    }
-                }
-            });
-    
-            if (currentState === "up" && lastTransitionTime !== null && this.lastDate) {
-                const finalDuration = (this.lastDate.getTime() - lastTransitionTime) / 1000;
-                if (finalDuration > 0) this.sessionSeconds.push(finalDuration);
-            }
-        }
     */
     
 }
