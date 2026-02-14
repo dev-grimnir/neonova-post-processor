@@ -24,7 +24,7 @@ class BaseNeonovaController {
 
         // Constants
         this.HITS_PER_PAGE = 100;
-        this.DELAY_BETWEEN_PAGES_MS = 500;   // you said max 500ms is acceptable
+        this.DELAY_BETWEEN_PAGES_MS = 200;   // you said max 500ms is acceptable
     }
 
     async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
