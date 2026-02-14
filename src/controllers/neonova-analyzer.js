@@ -10,7 +10,7 @@ class NeonovaAnalyzer {
         this.lastDate = null;
         this.lastDisconnectDate = null;
         this.hourlyDisconnects = Array(24).fill(0);
-        this.dayOfWeekDisconnects = Array(7).fill(0); // Renamed for clarity
+        this.dayOfWeekDisconnects = Array(7).fill(0); 
         this.hourlyCount = Array(24).fill(0);
         this.dailyCount = {};
         this.disconnectDates = []; 
