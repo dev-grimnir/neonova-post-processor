@@ -1,6 +1,11 @@
 class NeonovaAnalyzer {
-    constructor(cleanedEntries) {
-        this.cleanEntries = cleanedEntries;
+    constructor(cleanedEntriesData) {
+        // Expect object from collector: { cleaned: [...], ignoredCount: number }
+        const { cleaned: cleanEntries = [], ignoredCount = 0 } = cleanedEntriesData || {};
+
+        this.cleanEntries = cleanEntries;
+        this.ignoredEntriesCount = ignoredCount;   // ← new
+
         this.disconnects = 0;
         this.sessionSeconds = [];
         this.reconnectSeconds = [];
@@ -10,10 +15,10 @@ class NeonovaAnalyzer {
         this.lastDate = null;
         this.lastDisconnectDate = null;
         this.hourlyDisconnects = Array(24).fill(0);
-        this.dayOfWeekDisconnects = Array(7).fill(0); 
+        this.dayOfWeekDisconnects = Array(7).fill(0);
         this.hourlyCount = Array(24).fill(0);
         this.dailyCount = {};
-        this.disconnectDates = []; 
+        this.disconnectDates = [];
         this.metrics = {};
         this.analyze();
     }
@@ -222,6 +227,7 @@ class NeonovaAnalyzer {
         const daysSpanned = this.#calculateDaysSpanned();
 
         // Step 6: Build the final return object (pure assembly only)
+        ignoredEntriesCount: this.ignoredEntriesCount
         return this.#buildReturnObject({
             peakHourStr,
             peakDayStr,
@@ -229,7 +235,8 @@ class NeonovaAnalyzer {
             offHoursDisconnects,
             timeSinceLastStr,
             avgDaily,
-            daysSpanned,                    // ← now passed in
+            daysSpanned,                    
+            ignoredEntriesCount: this.ignoredEntriesCount
             ...uptimeStats,
             ...sessionStats,
             ...reconnectStats,
