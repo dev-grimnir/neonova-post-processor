@@ -1,6 +1,7 @@
 class NeonovaAnalyzer {
     constructor(cleanedEntries) {
         this.cleanEntries = cleanedEntries;
+        this.ignoredEntriesCount = ignoredCount;
         this.disconnects = 0;
         this.sessionSeconds = [];
         this.reconnectSeconds = [];
@@ -490,6 +491,7 @@ class NeonovaAnalyzer {
             dailyDisconnects: sortedDailyDisconnects,
             dailyLabels: sortedKeys,
             hourlyCount: this.hourlyCount
+            ignoredEntriesCount: this.ignoredEntriesCount
         };
     }
     
