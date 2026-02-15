@@ -108,8 +108,6 @@ class NeonovaProgressView extends BaseNeonovaView {
      * Closes modal and opens the full report in a new tab.
      */
     finish(data) {
-        this._close && this._close();
-
         const reportView = new NeonovaReportView(
             data.username,
             data.friendlyName,
@@ -117,6 +115,8 @@ class NeonovaProgressView extends BaseNeonovaView {
             data.entries.length,
             data.metrics.longDisconnects
         );
+                
+        this._close && this._close();
     }
 
     /**
