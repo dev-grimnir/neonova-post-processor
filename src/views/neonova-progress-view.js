@@ -80,7 +80,7 @@ class NeonovaProgressView extends BaseNeonovaView {
      * Updates the progress bar and status text.
      * Signature matches paginateReportLogs callback: (collected, total, page)
      */
-    updateProgress(collected, total, currentPage) 
+    updateProgress(collected, total, currentPage) {
         const bar = this.container.querySelector('#progress-bar');
         const status = this.container.querySelector('#status');
 
@@ -97,7 +97,7 @@ class NeonovaProgressView extends BaseNeonovaView {
         } else {
             percent = Math.min(99, currentPage * 5);
             statusText = `Fetching page ${currentPage}...`;
-        }
+            }
 
         if (bar) bar.style.width = percent + '%';
         if (status) status.textContent = statusText;
