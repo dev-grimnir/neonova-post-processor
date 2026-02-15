@@ -1,7 +1,10 @@
 class NeonovaAnalyzer {
     constructor(cleanedEntries) {
-        this.cleanEntries = cleanedEntries;
+        const { cleaned: cleanEntries, ignoredCount = 0 } = cleanedEntriesData || { cleaned: [] };
+        this.cleanEntries = cleanEntries;
         this.ignoredEntriesCount = ignoredCount;
+        this.disconnects = 0;
+        this.sessionSeconds = [];
         this.disconnects = 0;
         this.sessionSeconds = [];
         this.reconnectSeconds = [];
