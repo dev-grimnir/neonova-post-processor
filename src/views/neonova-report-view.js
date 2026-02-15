@@ -8,8 +8,9 @@ class NeonovaReportView extends BaseNeonovaView {
      * @param {Object} metrics - Computed metrics from analyzer
      * @param {number} numEntries - Total log entries processed
      * @param {Array} longDisconnects - Long disconnect objects
+     * @param {boolean} [autoOpen=true] - Whether to automatically open in new tab (default true)
      */
-    constructor(username, friendlyName, metrics, numEntries, longDisconnects) {
+    constructor(username, friendlyName, metrics, numEntries, longDisconnects, autoOpen = true) {
         super(null);  // No container — generates standalone HTML
         this.username = username;
         this.friendlyName = friendlyName;
@@ -21,6 +22,7 @@ class NeonovaReportView extends BaseNeonovaView {
             this.openInNewTab();
         }
     }
+
 
     /**
      * Generates HTML for the long disconnects table.
