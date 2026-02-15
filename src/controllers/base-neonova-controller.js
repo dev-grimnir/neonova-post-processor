@@ -1,19 +1,9 @@
-/**
- * @file src/controllers/BaseNeonovaController.js
- * 
- * Base controller for Neonova RADIUS log operations.
- * Provides core functionality for pagination, fetching, parsing, and searching logs.
- * Extended by dashboard and report controllers.
- */
+// src/controllers/BaseNeonovaController.js
+
 class BaseNeonovaController {
-    /**
-     * Initializes the controller with base URL, default form parameters, and constants.
-     */
     constructor() {
-        // Base URL for all RADIUS admin searches
         this.baseSearchUrl = 'https://admin.neonova.net/rat/index.php';
 
-        // Default form field values used when submitting searches
         this.defaultFormData = {
             ip: '',
             session: '',
@@ -27,28 +17,18 @@ class BaseNeonovaController {
             eyear: '',
             ehour: '',
             emin: '',
-            hits: '100',           // Maximum entries per page supported by the admin interface
+            hits: '100',           // ← changed to 100 as you want
             order: 'date',
             submit: 'Search'
         };
 
-        // Pagination constants
-        this.HITS_PER_PAGE = 100;                 // Entries requested per page
-        this.DELAY_BETWEEN_PAGES_MS = 200;        // Polite delay between page requests (ms)
+        // Constants
+        this.HITS_PER_PAGE = 100;
+        this.DELAY_BETWEEN_PAGES_MS = 200;   // you said max 500ms is acceptable
     }
 
-    /**
-     * Fetches all log entries across paginated results for the given username and date range.
-     * Primary entry point for full log collection.
-     * 
-     * @param {string} username - RADIUS username to query
-     * @param {Date|null} [startDate=null] - Optional start date (defaults to current month start)
-     * @param {Date|null} [endDate=null] - Optional end date (defaults to now)
-     * @param {Function|null} [onProgress=null] - Callback: (collected, total, page)
-     * @returns {Promise<Array>} Sorted array of cleaned log entries (newest first)
-     */
     async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
-        // Backward compatibility: allow onProgress as second argument
+        // Legacy support
         if (typeof startDate === 'function') {
             onProgress = startDate;
             startDate = null;
@@ -67,7 +47,7 @@ class BaseNeonovaController {
         } catch (err) {
             console.error('paginateReportLogs failed:', err);
             alert('Report generation failed. Check the browser console for details.');
-            return [];   // Fail gracefully with empty result
+            return [];   // return empty instead of crashing everything
         }
     }
 
@@ -75,7 +55,7 @@ class BaseNeonovaController {
      * Gets the most recent RADIUS log entry for the user.
      * Returns null if no entries or on error.
      * 
-     * @param {string} username - RADIUS username
+     * @param {string} username
      * @returns {Promise<Object|null>} Newest entry or null
      */
     async getLatestEntry(username) {
@@ -93,18 +73,16 @@ class BaseNeonovaController {
     
         } catch (err) {
             console.error(`getLatestEntry(${username}) failed:`, err);
+            // Optional: show user-friendly alert only on dashboard path
+            // alert(`Failed to get status for ${username}. Check console.`);
             return null;
         }
     }
 
     // ────────────────────────────────────────────────
-    // Private helpers – internal pagination and parsing logic
+    // Private helpers – clean and focused
     // ────────────────────────────────────────────────
 
-    /**
-     * Core pagination loop: fetches all pages until completion.
-     * Handles total extraction, progress, stop conditions, and rate limiting.
-     */
     async #fetchAllLogPages(username, start, end, onProgress) {
         const entries = [];
         let page = 1;
@@ -119,43 +97,39 @@ class BaseNeonovaController {
             const doc = new DOMParser().parseFromString(html, 'text/html');
             const pageEntries = this.parsePageRows(doc);
 
-            // Extract total count from first page (primary stop condition)
+            // First page: extract total count (primary stop condition)
             if (page === 1) {
                 knownTotal = this.#extractTotalFromFirstPage(doc);
 
                 if (knownTotal === 0) {
-                    break;                    // No results at all
+                    break;                    // no results
                 }
             }
 
             entries.push(...pageEntries);
 
-            // Report progress to caller
+            // Progress callback (now using collected first, total second – more conventional)
             if (typeof onProgress === 'function') {
                 const total = knownTotal !== null ? knownTotal : entries.length;
                 onProgress(entries.length, total, page);
             }
 
-            // Primary stop conditions
-            if (pageEntries.length < this.HITS_PER_PAGE) break;           // Last page (short)
-            if (knownTotal !== null && entries.length >= knownTotal) break; // Reached known total
+            // Stop conditions
+            if (pageEntries.length < this.HITS_PER_PAGE) break;           // last page
+            if (knownTotal !== null && entries.length >= knownTotal) break; // reached total
 
-            // Safety net if total extraction failed
+            // Safety: prevent infinite loop if total never parsed
             if (page > 200) break;
 
             offset += this.HITS_PER_PAGE;
             page++;
 
-            // Be polite to the server
             await new Promise(r => setTimeout(r, this.DELAY_BETWEEN_PAGES_MS));
         }
 
         return this.#sortNewestFirst(entries);
     }
 
-    /**
-     * Builds the full URL for a specific paginated request.
-     */
     #buildPaginationUrl(username, start, end, offset) {
         const params = new URLSearchParams({
             acctsearch: '2',
@@ -185,10 +159,6 @@ class BaseNeonovaController {
         return `${this.baseSearchUrl}?${params.toString()}`;
     }
 
-    /**
-     * Fetches a single page's HTML content with appropriate headers.
-     * Returns null on failure (non-OK response).
-     */
     async #fetchPageHtml(url) {
         const res = await fetch(url, {
             credentials: 'include',
@@ -208,10 +178,6 @@ class BaseNeonovaController {
         return await res.text();
     }
 
-    /**
-     * Extracts the total result count from the first page's status row.
-     * Returns null if not found or unparseable.
-     */
     #extractTotalFromFirstPage(doc) {
         const statusRow = Array.from(doc.querySelectorAll('tr'))
             .find(tr => tr.textContent.includes('Search Results') && tr.textContent.includes('of'));
@@ -230,21 +196,14 @@ class BaseNeonovaController {
         return isNaN(total) ? null : total;
     }
 
-    /**
-     * Sorts entries newest to oldest by timestamp.
-     */
     #sortNewestFirst(entries) {
         return [...entries].sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
     }
 
     // ────────────────────────────────────────────────
-    // Additional public utilities
+    // Other existing methods (cleaned up slightly)
     // ────────────────────────────────────────────────
 
-    /**
-     * Submits a search form via POST and returns the parsed result document.
-     * Used for initial searches or alternative flows.
-     */
     async submitSearch(username, overrides = {}) {
         const formData = new URLSearchParams({
             ...this.defaultFormData,
@@ -277,10 +236,6 @@ class BaseNeonovaController {
         return new DOMParser().parseFromString(html, 'text/html');
     }
 
-    /**
-     * Parses log entries from a result page document.
-     * Extracts timestamp, status, and session time.
-     */
     parsePageRows(doc) {
         const table = doc.querySelector('table[width="500"]') || 
                       doc.querySelector('table[cellspacing="2"][cellpadding="2"]');

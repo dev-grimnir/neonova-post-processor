@@ -201,7 +201,10 @@ class NeonovaProgressView extends BaseNeonovaView {
         overlay.addEventListener('click', e => { if (e.target === overlay) this._close(); });
     }
 
-
+    /**
+     * New signature matches the updated callback from paginateReportLogs:
+     * onProgress(totalRows, currentEntries, currentPage)
+     */
     updateProgress(collected, total, currentPage) {
         const bar = this.container.querySelector('#progress-bar');
         const status = this.container.querySelector('#status');
@@ -249,4 +252,3 @@ class NeonovaProgressView extends BaseNeonovaView {
         if (status) status.textContent = 'Error: ' + message;
     }
 }
-*/

@@ -1,14 +1,5 @@
-/**
- * Base class for all Neonova views.
- * Handles common functionality like Tailwind loading, panel creation, and basic rendering.
- * Subclasses override renderContent() for their specific UI.
- */
 class BaseNeonovaView {
-    /**
-     * @param {HTMLElement|null} container - Optional existing container (used for modals); if null, creates a floating panel.
-     */
     constructor(container = null) {
-        // Theme configuration (consistent across all views)
         this.theme = {
             accent: 'emerald',
             accentColor: '#34d399',
@@ -18,18 +9,14 @@ class BaseNeonovaView {
         this.accentColor = 'emerald-500';
 
         if (container) {
-            this.container = container;        // For modal/content views that use an existing element
+            this.container = container;        // ← for report/progress views
         } else {
-            this.panel = this.createPanelContainer();  // Floating dashboard-style panel
+            this.panel = this.createPanelContainer();
         }
 
         this.ensureTailwind();
     }
 
-    /**
-     * Ensures Tailwind CSS is loaded (idempotent).
-     * Calls onTailwindReady() once loaded.
-     */
     ensureTailwind() {
         if (document.getElementById('tailwind-css')) {
             this.onTailwindReady();
@@ -42,10 +29,6 @@ class BaseNeonovaView {
         document.head.appendChild(s);
     }
 
-    /**
-     * Creates the floating panel container used by dashboard/report views.
-     * Applies consistent styling for the Neonova UI.
-     */
     createPanelContainer() {
         const panel = document.createElement('div');
         panel.style.cssText = `
@@ -59,40 +42,22 @@ class BaseNeonovaView {
         return panel;
     }
 
-    /**
-     * Callback invoked when Tailwind is ready.
-     * Subclasses typically override render() which calls renderContent().
-     */
     onTailwindReady() {
-        this.render();
+        this.render();   // subclass will override render()
     }
 
-    /**
-     * Re-renders the view by clearing the panel and calling renderContent().
-     * Safe to call multiple times.
-     */
     render() {
         if (!this.panel) return;
         this.panel.innerHTML = "";
         this.renderContent();
     }
 
-    /**
-     * Subclasses override this to build their specific content.
-     * Default shows a simple loading message.
-     */
     renderContent() {
         this.panel.innerHTML = '<div class="p-8 text-center text-zinc-400">Loading...</div>';
     }
 
-    /** Shows the panel/modal */
     show()  { this.panel.style.display = 'block'; }
-
-    /** Hides the panel/modal */
     hide()  { this.panel.style.display = 'none'; }
 
-    /**
-     * Convenience query selector scoped to the panel/container.
-     */
     $(sel)  { return this.panel.querySelector(sel); }
 }
