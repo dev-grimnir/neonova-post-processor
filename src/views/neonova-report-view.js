@@ -303,24 +303,47 @@ class NeonovaReportView extends BaseNeonovaView {
      * Generates the embedded script block with charts and export functions.
      */
     #generateReportScripts() {
+        // Pass the full data into the new tab as a global variable
+        const reportData = {
+            username: this.username,
+            friendlyName: this.friendlyName,
+            metrics: this.metrics,
+            numEntries: this.numEntries,
+            longDisconnects: this.longDisconnects,
+            ignoredEntriesCount: this.ignoredEntriesCount || 0,
+            generatedAt: new Date().toISOString()
+        };
+
         return `
             <script>
-                // Data is passed from the controller when the report is generated
-                const reportData = ${JSON.stringify(this.getReportDataForExport ? this.getReportDataForExport(this) : {})};
+                const reportData = ${JSON.stringify(reportData)};
 
+                // ────── HTML Export ──────
                 function exportToHTML() {
-                    const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
+                    const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html;charset=utf-8' });
                     const a = document.createElement('a');
                     a.href = URL.createObjectURL(blob);
-                    a.download = 'radius_report.html';
+                    a.download = \`RADIUS_Report_\${reportData.username || 'user'}_\${new Date().toISOString().slice(0,10)}.html\`;
                     a.click();
                 }
 
+                // ────── CSV Export ──────
                 function exportToCSV() {
-                    // You can move generateCsvContent logic here later
-                    alert("CSV export coming soon");
+                    let csv = 'Metric,Value\\n';
+                    csv += \`Total Disconnects,\${reportData.metrics.disconnects || 0}\\n\`;
+                    csv += \`Percent Connected,\${Number(reportData.metrics.percentConnected || 0).toFixed(1)}%\\n\`;
+                    csv += \`Mean Stability Score,\${reportData.metrics.meanStabilityScore}\\n\`;
+                    csv += \`Median Stability Score,\${reportData.metrics.medianStabilityScore}\\n\`;
+                    // Add more rows as needed...
+
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = \`RADIUS_Report_\${reportData.username || 'user'}_\${new Date().toISOString().slice(0,10)}.csv\`;
+                    a.click();
                 }
 
+                // ────── JSON Export ──────
                 function exportToJSON() {
                     const jsonContent = JSON.stringify(reportData, null, 2);
                     const blob = new Blob([jsonContent], { type: 'application/json' });
@@ -330,23 +353,48 @@ class NeonovaReportView extends BaseNeonovaView {
                     a.click();
                 }
 
+                // ────── XML Export ──────
                 function exportToXML() {
-                    const xmlContent = controller.getXmlContent ? controller.getXmlContent(reportData) : '<radiusReport/>';
-                    const blob = new Blob([xmlContent], { type: 'application/xml' });
+                    let xml = \`<?xml version="1.0" encoding="UTF-8"?>\\n<radiusReport>\\n\`;
+                    xml += \`  <metadata>\\n\`;
+                    xml += \`    <username>\${reportData.username}</username>\\n\`;
+                    xml += \`    <friendlyName>\${reportData.friendlyName}</friendlyName>\\n\`;
+                    xml += \`    <generatedAt>\${reportData.generatedAt}</generatedAt>\\n\`;
+                    xml += \`  </metadata>\\n\`;
+                    xml += \`  <summary>\\n\`;
+                    xml += \`    <totalDisconnects>\${reportData.metrics.disconnects || 0}</totalDisconnects>\\n\`;
+                    xml += \`    <percentConnected>\${Number(reportData.metrics.percentConnected || 0).toFixed(1)}</percentConnected>\\n\`;
+                    xml += \`  </summary>\\n\`;
+                    xml += \`</radiusReport>\`;
+
+                    const blob = new Blob([xml], { type: 'application/xml' });
                     const a = document.createElement('a');
                     a.href = URL.createObjectURL(blob);
                     a.download = \`RADIUS_Report_\${reportData.username || 'user'}_\${new Date().toISOString().slice(0,10)}.xml\`;
                     a.click();
                 }
 
+                // ────── PDF Export ────── (loads libraries on demand)
                 async function exportToPDF() {
+                    if (typeof jsPDF === 'undefined') {
+                        const jspdfScript = document.createElement('script');
+                        jspdfScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+                        document.head.appendChild(jspdfScript);
+
+                        const html2canvasScript = document.createElement('script');
+                        html2canvasScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+                        document.head.appendChild(html2canvasScript);
+
+                        await new Promise(r => setTimeout(r, 800)); // wait for load
+                    }
+
                     const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
                     const canvas = await html2canvas(document.body, { scale: 2 });
                     const imgData = canvas.toDataURL('image/png');
                     const imgWidth = pdf.internal.pageSize.getWidth();
                     const imgHeight = (canvas.height * imgWidth) / canvas.width;
                     pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-                    pdf.save('radius_report.pdf');
+                    pdf.save(\`RADIUS_Report_\${reportData.username || 'user'}_\${new Date().toISOString().slice(0,10)}.pdf\`);
                 }
             </script>
         `;
