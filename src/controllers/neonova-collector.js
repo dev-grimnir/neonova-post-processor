@@ -73,7 +73,7 @@ class NeonovaCollector {
 
         let normalized = this.#normalizeEntries(entries);
         normalized = this.#sortEntries(normalized);
-        const { cleaned, ignoredCount } = this.#filterConsecutiveDuplicates(normalized);
+        const { cleaned, ignoredCount } = this.##deduplicateEntries(normalized);
 
         return { cleaned, ignoredCount };
     }
