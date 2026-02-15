@@ -8,6 +8,24 @@ class NeonovaReportView extends BaseNeonovaView {
         this.longDisconnects = longDisconnects;
     }
 
+    /**
+     * Opens the generated report in a new tab using a Blob URL (clean source, no about:blank).
+     */
+    openInNewTab() {
+        const reportHTML = this.generateReportHTML();
+
+        const blob = new Blob([reportHTML], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+
+        const newTab = window.open(url, '_blank');
+        if (newTab) {
+            newTab.document.title = `RADIUS Report — ${this.friendlyName || this.username}`;
+        }
+
+        // Clean up memory
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+
     generateLongDisconnectsHTML() {
         if (this.longDisconnects.length === 0) return '';
     
