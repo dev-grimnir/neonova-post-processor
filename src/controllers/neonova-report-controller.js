@@ -7,7 +7,21 @@ class NeonovaReportController extends BaseNeonovaController {
         this.analyzer = null
     }
 
-        // Add these five methods to your report controller
+        /**
+     * Returns a clean data object that can be used for JSON, XML, CSV, etc.
+     * This is the single source of truth for all export formats.
+     */
+    getReportDataForExport(data) {
+        return {
+            username: data.username,
+            friendlyName: data.friendlyName,
+            metrics: data.metrics,
+            entriesCount: data.entries ? data.entries.length : data.numEntries || 0,
+            longDisconnects: data.longDisconnects || data.metrics.longDisconnects || [],
+            ignoredEntriesCount: data.ignoredEntriesCount || 0,
+            generatedAt: new Date().toISOString()
+        };
+    }
 
     getReportData(data) {
         return {
