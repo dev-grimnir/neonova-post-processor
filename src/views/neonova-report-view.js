@@ -204,13 +204,14 @@ class NeonovaReportView extends BaseNeonovaView {
 
     /**
      * Generates the embedded <script> block for the report page.
-     * This script is self-contained:
-     * - Embeds formatDuration
-     * - Recreates all charts on load
+     * This script is fully self-contained:
+     * - Embeds formatDuration for durations in tables and CSV
+     * - Recreates all Chart.js charts on page load using injected reportData
      * - Implements all export functions (HTML, CSV, JSON, XML, PDF)
      * - Handles multi-page PDF for long reports
+     * - Uses string concatenation to avoid nested template literal issues in userscript environments
      * 
-     * @returns {string} Full <script> tag with all functionality
+     * @returns {string} Complete <script> tag with all functionality
      */
     #generateReportScripts() {
         const reportData = {
@@ -226,7 +227,7 @@ class NeonovaReportView extends BaseNeonovaView {
             <script>
                 const reportData = ${JSON.stringify(reportData)};
 
-                // Embedded formatDuration — required for CSV and table durations
+                // Embedded formatDuration — required for table durations and CSV export
                 function formatDuration(seconds) {
                     if (seconds < 60) return seconds + 's';
                     if (seconds < 3600) return Math.floor(seconds / 60) + 'm ' + (seconds % 60) + 's';
@@ -234,14 +235,14 @@ class NeonovaReportView extends BaseNeonovaView {
                     return Math.floor(seconds / 86400) + 'd ' + Math.floor((seconds % 86400) / 3600) + 'h';
                 }
 
-                // Recreate all charts on page load
+                // Recreate all charts on page load using the injected reportData
                 window.addEventListener('load', () => {
                     const accentHex = '#34d399';
 
                     new Chart(document.getElementById('hourlyChart'), {
                         type: 'bar',
                         data: {
-                            labels: Array.from({length: 24}, (_, i) => \`\${i}:00\`),
+                            labels: Array.from({length: 24}, (_, i) => i + ':00'),
                             datasets: [{ label: 'Disconnects', data: reportData.metrics.hourlyDisconnects || Array(24).fill(0), backgroundColor: accentHex }]
                         },
                         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
@@ -266,40 +267,40 @@ class NeonovaReportView extends BaseNeonovaView {
                     });
                 });
 
-                // ────── Export Functions (self-contained) ──────
+                // ────── Export Functions (self-contained, using concatenation for filenames) ──────
 
                 function exportToHTML() {
                     const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
                     const a = document.createElement('a');
                     a.href = URL.createObjectURL(blob);
-                    a.download = \`RADIUS_Report_\${reportData.username || 'user'}_\${new Date().toISOString().slice(0,10)}.html\`;
+                    a.download = 'RADIUS_Report_' + (reportData.username || 'user') + '_' + new Date().toISOString().slice(0,10) + '.html';
                     a.click();
                 }
 
                 function exportToCSV() {
                     let csv = 'Metric,Value\\n';
-                    csv += \`Total Disconnects,\${reportData.metrics.disconnects || 0}\\n\`;
-                    csv += \`Average Session Duration,\${reportData.metrics.avgSessionMin ? formatDuration(reportData.metrics.avgSessionMin * 60) : 'N/A'}\\n\`;
-                    csv += \`Average Reconnect Time,\${reportData.metrics.avgReconnectMin ? formatDuration(reportData.metrics.avgReconnectMin * 60) : 'N/A'}\\n\`;
-                    csv += \`Percent Connected,\${Number(reportData.metrics.percentConnected || 0).toFixed(1)}%\\n\`;
-                    csv += \`Business Hours Disconnects,\${reportData.metrics.businessDisconnects || 0}\\n\`;
-                    csv += \`Off-Hours Disconnects,\${reportData.metrics.offHoursDisconnects || 0}\\n\`;
-                    csv += \`Time Since Last Disconnect,\${reportData.metrics.timeSinceLastStr || 'N/A'}\\n\`;
-                    csv += \`Peak Disconnect Hour,\${reportData.metrics.peakHourStr || 'None'}\\n\`;
-                    csv += \`Peak Disconnect Day,\${reportData.metrics.peakDayStr || 'None'}\\n\`;
-                    csv += \`Mean Stability Score,\${reportData.metrics.meanStabilityScore}\\n\`;
-                    csv += \`Median Stability Score,\${reportData.metrics.medianStabilityScore}\\n\`;
-                    csv += \`Ignored Entries,\${reportData.ignoredEntriesCount || 0}\\n\`;
+                    csv += 'Total Disconnects,' + (reportData.metrics.disconnects || 0) + '\\n';
+                    csv += 'Average Session Duration,' + (reportData.metrics.avgSessionMin ? formatDuration(reportData.metrics.avgSessionMin * 60) : 'N/A') + '\\n';
+                    csv += 'Average Reconnect Time,' + (reportData.metrics.avgReconnectMin ? formatDuration(reportData.metrics.avgReconnectMin * 60) : 'N/A') + '\\n';
+                    csv += 'Percent Connected,' + Number(reportData.metrics.percentConnected || 0).toFixed(1) + '%\\n';
+                    csv += 'Business Hours Disconnects,' + (reportData.metrics.businessDisconnects || 0) + '\\n';
+                    csv += 'Off-Hours Disconnects,' + (reportData.metrics.offHoursDisconnects || 0) + '\\n';
+                    csv += 'Time Since Last Disconnect,' + (reportData.metrics.timeSinceLastStr || 'N/A') + '\\n';
+                    csv += 'Peak Disconnect Hour,' + (reportData.metrics.peakHourStr || 'None') + '\\n';
+                    csv += 'Peak Disconnect Day,' + (reportData.metrics.peakDayStr || 'None') + '\\n';
+                    csv += 'Mean Stability Score,' + reportData.metrics.meanStabilityScore + '\\n';
+                    csv += 'Median Stability Score,' + reportData.metrics.medianStabilityScore + '\\n';
+                    csv += 'Ignored Entries,' + (reportData.ignoredEntriesCount || 0) + '\\n';
 
                     csv += '\\nLong Disconnects\\nDisconnected At,Reconnected At,Duration\\n';
                     (reportData.longDisconnects || []).forEach(ld => {
-                        csv += \`\${new Date(ld.stopDate).toLocaleString()},\${new Date(ld.startDate).toLocaleString()},\${formatDuration(ld.durationSec)}\\n\`;
+                        csv += new Date(ld.stopDate).toLocaleString() + ',' + new Date(ld.startDate).toLocaleString() + ',' + formatDuration(ld.durationSec) + '\\n';
                     });
 
                     const blob = new Blob([csv], { type: 'text/csv' });
                     const a = document.createElement('a');
                     a.href = URL.createObjectURL(blob);
-                    a.download = \`RADIUS_Report_\${reportData.username || 'user'}_\${new Date().toISOString().slice(0,10)}.csv\`;
+                    a.download = 'RADIUS_Report_' + (reportData.username || 'user') + '_' + new Date().toISOString().slice(0,10) + '.csv';
                     a.click();
                 }
 
@@ -307,41 +308,41 @@ class NeonovaReportView extends BaseNeonovaView {
                     const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
                     const a = document.createElement('a');
                     a.href = URL.createObjectURL(blob);
-                    a.download = \`RADIUS_Report_\${reportData.username || 'user'}_\${new Date().toISOString().slice(0,10)}.json\`;
+                    a.download = 'RADIUS_Report_' + (reportData.username || 'user') + '_' + new Date().toISOString().slice(0,10) + '.json';
                     a.click();
                 }
 
                 function exportToXML() {
-                    let xml = \`<?xml version="1.0" encoding="UTF-8"?>\\n<radiusReport>\\n\`;
-                    xml += \`  <metadata>\\n\`;
-                    xml += \`    <username>\${reportData.username}</username>\\n\`;
-                    xml += \`    <friendlyName>\${reportData.friendlyName || reportData.username}</friendlyName>\\n\`;
-                    xml += \`    <generatedAt>\${reportData.generatedAt}</generatedAt>\\n\`;
-                    xml += \`    <monitoringPeriod>\${reportData.metrics.monitoringPeriod || 'N/A'}</monitoringPeriod>\\n\`;
-                    xml += \`    <daysSpanned>\${Number(reportData.metrics.daysSpanned || 0).toFixed(1)}</daysSpanned>\\n\`;
-                    xml += \`    <ignoredEntries>\${reportData.ignoredEntriesCount || 0}</ignoredEntries>\\n\`;
-                    xml += \`  </metadata>\\n\`;
-                    xml += \`  <summary>\\n\`;
-                    xml += \`    <totalDisconnects>\${reportData.metrics.disconnects || 0}</totalDisconnects>\\n\`;
-                    xml += \`    <percentConnected>\${Number(reportData.metrics.percentConnected || 0).toFixed(1)}</percentConnected>\\n\`;
-                    xml += \`    <meanStabilityScore>\${reportData.metrics.meanStabilityScore}</meanStabilityScore>\\n\`;
-                    xml += \`    <medianStabilityScore>\${reportData.metrics.medianStabilityScore}</medianStabilityScore>\\n\`;
-                    xml += \`  </summary>\\n\`;
-                    xml += \`  <longDisconnects>\\n\`;
+                    let xml = '<?xml version="1.0" encoding="UTF-8"?> \\n<radiusReport>\\n';
+                    xml += '  <metadata>\\n';
+                    xml += '    <username>' + reportData.username + '</username>\\n';
+                    xml += '    <friendlyName>' + (reportData.friendlyName || reportData.username) + '</friendlyName>\\n';
+                    xml += '    <generatedAt>' + reportData.generatedAt + '</generatedAt>\\n';
+                    xml += '    <monitoringPeriod>' + (reportData.metrics.monitoringPeriod || 'N/A') + '</monitoringPeriod>\\n';
+                    xml += '    <daysSpanned>' + Number(reportData.metrics.daysSpanned || 0).toFixed(1) + '</daysSpanned>\\n';
+                    xml += '    <ignoredEntries>' + (reportData.ignoredEntriesCount || 0) + '</ignoredEntries>\\n';
+                    xml += '  </metadata>\\n';
+                    xml += '  <summary>\\n';
+                    xml += '    <totalDisconnects>' + (reportData.metrics.disconnects || 0) + '</totalDisconnects>\\n';
+                    xml += '    <percentConnected>' + Number(reportData.metrics.percentConnected || 0).toFixed(1) + '</percentConnected>\\n';
+                    xml += '    <meanStabilityScore>' + reportData.metrics.meanStabilityScore + '</meanStabilityScore>\\n';
+                    xml += '    <medianStabilityScore>' + reportData.metrics.medianStabilityScore + '</medianStabilityScore>\\n';
+                    xml += '  </summary>\\n';
+                    xml += '  <longDisconnects>\\n';
                     (reportData.longDisconnects || []).forEach(ld => {
-                        xml += \`    <disconnect>\\n\`;
-                        xml += \`      <disconnectedAt>\${new Date(ld.stopDate).toISOString()}</disconnectedAt>\\n\`;
-                        xml += \`      <reconnectedAt>\${new Date(ld.startDate).toISOString()}</reconnectedAt>\\n\`;
-                        xml += \`      <durationSeconds>\${ld.durationSec}</durationSeconds>\\n\`;
-                        xml += \`    </disconnect>\\n\`;
+                        xml += '    <disconnect>\\n';
+                        xml += '      <disconnectedAt>' + new Date(ld.stopDate).toISOString() + '</disconnectedAt>\\n';
+                        xml += '      <reconnectedAt>' + new Date(ld.startDate).toISOString() + '</reconnectedAt>\\n';
+                        xml += '      <durationSeconds>' + ld.durationSec + '</durationSeconds>\\n';
+                        xml += '    </disconnect>\\n';
                     });
-                    xml += \`  </longDisconnects>\\n\`;
-                    xml += \`</radiusReport>\`;
+                    xml += '  </longDisconnects>\\n';
+                    xml += '</radiusReport>';
 
                     const blob = new Blob([xml], { type: 'application/xml' });
                     const a = document.createElement('a');
                     a.href = URL.createObjectURL(blob);
-                    a.download = \`RADIUS_Report_\${reportData.username || 'user'}_\${new Date().toISOString().slice(0,10)}.xml\`;
+                    a.download = 'RADIUS_Report_' + (reportData.username || 'user') + '_' + new Date().toISOString().slice(0,10) + '.xml';
                     a.click();
                 }
 
@@ -365,7 +366,7 @@ class NeonovaReportView extends BaseNeonovaView {
                         heightLeft -= pageHeight;
                     }
 
-                    pdf.save(\`RADIUS_Report_\${reportData.username || 'user'}_\${new Date().toISOString().slice(0,10)}.pdf\`);
+                    pdf.save('RADIUS_Report_' + (reportData.username || 'user') + '_' + new Date().toISOString().slice(0,10) + '.pdf');
                 }
             </script>
         `;
