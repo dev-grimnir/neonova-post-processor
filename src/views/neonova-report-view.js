@@ -305,7 +305,8 @@ class NeonovaReportView extends BaseNeonovaView {
     #generateReportScripts() {
         return `
             <script>
-                const reportData = ${JSON.stringify(this.getReportDataForExport())};
+                // Data is passed from the controller when the report is generated
+                const reportData = ${JSON.stringify(this.getReportDataForExport ? this.getReportDataForExport(this) : {})};
 
                 function exportToHTML() {
                     const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
@@ -315,9 +316,28 @@ class NeonovaReportView extends BaseNeonovaView {
                     a.click();
                 }
 
-                function exportToCSV() { controller.getCsvContent(reportData); /* download logic */ }
-                function exportToJSON() { controller.getJsonContent(reportData); /* download logic */ }
-                function exportToXML()  { controller.getXmlContent(reportData);  /* download logic */ }
+                function exportToCSV() {
+                    // You can move generateCsvContent logic here later
+                    alert("CSV export coming soon");
+                }
+
+                function exportToJSON() {
+                    const jsonContent = JSON.stringify(reportData, null, 2);
+                    const blob = new Blob([jsonContent], { type: 'application/json' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = \`RADIUS_Report_\${reportData.username || 'user'}_\${new Date().toISOString().slice(0,10)}.json\`;
+                    a.click();
+                }
+
+                function exportToXML() {
+                    const xmlContent = controller.getXmlContent ? controller.getXmlContent(reportData) : '<radiusReport/>';
+                    const blob = new Blob([xmlContent], { type: 'application/xml' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = \`RADIUS_Report_\${reportData.username || 'user'}_\${new Date().toISOString().slice(0,10)}.xml\`;
+                    a.click();
+                }
 
                 async function exportToPDF() {
                     const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
