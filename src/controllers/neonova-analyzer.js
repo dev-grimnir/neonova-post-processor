@@ -347,11 +347,7 @@ class NeonovaAnalyzer {
     /**
      * Builds the final return object.
      * This method ensures the exact same shape as the original computeMetrics().
-     */
-    /**
-     * Builds the final return object.
-     * This method ensures the exact same shape as the original computeMetrics().
-     * Fixed: daysSpanned is now properly calculated from firstDate/lastDate.
+     * No spread operators — fully compatible with older JS environments.
      */
     #buildReturnObject(stats) {
         const sortedKeys = Object.keys(this.dailyCount).sort((a, b) => new Date(a) - new Date(b));
@@ -375,7 +371,7 @@ class NeonovaAnalyzer {
             p95ReconnectMin: stats.p95ReconnectMin,
             avgReconnectMin: stats.avgReconnectMin,
             quickReconnects: stats.quickReconnects,
-            daysSpanned: stats.daysSpanned,                    // ← now passed in
+            daysSpanned: stats.daysSpanned,
             uptimeComponent: stats.uptimeComponent,
             sessionBonusMean: stats.sessionBonusMean,
             sessionBonusMedian: stats.sessionBonusMedian,
@@ -399,7 +395,8 @@ class NeonovaAnalyzer {
             cleanedEntriesLength: this.cleanEntries.length,
             dailyDisconnects: sortedDailyDisconnects,
             dailyLabels: sortedKeys,
-            hourlyCount: this.hourlyCount
+            hourlyCount: this.hourlyCount,
+            ignoredEntriesCount: this.ignoredEntriesCount   // ← your new field
         };
     }
 
