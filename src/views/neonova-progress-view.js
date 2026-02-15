@@ -115,8 +115,14 @@ class NeonovaProgressView extends BaseNeonovaView {
             data.entries.length,
             data.metrics.longDisconnects
         );
+
+        // Open the report tab FIRST (in user gesture context)
         reportView.openInNewTab();
-        this._close && this._close();
+
+        // Then close the modal (short delay ensures popup opens reliably)
+        setTimeout(() => {
+            this._close && this._close();
+        }, 100);
     }
 
     /**
