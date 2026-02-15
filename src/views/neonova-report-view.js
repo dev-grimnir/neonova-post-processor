@@ -17,6 +17,7 @@ class NeonovaReportView extends BaseNeonovaView {
         this.metrics = metrics;
         this.numEntries = numEntries;
         this.longDisconnects = longDisconnects;
+        this.ignoredEntriesCount = metrics.ignoredEntriesCount || 0;
 
         if (autoOpen) {
             this.openInNewTab();
@@ -155,7 +156,10 @@ class NeonovaReportView extends BaseNeonovaView {
             <div class="max-w-6xl mx-auto px-8 py-12">
                 <h1 class="text-5xl font-bold text-white text-center tracking-tight">RADIUS Connection Report</h1>
                 <p class="text-${this.accent}-400 text-center text-2xl mt-2 mb-3">${this.friendlyName || this.username}</p>
-                <p class="text-center text-zinc-400 mb-16">Monitoring period: ${this.metrics.monitoringPeriod || 'N/A'} (${Number(this.metrics.daysSpanned || 0).toFixed(1)} days)</p>
+                <p class="text-center text-zinc-400 mb-16">Monitoring period: ${this.metrics.monitoringPeriod || 'N/A'} 
+                    (${Number(this.metrics.daysSpanned || 0).toFixed(1)} days)
+                    ${this.ignoredEntriesCount > 0 ? ` • ${this.ignoredEntriesCount.toLocaleString()} duplicate/consecutive entries ignored` : ''}
+                </p>
                 
                 <!-- Stability Scores -->
                 ${this.#generateStabilityScoresSection()}
