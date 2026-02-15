@@ -202,30 +202,28 @@ class NeonovaProgressView extends BaseNeonovaView {
     }
 
     /**
-     * New signature matches the updated callback from paginateReportLogs:
-     * onProgress(totalRows, currentEntries, currentPage)
+     * Updates the progress bar and status text.
+     * Signature matches paginateReportLogs callback: (collected, total, page)
      */
-    updateProgress(collected, total, currentPage) {
+    updateProgress(collected, total, currentPage) {   // ← make sure there's a ) here
         const bar = this.container.querySelector('#progress-bar');
         const status = this.container.querySelector('#status');
-    
+
         let percent = 0;
         let statusText = 'Starting fetch...';
-    
+
         if (total && total > 0) {
-            // Normal case: we know the total
             percent = Math.min(99, Math.round((collected / total) * 100));
             const totalPages = Math.ceil(total / 100);
-    
+
             statusText = `Page ${currentPage} of ${totalPages} — ` +
                          `${collected.toLocaleString()} / ${total.toLocaleString()} entries ` +
                          `(${percent}%)`;
         } else {
-            // Fallback: total unknown (early pages or parsing failed)
             percent = Math.min(99, currentPage * 5);
             statusText = `Fetching page ${currentPage}...`;
         }
-    
+
         if (bar) bar.style.width = percent + '%';
         if (status) status.textContent = statusText;
     }
