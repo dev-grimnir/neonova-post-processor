@@ -62,16 +62,20 @@ class NeonovaCollector {
      * @param {Array} entries - Raw array of LogEntry objects
      * @returns {Array} Cleaned and sorted array of standardized entries
      */
+    /**
+     * Cleans and normalizes a full array of entries.
+     * Now returns both cleaned entries and the count of ignored duplicates.
+     */
     cleanEntries(entries) {
         if (!entries || entries.length === 0) {
-            return [];
+            return { cleaned: [], ignoredCount: 0 };
         }
 
         let normalized = this.#normalizeEntries(entries);
         normalized = this.#sortEntries(normalized);
-        normalized = this.#deduplicateEntries(normalized);
+        const { cleaned, ignoredCount } = this.#filterConsecutiveDuplicates(normalized);
 
-        return normalized;
+        return { cleaned, ignoredCount };
     }
 
     /**
