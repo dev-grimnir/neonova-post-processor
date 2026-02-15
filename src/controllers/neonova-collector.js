@@ -164,22 +164,23 @@ class NeonovaCollector {
      * Assumes entries are already sorted chronologically.
      */
     #deduplicateEntries(entries) {
-        if (entries.length <= 1) return entries;
+        if (entries.length <= 1) return { cleaned: entries, ignoredCount: 0 };
 
-        const filtered = [entries[0]];  // Always keep the first entry
+        const cleaned = [entries[0]];
+        let ignoredCount = 0;
 
         for (let i = 1; i < entries.length; i++) {
             const current = entries[i];
-            const previous = filtered[filtered.length - 1];
+            const previous = cleaned[cleaned.length - 1];
 
-            // Only add if status differs from the previous kept entry
             if (current.status !== previous.status) {
-                filtered.push(current);
+                cleaned.push(current);
+            } else {
+                ignoredCount++;
             }
-            // If same status, ignore (collapse the run)
         }
 
-        return filtered;
+        return { cleaned, ignoredCount };
     }
 
     /**
