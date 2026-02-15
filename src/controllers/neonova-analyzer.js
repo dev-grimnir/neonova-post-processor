@@ -452,35 +452,26 @@ class NeonovaAnalyzer {
      * The returned object shape is 100% identical to the previous version.
      */
     computeMetrics() {
-        // Step 1: Calculate basic peak and summary stats
         const peakHourStr = this.#calculatePeakHourStr();
         const peakDayStr = this.#calculatePeakDayStr();
 
         const { businessDisconnects, offHoursDisconnects } = this.#calculateBusinessVsOffHours();
 
         const timeSinceLastStr = this.#calculateTimeSinceLastDisconnect();
-
         const avgDaily = this.#calculateAverageDailyDisconnects();
 
-        // Step 2: Calculate session and reconnect statistics
         const sessionStats = this.#calculateSessionStatistics();
         const reconnectStats = this.#calculateReconnectStatistics();
-
-        // Step 3: Calculate uptime
         const uptimeStats = this.#calculateUptimeAndPercentConnected();
-
-        // Step 4: Compute the new stability scoring
         const scoring = this.#computeStabilityScores(
             uptimeStats.uptimeScore,
             sessionStats.avgSessionMin,
             sessionStats.medianSessionMin
         );
 
-        // Step 5: Calculate daysSpanned (moved here so it's not in the builder)
         const daysSpanned = this.#calculateDaysSpanned();
 
-        // Step 6: Build the final return object (pure assembly only)
-        ignoredEntriesCount: this.ignoredEntriesCount
+        // No spread operators — manually build the stats object
         return this.#buildReturnObject({
             peakHourStr,
             peakDayStr,
@@ -488,12 +479,30 @@ class NeonovaAnalyzer {
             offHoursDisconnects,
             timeSinceLastStr,
             avgDaily,
-            daysSpanned,                    
-            ignoredEntriesCount: this.ignoredEntriesCount
-            ...uptimeStats,
-            ...sessionStats,
-            ...reconnectStats,
-            ...scoring
+            daysSpanned,
+            totalConnectedSec: uptimeStats.totalConnectedSec,
+            totalDisconnectedSec: uptimeStats.totalDisconnectedSec,
+            percentConnected: uptimeStats.percentConnected,
+            uptimeScore: uptimeStats.uptimeScore,
+            numSessions: sessionStats.numSessions,
+            avgSessionMin: sessionStats.avgSessionMin,
+            longestSessionMin: sessionStats.longestSessionMin,
+            shortestSessionMin: sessionStats.shortestSessionMin,
+            medianSessionMin: sessionStats.medianSessionMin,
+            avgReconnectMin: reconnectStats.avgReconnectMin,
+            medianReconnectMin: reconnectStats.medianReconnectMin,
+            p95ReconnectMin: reconnectStats.p95ReconnectMin,
+            quickReconnects: reconnectStats.quickReconnects,
+            uptimeComponent: scoring.uptimeComponent,
+            sessionBonusMean: scoring.sessionBonusMean,
+            sessionBonusMedian: scoring.sessionBonusMedian,
+            totalFastBonus: scoring.totalFastBonus,
+            flappingPenalty: scoring.flappingPenalty,
+            longOutagePenalty: scoring.longOutagePenalty,
+            rawMeanScore: scoring.rawMeanScore,
+            meanStabilityScore: scoring.meanStabilityScore,
+            rawMedianScore: scoring.rawMedianScore,
+            medianStabilityScore: scoring.medianStabilityScore
         });
     }
     
