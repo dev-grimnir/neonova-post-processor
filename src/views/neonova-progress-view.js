@@ -76,10 +76,7 @@ class NeonovaProgressView extends BaseNeonovaView {
         overlay.addEventListener('click', e => { if (e.target === overlay) this._close(); });
     }
 
-    /**
-     * Updates the progress bar and status text.
-     * Signature matches paginateReportLogs callback: (collected, total, page)
-     */
+
     updateProgress(collected, total, currentPage) {
         const bar = this.container.querySelector('#progress-bar');
         const status = this.container.querySelector('#status');
