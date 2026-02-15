@@ -56,19 +56,28 @@ class NeonovaReportView extends BaseNeonovaView {
         return html;
     }
 
-        /**
-         * Opens the generated report in a new browser tab.
-         */
-        openInNewTab() {
-            const reportHTML = this.generateReportHTML();
-            const newTab = window.open('', '_blank');
-            if (newTab) {
-                newTab.document.write(reportHTML);
-                newTab.document.close();
-            } else {
-                alert('Popup blocked. Please allow popups for this site to view the report.');
-            }
+    /**
+     * Opens the generated report in a new tab using a Blob URL.
+     * This gives a clean, viewable page source (no about:blank).
+     */
+    openInNewTab() {
+        const reportHTML = this.generateReportHTML();
+
+        const blob = new Blob([reportHTML], { 
+            type: 'text/html;charset=utf-8' 
+        });
+        const url = URL.createObjectURL(blob);
+
+        const newTab = window.open(url, '_blank');
+
+        // Optional: give the tab a nice title immediately
+        if (newTab) {
+            newTab.document.title = `RADIUS Report — ${this.friendlyName || this.username}`;
         }
+
+        // Clean up the object URL after a short delay (prevents memory leak)
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }
 
     /**
      * Generates the long disconnects section (table or "none" message).
