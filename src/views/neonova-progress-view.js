@@ -115,7 +115,7 @@ class NeonovaProgressView extends BaseNeonovaView {
             data.entries.length,
             data.metrics.longDisconnects
         );
-                
+        reportView.openInNewTab();
         this._close && this._close();
     }
 
