@@ -290,9 +290,11 @@ class NeonovaReportView extends BaseNeonovaView {
     #generateExportButtons() {
         return `
             <div class="flex justify-center gap-4 mt-20">
-                <button onclick="exportToHTML()" class="px-10 py-4 bg-${this.accent}-600 hover:bg-${this.accent}-500 text-black font-semibold rounded-2xl transition">Export as HTML</button>
-                <button onclick="exportToCSV()" class="px-10 py-4 bg-${this.accent}-600 hover:bg-${this.accent}-500 text-black font-semibold rounded-2xl transition">Export as CSV</button>
-                <button onclick="exportToPDF()" class="px-10 py-4 bg-${this.accent}-600 hover:bg-${this.accent}-500 text-black font-semibold rounded-2xl transition">Export as PDF</button>
+                <button onclick="exportToHTML()" class="px-10 py-4 bg-${this.accent}-600 hover:bg-${this.accent}-500 text-black font-semibold rounded-2xl transition">HTML</button>
+                <button onclick="exportToCSV()" class="px-10 py-4 bg-${this.accent}-600 hover:bg-${this.accent}-500 text-black font-semibold rounded-2xl transition">CSV</button>
+                <button onclick="exportToJSON()" class="px-10 py-4 bg-${this.accent}-600 hover:bg-${this.accent}-500 text-black font-semibold rounded-2xl transition">JSON</button>
+                <button onclick="exportToXML()" class="px-10 py-4 bg-${this.accent}-600 hover:bg-${this.accent}-500 text-black font-semibold rounded-2xl transition">XML</button>
+                <button onclick="exportToPDF()" class="px-10 py-4 bg-${this.accent}-600 hover:bg-${this.accent}-500 text-black font-semibold rounded-2xl transition">PDF</button>
             </div>
         `;
     }
@@ -300,42 +302,10 @@ class NeonovaReportView extends BaseNeonovaView {
     /**
      * Generates the embedded script block with charts and export functions.
      */
-    #generateReportScripts(csvContent) {
+    #generateReportScripts() {
         return `
             <script>
-                const accentHex = '${this.theme.accentColor}';
-
-                // Hourly chart
-                new Chart(document.getElementById('hourlyChart'), {
-                    type: 'bar',
-                    data: {
-                        labels: Array.from({length: 24}, (_, i) => \`\${i}:00\`),
-                        datasets: [{ label: 'Disconnects', data: ${JSON.stringify(this.metrics.hourlyDisconnects || Array(24).fill(0))}, backgroundColor: accentHex }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-                });
-
-                // Daily chart
-                new Chart(document.getElementById('dailyChart'), {
-                    type: 'bar',
-                    data: {
-                        labels: ${JSON.stringify(this.metrics.dailyLabels || [])},
-                        datasets: [{ label: 'Disconnects', data: ${JSON.stringify(this.metrics.dailyDisconnects || [])}, backgroundColor: accentHex }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-                });
-
-                // Rolling 7-day chart
-                new Chart(document.getElementById('rollingChart'), {
-                    type: 'line',
-                    data: {
-                        labels: ${JSON.stringify(this.metrics.rollingLabels || [])},
-                        datasets: [{ label: '7-Day Rolling Disconnects', data: ${JSON.stringify(this.metrics.rolling7Day || [])}, borderColor: accentHex, borderWidth: 3, tension: 0.3, fill: false }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-                });
-
-                const csvContent = \`${csvContent.replace(/`/g, '\\`').replace(/\n/g, '\\n')}\`;
+                const reportData = ${JSON.stringify(this.getReportDataForExport())};
 
                 function exportToHTML() {
                     const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
@@ -345,13 +315,9 @@ class NeonovaReportView extends BaseNeonovaView {
                     a.click();
                 }
 
-                function exportToCSV() {
-                    const blob = new Blob([csvContent], { type: 'text/csv' });
-                    const a = document.createElement('a');
-                    a.href = URL.createObjectURL(blob);
-                    a.download = 'radius_report.csv';
-                    a.click();
-                }
+                function exportToCSV() { controller.getCsvContent(reportData); /* download logic */ }
+                function exportToJSON() { controller.getJsonContent(reportData); /* download logic */ }
+                function exportToXML()  { controller.getXmlContent(reportData);  /* download logic */ }
 
                 async function exportToPDF() {
                     const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
