@@ -57,21 +57,18 @@ class NeonovaCollector {
 
     /**
      * Cleans and normalizes a full array of entries.
-     * Removes invalid dates, sorts chronologically, and deduplicates exact matches.
-     * 
-     * @param {Array} entries - Raw array of LogEntry objects
-     * @returns {Array} Cleaned and sorted array of standardized entries
+     * Returns both the cleaned entries AND the count of ignored duplicates.
      */
     cleanEntries(entries) {
         if (!entries || entries.length === 0) {
-            return [];
+            return { cleaned: [], ignoredCount: 0 };
         }
 
         let normalized = this.#normalizeEntries(entries);
         normalized = this.#sortEntries(normalized);
-        normalized = this.#deduplicateEntries(normalized);
+        const result = this.#deduplicateEntries(normalized);
 
-        return normalized;
+        return result;   // { cleaned, ignoredCount }
     }
 
     /**
