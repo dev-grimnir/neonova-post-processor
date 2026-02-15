@@ -4,7 +4,7 @@ class NeonovaReportController extends BaseNeonovaController {
         this.progressView = new NeonovaProgressView();
         this.collector = new NeonovaCollector();
         this.reportView = null;
-        this.analyzer = new NeonovaAnalyzer();
+        this.analyzer = null;
     }
 
     /**
