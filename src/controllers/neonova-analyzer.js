@@ -23,50 +23,6 @@ class NeonovaAnalyzer {
         this.analyze();
     }
 
-        /**
-     * Main entry point for analysis.
-     * Orchestrates the entire state-machine processing of RADIUS log entries.
-     * This method is now short and readable — it no longer contains the actual logic.
-     */
-    analyze() {
-        // Reset all data structures
-        this.disconnects = 0;
-        this.sessionSeconds = [];
-        this.reconnectSeconds = [];
-        this.reconnects = [];
-        this.longDisconnects = [];
-        this.firstDate = null;
-        this.lastDate = null;
-        this.lastDisconnectDate = null;
-        this.hourlyDisconnects = Array(24).fill(0);
-        this.dayOfWeekDisconnects = Array(7).fill(0);
-        this.hourlyCount = Array(24).fill(0);
-        this.dailyCount = {};
-        this.disconnectDates = [];
-
-        // State machine variables
-        let currentState = null;          // "up", "down", or null (before first entry)
-        let lastTransitionTime = null;    // timestamp of the most recent state change
-
-        // Process every log entry in chronological order
-        this.cleanEntries.forEach(entry => {
-            this.#processEntry(entry, currentState, lastTransitionTime);
-            
-            // Update state machine for next iteration
-            if (entry.status === "Start") {
-                currentState = "up";
-                lastTransitionTime = entry.dateObj.getTime();
-            } else if (entry.status === "Stop") {
-                currentState = "down";
-                lastTransitionTime = entry.dateObj.getTime();
-                this.lastDisconnectDate = entry.dateObj;
-            }
-        });
-
-        // Handle any open session at the very end of the log
-        this.#finalizeLastSession(currentState, lastTransitionTime);
-    }
-
     /**
      * Routes each log entry to the correct handler based on its status.
      * Also updates firstDate / lastDate.
@@ -191,60 +147,7 @@ class NeonovaAnalyzer {
         }
     }
 
-        /**
-     * Computes all metrics from the raw analyzed data.
-     * This method is now the orchestrator only — short and readable.
-     * All heavy calculations have been moved to focused private methods.
-     * 
-     * The returned object shape is 100% identical to the previous version.
-     */
-    computeMetrics() {
-        // Step 1: Calculate basic peak and summary stats
-        const peakHourStr = this.#calculatePeakHourStr();
-        const peakDayStr = this.#calculatePeakDayStr();
-
-        const { businessDisconnects, offHoursDisconnects } = this.#calculateBusinessVsOffHours();
-
-        const timeSinceLastStr = this.#calculateTimeSinceLastDisconnect();
-
-        const avgDaily = this.#calculateAverageDailyDisconnects();
-
-        // Step 2: Calculate session and reconnect statistics
-        const sessionStats = this.#calculateSessionStatistics();
-        const reconnectStats = this.#calculateReconnectStatistics();
-
-        // Step 3: Calculate uptime
-        const uptimeStats = this.#calculateUptimeAndPercentConnected();
-
-        // Step 4: Compute the new stability scoring
-        const scoring = this.#computeStabilityScores(
-            uptimeStats.uptimeScore,
-            sessionStats.avgSessionMin,
-            sessionStats.medianSessionMin
-        );
-
-        // Step 5: Calculate daysSpanned (moved here so it's not in the builder)
-        const daysSpanned = this.#calculateDaysSpanned();
-
-        // Step 6: Build the final return object (pure assembly only)
-        ignoredEntriesCount: this.ignoredEntriesCount
-        return this.#buildReturnObject({
-            peakHourStr,
-            peakDayStr,
-            businessDisconnects,
-            offHoursDisconnects,
-            timeSinceLastStr,
-            avgDaily,
-            daysSpanned,                    
-            ignoredEntriesCount: this.ignoredEntriesCount
-            ...uptimeStats,
-            ...sessionStats,
-            ...reconnectStats,
-            ...scoring
-        });
-    }
-
-    // ────────────────────────────────────────────────
+        // ────────────────────────────────────────────────
     // Private helper methods — each does one focused job
     // ────────────────────────────────────────────────
 
@@ -498,6 +401,103 @@ class NeonovaAnalyzer {
             dailyLabels: sortedKeys,
             hourlyCount: this.hourlyCount
         };
+    }
+
+    /**
+     * Main entry point for analysis.
+     * Orchestrates the entire state-machine processing of RADIUS log entries.
+     * This method is now short and readable — it no longer contains the actual logic.
+     */
+    analyze() {
+        // Reset all data structures
+        this.disconnects = 0;
+        this.sessionSeconds = [];
+        this.reconnectSeconds = [];
+        this.reconnects = [];
+        this.longDisconnects = [];
+        this.firstDate = null;
+        this.lastDate = null;
+        this.lastDisconnectDate = null;
+        this.hourlyDisconnects = Array(24).fill(0);
+        this.dayOfWeekDisconnects = Array(7).fill(0);
+        this.hourlyCount = Array(24).fill(0);
+        this.dailyCount = {};
+        this.disconnectDates = [];
+
+        // State machine variables
+        let currentState = null;          // "up", "down", or null (before first entry)
+        let lastTransitionTime = null;    // timestamp of the most recent state change
+
+        // Process every log entry in chronological order
+        this.cleanEntries.forEach(entry => {
+            this.#processEntry(entry, currentState, lastTransitionTime);
+            
+            // Update state machine for next iteration
+            if (entry.status === "Start") {
+                currentState = "up";
+                lastTransitionTime = entry.dateObj.getTime();
+            } else if (entry.status === "Stop") {
+                currentState = "down";
+                lastTransitionTime = entry.dateObj.getTime();
+                this.lastDisconnectDate = entry.dateObj;
+            }
+        });
+
+        // Handle any open session at the very end of the log
+        this.#finalizeLastSession(currentState, lastTransitionTime);
+    }
+
+    /**
+     * Computes all metrics from the raw analyzed data.
+     * This method is now the orchestrator only — short and readable.
+     * All heavy calculations have been moved to focused private methods.
+     * 
+     * The returned object shape is 100% identical to the previous version.
+     */
+    computeMetrics() {
+        // Step 1: Calculate basic peak and summary stats
+        const peakHourStr = this.#calculatePeakHourStr();
+        const peakDayStr = this.#calculatePeakDayStr();
+
+        const { businessDisconnects, offHoursDisconnects } = this.#calculateBusinessVsOffHours();
+
+        const timeSinceLastStr = this.#calculateTimeSinceLastDisconnect();
+
+        const avgDaily = this.#calculateAverageDailyDisconnects();
+
+        // Step 2: Calculate session and reconnect statistics
+        const sessionStats = this.#calculateSessionStatistics();
+        const reconnectStats = this.#calculateReconnectStatistics();
+
+        // Step 3: Calculate uptime
+        const uptimeStats = this.#calculateUptimeAndPercentConnected();
+
+        // Step 4: Compute the new stability scoring
+        const scoring = this.#computeStabilityScores(
+            uptimeStats.uptimeScore,
+            sessionStats.avgSessionMin,
+            sessionStats.medianSessionMin
+        );
+
+        // Step 5: Calculate daysSpanned (moved here so it's not in the builder)
+        const daysSpanned = this.#calculateDaysSpanned();
+
+        // Step 6: Build the final return object (pure assembly only)
+        ignoredEntriesCount: this.ignoredEntriesCount
+        return this.#buildReturnObject({
+            peakHourStr,
+            peakDayStr,
+            businessDisconnects,
+            offHoursDisconnects,
+            timeSinceLastStr,
+            avgDaily,
+            daysSpanned,                    
+            ignoredEntriesCount: this.ignoredEntriesCount
+            ...uptimeStats,
+            ...sessionStats,
+            ...reconnectStats,
+            ...scoring
+        });
     }
     
     computeSessionBins() {
