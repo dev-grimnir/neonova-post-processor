@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         NovaSubscriber - Dashboard
-// @namespace    http://tampermonkey.net/ 
+// @namespace    http://tampermonkey.net/
 // @id           nova-dashboard-clean
 // @version      1.0
 // @description  Real-time customer modem connection dashboard (separate script)
@@ -35,8 +35,6 @@
         return;
     }
 
-    {
-
         const dashboardController = new NeonovaDashboardController();
 
-})();
+)();
