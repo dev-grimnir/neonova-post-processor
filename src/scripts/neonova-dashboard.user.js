@@ -36,7 +36,7 @@
     }
 
     // Wait for all critical classes before starting the dashboard
-    (function waitForDependencies() {
+    (function waitForDependencies() 
         // List all classes that must be defined before we proceed
         if (typeof BaseNeonovaController      !== 'undefined' &&
             typeof NeonovaDashboardController !== 'undefined' &&
