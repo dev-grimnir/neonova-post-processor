@@ -267,3 +267,4 @@ cleanEntries(entries) {
         localStorage.removeItem('novaEntries');
     }
 }
+*/
