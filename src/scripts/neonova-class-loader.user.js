@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NovaSubscriber - Class Loader
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  Load required classes
 // @author       dev-grimnir
 // @match        https://admin.neonova.net/*
