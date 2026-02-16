@@ -48,19 +48,29 @@
             console.log('All dependencies loaded');
 
         } else {
-            // Not ready — retry every 100ms
-            console.log('BaseneoNovaController = ' + typeof BaseNeonovaController);
-            console.log('NeonovaDashboardController = ' + typeof NeonovaDashboardController);
-            console.log('NeonovaAnalyzer = '  + typeof NeonovaAnalyzer);
-            console.log('NeonovaCollector = ' + typeof NeonovaCollector);
-            console.log('NeonovaReportOrderController = ' + typeof NeonovaReportOrderController);
-            console.log('BaseNeonovaView = ' + typeof BaseNeonovaView);
-            console.log('NeonovaDashboardView = ' + typeof NeonovaDashboardView);
-            console.log('NeonovaProgressView = ' + typeof NeonovaProgressView);
-            console.log('NeonovaReportOrderView = ' + typeof NeonovaReportOrderView);
-            console.log('NeonovaReportView = ' + typeof NeonovaReportView);
-            console.log('Not ready, trying again in 100ms');
-            setTimeout(waitForDependencies, 100);
-        }
+    console.group('⏳ Waiting for Neonova classes...');
+    
+    const deps = {
+        BaseNeonovaController,
+        NeonovaDashboardController,
+        NeonovaAnalyzer,
+        NeonovaCollector,
+        NeonovaReportOrderController,
+        BaseNeonovaView,
+        NeonovaDashboardView,
+        NeonovaProgressView,
+        NeonovaReportOrderView,
+        NeonovaReportView
+    };
+
+    Object.entries(deps).forEach(([name, value]) => {
+        console.log(`${name} = ${typeof value}`);
+    });
+
+    console.log('Not ready, trying again in 100ms');
+    console.groupEnd();
+
+    setTimeout(waitForDependencies, 100);
+}
     })();
 })();
