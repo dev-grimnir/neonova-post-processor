@@ -33,29 +33,30 @@
     if (window.name !== 'MAIN') {
         return;
     }
-    // Wait for all critical classes to be defined
-    (function waitForDependencies() {
-        if (typeof BaseNeonovaController !== 'undefined' &&
-            typeof NeonovaDashboardController !== 'undefined' &&
-            typeof NeonovaAnalyzer !== 'undefined' &&
-            typeof NeonovaCollector !== 'undefined' &&
-            typeof NeonovaReportController !== 'undefined' &&
-            typeof NeonovaDashboardController !== 'undefined' &&
-            typeof BaseNeonovaView !== 'undefined' &&
-            typeof NeonovaDashboardView !== 'undefined' &&      
-            typeof NeonovaProgressView !== 'undefined' &&
-            typeof NeonovaReportOrderView !== 'undefined' &&
-            typeof NeonovaReportView !== 'undefined') {
 
-            // All classes are now available — safe to start
+    // Wait for all critical classes before starting the dashboard
+    (function waitForDependencies() {
+        // List all classes that must be defined before we proceed
+        if (typeof BaseNeonovaController      !== 'undefined' &&
+            typeof NeonovaDashboardController !== 'undefined' &&
+            typeof NeonovaAnalyzer            !== 'undefined' &&
+            typeof NeonovaCollector           !== 'undefined' &&
+            typeof NeonovaReportController    !== 'undefined' &&
+            typeof BaseNeonovaView            !== 'undefined' &&
+            typeof NeonovaDashboardView       !== 'undefined' &&
+            typeof NeonovaProgressView        !== 'undefined' &&
+            typeof NeonovaReportOrderView     !== 'undefined' &&
+            typeof NeonovaReportView          !== 'undefined') {
+
             console.log('All dependencies loaded — starting dashboard');
-            new DashboardController();  // or whatever your entry point instantiation is
             
+            // Safe to instantiate now
+            const dashboardController = new NeonovaDashboardController();
+
         } else {
-            // Not ready yet — check again in 100ms
+            // Not ready — retry every 100ms
+            console.log('Not ready, trying again in 100ms');
             setTimeout(waitForDependencies, 100);
         }
-    const dashboardController = new NeonovaDashboardController();
-
+    })();
 })();
-
