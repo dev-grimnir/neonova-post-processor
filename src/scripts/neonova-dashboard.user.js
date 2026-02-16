@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         NovaSubscriber - Dashboard (Class Checking)
+// @name         NovaSubscriber - Dashboard
 // @namespace    http://tampermonkey.net/ - Clean
 // @id           nova-dashboard-clean
 // @version      1.0
