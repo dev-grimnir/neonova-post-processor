@@ -28,7 +28,7 @@
     (function waitForDependencies() {
         // List all classes that must be defined before we proceed
         if (typeof BaseNeonovaController !== 'undefined' &&
-            typeof NeonovaDashboardController !=== 'undefined' ) {
+            typeof NeonovaDashboardController !== 'undefined' ) {
 
             console.log('All dependencies loaded');
 
