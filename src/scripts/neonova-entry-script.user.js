@@ -42,8 +42,8 @@
             'NeonovaDashboardView',
             'NeonovaProgressView',
             'NeonovaReportOrderView',
-            'NeonovaReportView'
-            'Customer'
+            'NeonovaReportView',
+            'Customer',
             'LogEntry'
         ];
 
