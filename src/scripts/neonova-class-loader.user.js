@@ -61,16 +61,16 @@
         NeonovaProgressView,
         NeonovaReportOrderView,
         NeonovaReportView
-    };
-
-    Object.entries(deps).forEach(([name, value]) => {
-        console.log(`${name} = ${typeof value}`);
-    });
-
-    console.log('Not ready, trying again in 100ms');
-    console.groupEnd();
-
-    setTimeout(waitForDependencies, 100);
-}
+        };
+    
+        Object.entries(deps).forEach(([name, value]) => {
+            console.log(`${name} = ${typeof value}`);
+        });
+    
+        console.log('Not ready, trying again in 100ms');
+        console.groupEnd();
+    
+        setTimeout(waitForDependencies, 100);
+    }
     })();
 })();
