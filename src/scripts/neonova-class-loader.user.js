@@ -26,14 +26,11 @@
 (function() {
     'use strict';
 
-    // Only run in the MAIN content frame (same as report script)
     if (window.name !== 'MAIN') {
         return;
     }
 
-    // Wait for all critical classes before starting the dashboard
     (function waitForDependencies() {
-        // List all classes that must be defined before we proceed
         if (typeof BaseNeonovaController !== 'undefined' &&
             typeof NeonovaDashboardController !== 'undefined' &&
             typeof NeonovaAnalyzer !== 'undefined' &&
@@ -45,32 +42,37 @@
             typeof NeonovaReportOrderView !== 'undefined' &&
             typeof NeonovaReportView !== 'undefined') {
 
-            console.log('All dependencies loaded');
+            console.log('✅ All dependencies loaded');
+
+            // TODO: start your dashboard here
+            // new NeonovaDashboardController();
+            // or NeonovaDashboardController.init?.();
 
         } else {
-    console.group('⏳ Waiting for Neonova classes...');
-    
-    const deps = {
-        BaseNeonovaController,
-        NeonovaDashboardController,
-        NeonovaAnalyzer,
-        NeonovaCollector,
-        NeonovaReportOrderController,
-        BaseNeonovaView,
-        NeonovaDashboardView,
-        NeonovaProgressView,
-        NeonovaReportOrderView,
-        NeonovaReportView
-        };
-    
-        Object.entries(deps).forEach(([name, value]) => {
-            console.log(`${name} = ${typeof value}`);
-        });
-    
-        console.log('Not ready, trying again in 100ms');
-        console.groupEnd();
-    
-        setTimeout(waitForDependencies, 100);
-    }
+            console.group('⏳ Waiting for Neonova classes...');
+
+            const deps = {
+                BaseNeonovaController   : typeof BaseNeonovaController,
+                NeonovaDashboardController : typeof NeonovaDashboardController,
+                NeonovaAnalyzer         : typeof NeonovaAnalyzer,
+                NeonovaCollector        : typeof NeonovaCollector,
+                NeonovaReportOrderController : typeof NeonovaReportOrderController,
+                BaseNeonovaView         : typeof BaseNeonovaView,
+                NeonovaDashboardView    : typeof NeonovaDashboardView,
+                NeonovaProgressView     : typeof NeonovaProgressView,
+                NeonovaReportOrderView  : typeof NeonovaReportOrderView,
+                NeonovaReportView       : typeof NeonovaReportView
+            };
+
+            Object.entries(deps).forEach(([name, type]) => {
+                console.log(`${name} = ${type}`);
+            });
+
+            console.log('Not ready, trying again in 100ms');
+            console.groupEnd();
+
+            setTimeout(waitForDependencies, 100);
+        }
     })();
 })();
+
