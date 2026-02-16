@@ -54,10 +54,10 @@
             required.forEach(name => {
                 console.log(`${name} = ${typeof window[name]}`);
             });
-            console.log('Not ready, trying again in 100ms');
+            console.log('Not ready, trying again in 500ms');
             console.groupEnd();
 
-            setTimeout(waitForDependencies, 100);
+            setTimeout(waitForDependencies, 500);
         }
     })();
 })();
