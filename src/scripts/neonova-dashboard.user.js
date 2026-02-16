@@ -2,7 +2,7 @@
 // @name         NovaSubscriber - Dashboard
 // @namespace    http://tampermonkey.net/
 // @id           nova-dashboard-clean
-// @version      1.0
+// @version      1.1
 // @description  Real-time customer modem connection dashboard (separate script)
 // @author       dev-grimnir
 // @match        https://admin.neonova.net/*
