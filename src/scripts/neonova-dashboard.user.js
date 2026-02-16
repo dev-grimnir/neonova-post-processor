@@ -37,4 +37,4 @@
 
         const dashboardController = new NeonovaDashboardController();
 
-)();
+})();
