@@ -182,3 +182,4 @@ class NeonovaCollector {
         localStorage.setItem('novaEntries', JSON.stringify(this.allEntries));
         localStorage.setItem('novaPages', this.pages.toString());
     }
+}
