@@ -23,11 +23,12 @@
     if (window.name !== 'MAIN') {
         return;
     }
-
+==
     // Wait for all critical classes before starting the dashboard
     (function waitForDependencies() {
         // List all classes that must be defined before we proceed
-        if (typeof BaseNeonovaController !== 'undefined') {
+        if (typeof BaseNeonovaController !== 'undefined' &&
+            typeof NeonovaDashboardController !=== 'undefined' ) {
 
             console.log('All dependencies loaded');
 
