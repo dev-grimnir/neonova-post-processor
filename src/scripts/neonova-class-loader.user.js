@@ -30,8 +30,8 @@
         if (typeof BaseNeonovaController !== 'undefined' &&
             typeof NeonovaDashboardController !== 'undefined' &&
             typeof NeonovaAnalyzer!== 'undefined' &&
-            typeof NeonovaCollector !== 'undefined &&
-            typeof NeonovaReportOrderController &&
+            typeof NeonovaCollector !== 'undefined' &&
+            typeof NeonovaReportOrderController !== 'undefined'&&
             typeof BaseNeonovaView !== 'undefined' &&
             typeof NeonovaDashboardView !== 'undefined' &&
             typeof NeonovaProgressView !== 'undefined' &&
