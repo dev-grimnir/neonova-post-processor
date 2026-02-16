@@ -35,29 +35,12 @@
         return;
     }
 
-    // Wait for all critical classes before starting the dashboard
-    (function waitForDependencies() 
-        // List all classes that must be defined before we proceed
-        if (typeof BaseNeonovaController      !== 'undefined' &&
-            typeof NeonovaDashboardController !== 'undefined' &&
-            typeof NeonovaAnalyzer            !== 'undefined' &&
-            typeof NeonovaCollector           !== 'undefined' &&
-            typeof NeonovaReportController    !== 'undefined' &&
-            typeof BaseNeonovaView            !== 'undefined' &&
-            typeof NeonovaDashboardView       !== 'undefined' &&
-            typeof NeonovaProgressView        !== 'undefined' &&
-            typeof NeonovaReportOrderView     !== 'undefined' &&
-            typeof NeonovaReportView          !== 'undefined') {
+    {
 
-            console.log('All dependencies loaded — starting dashboard');
             
-            // Safe to instantiate now
-            const dashboardController = new NeonovaDashboardController();
+            
+            
+        const dashboardController = new NeonovaDashboardController();
 
-        } else {
-            // Not ready — retry every 100ms
-            console.log('Not ready, trying again in 100ms');
-            setTimeout(waitForDependencies, 100);
-        }
     })();
 })();
