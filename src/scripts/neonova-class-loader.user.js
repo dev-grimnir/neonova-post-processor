@@ -1,7 +1,6 @@
 // ==UserScript==
 // @name         NovaSubscriber - Class Loader
 // @namespace    http://tampermonkey.net/
-// @id           nova-class-loader
 // @version      1.0
 // @description  Load required classes
 // @author       dev-grimnir
