@@ -10,12 +10,15 @@
  */
 class NeonovaReportOrderView extends BaseNeonovaView {
     /**
+     * @param {Element} container - Parent container (passed to super)
+     * @param {string} username - RADIUS username
      * @param {string} friendlyName - Display name for title
      * @param {Function} onGenerateRequested - Callback(startDateIso, endDateIso) when generate clicked
      */
-    constructor(friendlyName, onGenerateRequested) {
-        super(null);  // No container needed — modal appended to body
-        this.friendlyName = friendlyName;
+    constructor(container, username, friendlyName, onGenerateRequested) {
+        super(container);
+        this.username = username;
+        this.friendlyName = friendlyName || username;
         this.onGenerateRequested = onGenerateRequested;  // Provided by controller
         this._close = null;
     }
@@ -171,7 +174,48 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         // ────────────────────────────────────────────────
         // Populate date dropdowns with defaults
         // ────────────────────────────────────────────────
-        // ... your existing populate code (unchanged) ...
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth() + 1;
+        const currentDay = today.getDate();
+
+        const oneYearAgo = new Date(today);
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+        const defaultStartYear = oneYearAgo.getFullYear();
+        const defaultStartMonth = oneYearAgo.getMonth() + 1;
+        let defaultStartDay = oneYearAgo.getDate();  // Will be clamped below if needed
+
+        // Start date = exactly one year ago (clamped)
+        const sy = this.container.querySelector('#start-year');
+        const sm = this.container.querySelector('#start-month');
+        const sd = this.container.querySelector('#start-day');
+        if (sy) populateYears(sy, defaultStartYear);
+        if (sm) populateMonths(sm, defaultStartMonth);
+        if (sd) populateDays(sd, defaultStartYear, defaultStartMonth, defaultStartDay);
+
+        // End date = today
+        const ey = this.container.querySelector('#end-year');
+        const em = this.container.querySelector('#end-month');
+        const ed = this.container.querySelector('#end-day');
+        if (ey) populateYears(ey, currentYear);
+        if (em) populateMonths(em, currentMonth);
+        if (ed) populateDays(ed, currentYear, currentMonth, currentDay);
+
+        // ────────────────────────────────────────────────
+        // Update days listener for month/year changes
+        // ────────────────────────────────────────────────
+        const updateDays = (dayId, yearId, monthId) => {
+            const y = this.container.querySelector(`#${yearId}`);
+            const m = this.container.querySelector(`#${monthId}`);
+            const d = this.container.querySelector(`#${dayId}`);
+            if (!y || !m || !d) return;
+            populateDays(d, parseInt(y.value), parseInt(m.value), parseInt(d.value) || 1);
+        };
+
+        sy?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
+        sm?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
+        ey?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
+        em?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
     }
 
     /**
