@@ -1,43 +1,55 @@
-class NeonovaReportOrderController extends BaseNeonovaController{
-    constructor(username, friendlyName, view) {
-        super();
+/**
+ * Controller for the report order modal (date selection).
+ * 
+ * Owns NeonovaReportOrderView, collects user date input, validates,
+ * closes its view, and hands off to NeonovaProgressController for actual generation.
+ * 
+ * No direct knowledge of progress or report views — pure orchestration.
+ */
+class NeonovaReportOrderController extends BaseNeonovaController {
+    /**
+     * @param {string} username 
+     * @param {string} friendlyName 
+     */
+    constructor(username, friendlyName) {
+        super();  // Inherits pagination methods/constants if needed later
+
         this.username = username;
         this.friendlyName = friendlyName || username;
-        this.view = view;
-        this.view.onGenerateRequested = (startDate) => this.generateReport(startDate);
+
+        // Create and own the view
+        this.view = new NeonovaReportOrderView(this.friendlyName);
+
+        // Bind handler
+        this.handleGenerateRequested = this.handleGenerateRequested.bind(this);
     }
 
+    /**
+     * Starts the order flow: shows modal and attaches generate handler.
+     */
     start() {
-
-        try {
-            this.view.renderOrderForm();
-            
-        } catch (err) {
-        }
+        // Pass callback to view — view will call it with selected dates
+        this.view.showModal(this.handleGenerateRequested);
     }
 
-    handleGenerate(startDate) {
-        this.view.showProgress();
-        this.view.updateProgress(10, 'Fetching logs...');
+    /**
+     * Called by view when user clicks generate (with validated dates).
+     * Closes order modal and starts progress controller.
+     * 
+     * @param {Date} startDate 
+     * @param {Date} endDate 
+     */
+    handleGenerateRequested(startDate, endDate) {
+        // Close order modal cleanly
+        this.view.close();
 
-        // Real generation (placeholder - expand with headless pagination)
-        setTimeout(() => {
-            this.view.updateProgress(40, 'Cleaning entries...');
-        }, 1000);
-
-        setTimeout(() => {
-            this.view.updateProgress(70, 'Calculating metrics...');
-        }, 2500);
-
-        setTimeout(() => {
-            this.view.updateProgress(90, 'Building report...');
-        }, 4000);
-
-        setTimeout(() => {
-            // Real report HTML (from NeonovaReportView)
-            const reportHTML = new NeonovaReportView().generateReportHTML(/* metrics */);
-            this.view.showReport(reportHTML);
-            if (this.onReportComplete) this.onReportComplete(reportHTML);
-        }, 5500);
+        // Hand off to progress controller with selected range
+        const progressController = new NeonovaProgressController(
+            this.username,
+            this.friendlyName,
+            startDate,
+            endDate  // Pass custom dates
+        );
+        progressController.start();
     }
 }
