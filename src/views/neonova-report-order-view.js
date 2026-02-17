@@ -15,11 +15,11 @@ class NeonovaReportOrderView extends BaseNeonovaView {
      * @param {string} friendlyName - Display name for title
      * @param {Function} onGenerateRequested - Callback(startDateIso, endDateIso) when generate clicked
      */
-    constructor(container, username, friendlyName, onGenerateRequested) {
-        super(container);
-        this.username = username;
+    constructor(username, friendlyName, onGenerateRequested) {
+        super(null);
         this.friendlyName = friendlyName || username;
-        this.onGenerateRequested = onGenerateRequested;  // Provided by controller
+        this.onGenerateRequested = onGenerateRequested;
+        this.view = new NeonovaReportOrderView(this.friendlyName, this.handleGenerateRequested);
         this._close = null;
     }
 
