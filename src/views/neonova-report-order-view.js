@@ -111,8 +111,12 @@ class NeonovaReportOrderView extends BaseNeonovaView {
     }
 
     /**
-     * Renders the order form content: header, presets, custom date selectors, generate button.
+     * Closes the modal with exit animation.
      */
+    close() {
+        this._close?.();
+    }
+
     render() {
         if (!this.container) {
             return;
@@ -170,7 +174,6 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         // ────────────────────────────────────────────────
         // Populate date dropdowns with defaults
         // ────────────────────────────────────────────────
-        // Calculate defaults
         const today = new Date();
         const currentYear = today.getFullYear();
         const currentMonth = today.getMonth() + 1;
