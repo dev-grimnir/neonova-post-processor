@@ -15,7 +15,6 @@ class NeonovaProgressView extends BaseNeonovaView {
 
         this.friendlyName = friendlyName;
         this._close = null;
-        this.onCancel = null;  // Callback set by controller when cancel is clicked
     }
 
     /**
@@ -76,11 +75,11 @@ class NeonovaProgressView extends BaseNeonovaView {
             </button>
         `;
 
-        // Store reference for later updates (progress bar, status text)
+        // Store reference for later updates
         this.container = modal;
 
         // ────────────────────────────────────────────────
-        // Entrance animation (fade in + slide from left)
+        // Entrance animation
         // ────────────────────────────────────────────────
         requestAnimationFrame(() => {
             overlay.style.opacity = '1';
@@ -89,7 +88,7 @@ class NeonovaProgressView extends BaseNeonovaView {
         });
 
         // ────────────────────────────────────────────────
-        // Close handler (exit animation + DOM removal)
+        // Close handler (animation only)
         // ────────────────────────────────────────────────
         this._close = () => {
             overlay.style.opacity = '0';
@@ -99,30 +98,23 @@ class NeonovaProgressView extends BaseNeonovaView {
         };
 
         // ────────────────────────────────────────────────
-        // Event listeners for cancel/close
+        // Cancel/close listeners (trigger controller callback + animation)
         // ────────────────────────────────────────────────
-        // Cancel button: trigger controller's abort + close animation
         modal.querySelector('#cancel-btn').addEventListener('click', () => {
-            if (typeof onCancelCallback === 'function') {
-                onCancelCallback();
-            }
+            if (typeof onCancelCallback === 'function') onCancelCallback();
             this._close();
         });
 
-        // Overlay click: same as cancel
-        overlay.addEventListener('click', e => { 
+        overlay.addEventListener('click', e => {
             if (e.target === overlay) {
-                if (typeof onCancelCallback === 'function') {
-                    onCancelCallback();
-                }
-                this._close(); 
+                if (typeof onCancelCallback === 'function') onCancelCallback();
+                this._close();
             }
         });
     }
 
     /**
      * Updates the progress bar and status text.
-     * Signature matches paginateReportLogs callback: (collected, total, page)
      */
     updateProgress(collected, total, currentPage) {
         const bar = this.container.querySelector('#progress-bar');
@@ -148,7 +140,7 @@ class NeonovaProgressView extends BaseNeonovaView {
     }
 
     /**
-     * Shows a status/error message in the modal.
+     * Shows a status/error message in the modal (e.g., "Cancelled", "Generation failed").
      * @param {string} message
      */
     showStatus(message) {
