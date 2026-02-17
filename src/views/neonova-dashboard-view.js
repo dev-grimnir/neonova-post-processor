@@ -231,12 +231,12 @@ class NeonovaDashboardView extends BaseNeonovaView{
         // Report buttons
         this.panel.querySelectorAll('.report-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                const username = btn.dataset.username;
-                const customer = this.controller.customers.find(c => c.radiusUsername === username);
+            const username = btn.dataset.username;
+            const customer = this.controller.customers.find(c => c.radiusUsername === username);
                 if (customer) {
-                    const reportView = new NeonovaReportOrderView(null, username, customer.friendlyName || username);
-                    reportView.controller = this.controller;
-                    reportView.showModal();
+                    // Instantiate controller, which owns/creates its view and handles the flow
+                    const orderController = new NeonovaReportOrderController(username, customer.friendlyName || username);
+                    orderController.start();
                 }
             });
         });
