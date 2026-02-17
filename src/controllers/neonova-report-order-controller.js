@@ -18,7 +18,7 @@ class NeonovaReportOrderController extends BaseNeonovaController {
         this.friendlyName = friendlyName || username;
 
         // Create and own the view
-        this.view = new NeonovaReportOrderView(this.friendlyName);
+        this.view = new NeonovaReportOrderView(this.friendlyName, this.handleGenerateRequested);
 
         // Bind handler
         this.handleGenerateRequested = this.handleGenerateRequested.bind(this);
