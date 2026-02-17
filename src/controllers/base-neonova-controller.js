@@ -152,6 +152,9 @@ class BaseNeonovaController {
      * This is the heart of pagination — it runs the infinite loop, handles page fetching,
      * parsing, progress reporting, stop conditions, delays, and final sorting.
      * 
+     * Now supports cancellation via AbortSignal: checks signal.aborted before/after
+     * awaits and during delays, throwing AbortError to bubble up cleanly.
+     * 
      * Called only by paginateReportLogs() — never directly from UI code.
      * 
      * @private
@@ -159,9 +162,11 @@ class BaseNeonovaController {
      * @param {Date} start - Start of date range
      * @param {Date} end - End of date range
      * @param {Function} [onProgress] - Callback(collected, estimatedTotal, currentPage)
+     * @param {AbortSignal} [signal] - Optional signal for cancellation
      * @returns {Promise<Array<Object>>} Sorted entries (newest first)
+     * @throws {DOMException} AbortError if cancelled
      */
-    async #fetchAllLogPages(username, start, end, onProgress) {
+    async #fetchAllLogPages(username, start, end, onProgress, signal) {
         // ────────────────────────────────────────────────
         // Initialize loop state
         // ────────────────────────────────────────────────
@@ -174,11 +179,21 @@ class BaseNeonovaController {
         // Main pagination loop (infinite until stop condition)
         // ────────────────────────────────────────────────
         while (true) {
+            // Abort check before heavy work (fetch)
+            if (signal?.aborted) {
+                throw new DOMException('Pagination aborted', 'AbortError');
+            }
+
             // Build URL for current page/offset
             const url = this.#buildPaginationUrl(username, start, end, offset);
 
             // Fetch raw HTML for the page
             const html = await this.#fetchPageHtml(url);
+
+            // Abort check after await (in case cancelled during fetch)
+            if (signal?.aborted) {
+                throw new DOMException('Pagination aborted', 'AbortError');
+            }
 
             // Network/server failure → stop quietly (caller handles error)
             if (!html) {
@@ -237,8 +252,17 @@ class BaseNeonovaController {
             offset += this.HITS_PER_PAGE;
             page++;
 
-            // Polite delay to avoid hammering the server
-            await new Promise(r => setTimeout(r, this.DELAY_BETWEEN_PAGES_MS));
+            // Polite delay with abort support
+            // Creates a promise that resolves after delay OR rejects immediately on abort
+            await new Promise((resolve, reject) => {
+                const timeout = setTimeout(resolve, this.DELAY_BETWEEN_PAGES_MS);
+
+                // Listen for abort and clean up + reject
+                signal?.addEventListener('abort', () => {
+                    clearTimeout(timeout);
+                    reject(new DOMException('Pagination aborted', 'AbortError'));
+                });
+            });
         }
 
         // Final step: sort all collected entries newest → oldest
