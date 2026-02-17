@@ -196,8 +196,8 @@ class BaseNeonovaController {
                 break; // reached total
             }
 
-            //offset += this.HITS_PER_PAGE;
-            //page++;
+            offset += this.HITS_PER_PAGE;
+            page++;
 
             await new Promise(r => setTimeout(r, this.DELAY_BETWEEN_PAGES_MS));
         }
