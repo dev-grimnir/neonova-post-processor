@@ -171,6 +171,7 @@ class BaseNeonovaController {
                 knownTotal = this.#extractTotalFromFirstPage(doc);
 
                 if (knownTotal === 0) {
+                    console.log("BaseNeonovaController.#fetchAllLogPages -> page === 1 Ending pagination.");
                     break;
                 }
             }
