@@ -150,6 +150,7 @@ class BaseNeonovaController {
      * @returns {Promise<Array<Object>>}
      */
     async #fetchAllLogPages(username, start, end, onProgress) {
+        console.log("BaseNeonovaController.#fetchAllLogPages -> START");
         const entries = [];
         let page = 1;
         let offset = 0;
