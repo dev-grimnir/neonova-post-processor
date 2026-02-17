@@ -27,8 +27,50 @@ class BaseNeonovaController {
         this.DELAY_BETWEEN_PAGES_MS = 200;   // you said max 500ms is acceptable
     }
 
+    /**
+     * Core method: Paginates through ALL RADIUS log pages for a given username within a date range.
+     * 
+     * This is the single most important method in the project — almost every report, dashboard stat,
+     * stability score, and long-disconnect list starts here. It handles:
+     *   - Legacy callback-only calling style (for backward compatibility)
+     *   - Automatic default range (current month → now)
+     *   - Progress reporting during long fetches
+     *   - Graceful error handling with user feedback
+     *   - Delegation to the private paginator (#fetchAllLogPages)
+     * 
+     * @param {string} username - The RADIUS username (e.g., "elray1287") to search logs for
+     * @param {Date|null} [startDate=null] - Optional start of the date range.
+     *                                       Defaults to first day of current month.
+     * @param {Date|null} [endDate=null] - Optional end of the date range.
+     *                                     Defaults to current date/time.
+     * @param {Function|null} [onProgress=null] - Optional callback for real-time progress updates.
+     *                                            Signature: (collectedCount, estimatedTotal, currentPage) => void
+     * 
+     * @legacy-support This method supports the old callback-only style:
+     *   - paginateReportLogs(username, onProgress)
+     *   - paginateReportLogs(username, startDate, onProgress)
+     *   These still work and are converted internally to the modern signature.
+     * 
+     * @returns {Promise<Array<Object>>} Promise that resolves to an array of log entry objects,
+     *                                   sorted newest-first. Each object typically contains:
+     *                                   - timestamp (string)
+     *                                   - status ("Start" | "Stop")
+     *                                   - sessionTime (string)
+     *                                   - dateObj (Date)
+     *                                   Returns empty array [] on any error (never rejects).
+     * 
+     * @throws Never rejects — all errors are caught, logged, and shown to the user via alert.
+     *         Returns [] instead so the rest of the app doesn't crash.
+     */
     async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
-        // Legacy support
+        // ────────────────────────────────────────────────
+        // 1. Legacy callback support (backward compatibility)
+        // ────────────────────────────────────────────────
+        // Older callers used callback-only style, e.g.:
+        //   paginateReportLogs("user", (progress) => {...})
+        // or
+        //   paginateReportLogs("user", someStartDate, (progress) => {...})
+        // We detect and normalize these to the modern signature.
         if (typeof startDate === 'function') {
             onProgress = startDate;
             startDate = null;
@@ -38,16 +80,35 @@ class BaseNeonovaController {
             endDate = null;
         }
 
+        // ────────────────────────────────────────────────
+        // 2. Determine the date range
+        // ────────────────────────────────────────────────
+        // Default: current month start → right now
+        // This ensures we always have a sensible range even if caller provides nothing.
         const now = new Date();
         const rangeStart = startDate || new Date(now.getFullYear(), now.getMonth(), 1);
         const rangeEnd = endDate || now;
 
+        // ────────────────────────────────────────────────
+        // 3. Execute the paginated fetch with error safety net
+        // ────────────────────────────────────────────────
         try {
+            // Delegate to the private worker method that handles actual pagination,
+            // page delays, total extraction, progress callbacks, etc.
             return await this.#fetchAllLogPages(username, rangeStart, rangeEnd, onProgress);
         } catch (err) {
+            // ────────────────────────────────────────────────
+            // 4. Failure handling — never let the app crash
+            // ────────────────────────────────────────────────
+            // Log full error for debugging (console.error preserves stack trace)
             console.error('paginateReportLogs failed:', err);
+
+            // Show user-friendly message (only alert once per failure)
             alert('Report generation failed. Check the browser console for details.');
-            return [];   // return empty instead of crashing everything
+
+            // Return empty array so downstream code (scoring, views, charts) can continue
+            // gracefully instead of throwing unhandled promise rejections.
+            return [];
         }
     }
 
@@ -79,10 +140,15 @@ class BaseNeonovaController {
         }
     }
 
-    // ────────────────────────────────────────────────
-    // Private helpers – clean and focused
-    // ────────────────────────────────────────────────
-
+    /**
+     * Recursively fetches all paginated log pages and aggregates entries.
+     * @private
+     * @param {string} username
+     * @param {Date} start
+     * @param {Date} end
+     * @param {Function} [onProgress]
+     * @returns {Promise<Array<Object>>}
+     */
     async #fetchAllLogPages(username, start, end, onProgress) {
         const entries = [];
         let page = 1;
@@ -102,7 +168,7 @@ class BaseNeonovaController {
                 knownTotal = this.#extractTotalFromFirstPage(doc);
 
                 if (knownTotal === 0) {
-                    break;                    // no results
+                    break;
                 }
             }
 
@@ -130,6 +196,15 @@ class BaseNeonovaController {
         return this.#sortNewestFirst(entries);
     }
 
+    /**
+     * Builds the full pagination URL with query parameters.
+     * @private
+     * @param {string} username
+     * @param {Date} start
+     * @param {Date} end
+     * @param {number} offset
+     * @returns {string} Full URL
+     */
     #buildPaginationUrl(username, start, end, offset) {
         const params = new URLSearchParams({
             acctsearch: '2',
@@ -159,6 +234,12 @@ class BaseNeonovaController {
         return `${this.baseSearchUrl}?${params.toString()}`;
     }
 
+    /**
+     * Fetches HTML for a single search results page.
+     * @private
+     * @param {string} url
+     * @returns {Promise<string|null>} HTML string or null on failure
+     */
     async #fetchPageHtml(url) {
         const res = await fetch(url, {
             credentials: 'include',
@@ -178,6 +259,12 @@ class BaseNeonovaController {
         return await res.text();
     }
 
+    /**
+     * Extracts the total number of log entries from the first page's status row.
+     * @private
+     * @param {Document} doc
+     * @returns {number|null} Total count or null if not found
+     */
     #extractTotalFromFirstPage(doc) {
         const statusRow = Array.from(doc.querySelectorAll('tr'))
             .find(tr => tr.textContent.includes('Search Results') && tr.textContent.includes('of'));
@@ -196,14 +283,22 @@ class BaseNeonovaController {
         return isNaN(total) ? null : total;
     }
 
+    /**
+     * Sorts entries newest first by timestamp.
+     * @private
+     * @param {Array<Object>} entries
+     * @returns {Array<Object>}
+     */
     #sortNewestFirst(entries) {
         return [...entries].sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
     }
-
-    // ────────────────────────────────────────────────
-    // Other existing methods (cleaned up slightly)
-    // ────────────────────────────────────────────────
-
+        
+    /**
+     * Submits a search form for a username with optional overrides.
+     * @param {string} username
+     * @param {Object} [overrides={}] - Optional form field overrides
+     * @returns {Promise<Document>} Parsed HTML document
+     */
     async submitSearch(username, overrides = {}) {
         const formData = new URLSearchParams({
             ...this.defaultFormData,
@@ -236,6 +331,11 @@ class BaseNeonovaController {
         return new DOMParser().parseFromString(html, 'text/html');
     }
 
+    /**
+     * Parses log entry rows from a search results table.
+     * @param {Document} doc
+     * @returns {Array<Object>} Array of entry objects with timestamp, status, sessionTime, dateObj
+     */
     parsePageRows(doc) {
         const table = doc.querySelector('table[width="500"]') || 
                       doc.querySelector('table[cellspacing="2"][cellpadding="2"]');
