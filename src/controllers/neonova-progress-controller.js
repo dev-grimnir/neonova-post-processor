@@ -11,12 +11,16 @@ class NeonovaProgressController extends BaseNeonovaController {
     /**
      * @param {string} username 
      * @param {string} friendlyName 
+     * @param {Date} [customStart=null] - Optional custom start date for pagination
+     * @param {Date} [customEnd=null] - Optional custom end date for pagination
      */
-    constructor(username, friendlyName) {
+    constructor(username, friendlyName, customStart = null, customEnd = null) {
         super();  // Inherits base URL, defaults, constants, etc.
 
         this.username = username;
         this.friendlyName = friendlyName;
+        this.customStart = customStart;
+        this.customEnd = customEnd;
 
         // Create and own the view
         this.view = new NeonovaProgressView(this.friendlyName);
@@ -32,17 +36,26 @@ class NeonovaProgressController extends BaseNeonovaController {
      * Starts the report generation flow: shows modal, begins pagination with abort support.
      */
     start() {
+        // ────────────────────────────────────────────────
+        // Show owned view and attach cancel handler
+        // ────────────────────────────────────────────────
         this.view.showModal(this.handleCancel);
 
+        // ────────────────────────────────────────────────
+        // Setup cancellation
+        // ────────────────────────────────────────────────
         const abortController = new AbortController();
 
         // Attach cancel from view
         this.view.onCancel = () => abortController.abort();
 
-        // Use inherited paginateReportLogs directly
+        // ────────────────────────────────────────────────
+        // Start pagination (with custom dates if provided)
+        // ────────────────────────────────────────────────
         this.paginateReportLogs(
             this.username,
-            null, null,
+            this.customStart,
+            this.customEnd,
             this.handleProgress,
             abortController.signal
         ).then(entries => {
@@ -63,7 +76,9 @@ class NeonovaProgressController extends BaseNeonovaController {
      * Handles successful completion — closes modal and opens report.
      */
     handleSuccess(entries) {
-        // Your existing finish logic — create and open the report view
+        // ────────────────────────────────────────────────
+        // Create and open report view in new tab
+        // ────────────────────────────────────────────────
         const reportView = new NeonovaReportView(
             this.username,
             this.friendlyName,
@@ -72,6 +87,10 @@ class NeonovaProgressController extends BaseNeonovaController {
             /* long disconnects */
         );
         reportView.openInNewTab();
+
+        // ────────────────────────────────────────────────
+        // Close progress modal
+        // ────────────────────────────────────────────────
         this.view.close();
     }
 
