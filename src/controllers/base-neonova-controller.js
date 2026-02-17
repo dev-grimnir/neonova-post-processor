@@ -159,7 +159,7 @@ class BaseNeonovaController {
             const url = this.#buildPaginationUrl(username, start, end, offset);
             const html = await this.#fetchPageHtml(url);
             if (!html) {
-                console.log('BaseNeonovaController.#fetchAllLogPages() -> Not HTML Ending pagination.");
+                console.log("BaseNeonovaController.#fetchAllLogPages -> Not HTML Ending pagination.");
                 break;
             }
 
