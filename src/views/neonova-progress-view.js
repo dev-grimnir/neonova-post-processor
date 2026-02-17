@@ -1,18 +1,21 @@
 /**
  * Progress modal shown during report generation.
  * Displays progress bar, status text, and cancel button.
+ * 
+ * Pure UI class — no business logic, no direct knowledge of pagination or controllers.
+ * All interactions (progress updates, status, cancel, close) are driven by callbacks
+ * provided by the owning controller.
  */
 class NeonovaProgressView extends BaseNeonovaView {
     /**
-     * @param {string} username - RADIUS username being reported
      * @param {string} friendlyName - Display name for the modal title
      */
-    constructor(username, friendlyName) {
+    constructor(friendlyName) {
         super(null);  // Container set in showModal()
 
-        this.username = username;
         this.friendlyName = friendlyName;
         this._close = null;
+        this.onCancel = null;  // Callback set by controller when cancel is clicked
     }
 
     /**
@@ -20,13 +23,13 @@ class NeonovaProgressView extends BaseNeonovaView {
      * 
      * Creates the overlay and modal elements dynamically, injects the progress UI
      * (title, bar, status text, cancel button), applies entrance animation,
-     * sets up close handlers, and starts pagination with cancellation support.
+     * and sets up close handlers.
      * 
-     * This is the entry point for report generation from the UI — pagination is
-     * triggered here so the AbortController can be tied directly to the modal's
-     * lifecycle.
+     * Cancel button triggers the onCancel callback (provided by controller).
+     * 
+     * @param {Function} onCancelCallback - Called when user clicks cancel or overlay
      */
-    showModal() {
+    showModal(onCancelCallback) {
         // ────────────────────────────────────────────────
         // Create overlay (dark blurred backdrop)
         // ────────────────────────────────────────────────
@@ -86,38 +89,9 @@ class NeonovaProgressView extends BaseNeonovaView {
         });
 
         // ────────────────────────────────────────────────
-        // Setup cancellation via AbortController
-        // ────────────────────────────────────────────────
-        const abortController = new AbortController();
-
-        // Start pagination with abort signal
-        baseController.paginateReportLogs(
-            this.username,
-            null, null,
-            (collected, total, page) => this.updateProgress(collected, total, page),
-            abortController.signal
-        ).then(entries => {
-            // Success: finish report generation
-            this.finish({ username: this.username, friendlyName: this.friendlyName, entries });
-        }).catch(err => {
-            // Handle abort separately (no alert, just close)
-            if (err.name === 'AbortError') {
-                console.log('Report generation cancelled by user');
-                this.showError('Cancelled');
-                setTimeout(() => this._close?.(), 800);
-                return;
-            }
-            // Real error: show message and close
-            this.showError('Generation failed');
-            setTimeout(() => this._close?.(), 1500);
-        });
-
-        // ────────────────────────────────────────────────
-        // Close handler (exit animation + DOM removal + abort)
+        // Close handler (exit animation + DOM removal)
         // ────────────────────────────────────────────────
         this._close = () => {
-            abortController.abort();  // Immediately stop pagination
-
             overlay.style.opacity = '0';
             modal.style.transform = 'translateX(-60px)';
             modal.style.opacity = '0';
@@ -125,11 +99,24 @@ class NeonovaProgressView extends BaseNeonovaView {
         };
 
         // ────────────────────────────────────────────────
-        // Event listeners for closing
+        // Event listeners for cancel/close
         // ────────────────────────────────────────────────
-        modal.querySelector('#cancel-btn').addEventListener('click', this._close);
+        // Cancel button: trigger controller's abort + close animation
+        modal.querySelector('#cancel-btn').addEventListener('click', () => {
+            if (typeof onCancelCallback === 'function') {
+                onCancelCallback();
+            }
+            this._close();
+        });
+
+        // Overlay click: same as cancel
         overlay.addEventListener('click', e => { 
-            if (e.target === overlay) this._close(); 
+            if (e.target === overlay) {
+                if (typeof onCancelCallback === 'function') {
+                    onCancelCallback();
+                }
+                this._close(); 
+            }
         });
     }
 
@@ -154,40 +141,26 @@ class NeonovaProgressView extends BaseNeonovaView {
         } else {
             percent = Math.min(99, currentPage * 5);
             statusText = `Fetching page ${currentPage}...`;
-            }
+        }
 
         if (bar) bar.style.width = percent + '%';
         if (status) status.textContent = statusText;
     }
 
     /**
-     * Called when report generation completes.
-     * Closes modal and opens the full report in a new tab.
+     * Shows a status/error message in the modal.
+     * @param {string} message
      */
-    finish(data) {
-        const reportView = new NeonovaReportView(
-            data.username,
-            data.friendlyName,
-            data.metrics,
-            data.entries.length,
-            data.metrics.longDisconnects
-        );
-
-        // Open the report tab FIRST (in user gesture context)
-        reportView.openInNewTab();
-
-        // Then close the modal (short delay ensures popup opens reliably)
-        setTimeout(() => {
-            this._close && this._close();
-        }, 100);
+    showStatus(message) {
+        const status = this.container.querySelector('#status');
+        if (status) status.textContent = message;
     }
 
     /**
-     * Shows an error message in the modal.
+     * Closes the modal with exit animation.
      */
-    showError(message) {
-        const status = this.container.querySelector('#status');
-        if (status) status.textContent = 'Error: ' + message;
+    close() {
+        this._close?.();
     }
 }
 
