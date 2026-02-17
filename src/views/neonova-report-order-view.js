@@ -19,7 +19,6 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         super(null);
         this.friendlyName = friendlyName || username;
         this.onGenerateRequested = onGenerateRequested;
-        this.view = new NeonovaReportOrderView(this.friendlyName, this.handleGenerateRequested);
         this._close = null;
     }
 
