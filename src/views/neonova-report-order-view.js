@@ -10,15 +10,12 @@
  */
 class NeonovaReportOrderView extends BaseNeonovaView {
     /**
-     * @param {Element} container - Parent container (passed to super)
-     * @param {string} username - RADIUS username
      * @param {string} friendlyName - Display name for title
      * @param {Function} onGenerateRequested - Callback(startDateIso, endDateIso) when generate clicked
      */
-    constructor(container, username, friendlyName, onGenerateRequested) {
-        super(container);
-        this.username = username;
-        this.friendlyName = friendlyName || username;
+    constructor(friendlyName, onGenerateRequested) {
+        super(null);  // No container needed for modal views
+        this.friendlyName = friendlyName;
         this.onGenerateRequested = onGenerateRequested;  // Provided by controller
         this._close = null;
     }
