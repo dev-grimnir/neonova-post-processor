@@ -181,8 +181,12 @@ class BaseNeonovaController {
             }
 
             // Stop conditions
-            if (pageEntries.length < this.HITS_PER_PAGE) break;           // last page
-            if (knownTotal !== null && entries.length >= knownTotal) break; // reached total
+            if (pageEntries.length < this.HITS_PER_PAGE)
+                console.log("BaseNeonovaController.#fetchallLogPages() -> less entries than 100.  Ending pagination.");
+            break;           // last page
+            if (knownTotal !== null && entries.length >= knownTotal)
+                console.log("BaseNeonovaController.#fetchallLogPages() -> length is greater than or equal to known total.  Ending pagination.");
+            break; // reached total
 
             // Safety: prevent infinite loop if total never parsed
             if (page > 200) break;
