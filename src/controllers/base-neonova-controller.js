@@ -158,7 +158,10 @@ class BaseNeonovaController {
         while (true) {
             const url = this.#buildPaginationUrl(username, start, end, offset);
             const html = await this.#fetchPageHtml(url);
-            if (!html) break;
+            if (!html) {
+                console.log('BaseNeonovaController.#fetchAllLogPages() -> Not HTML Ending pagination.");
+                break;
+            }
 
             const doc = new DOMParser().parseFromString(html, 'text/html');
             const pageEntries = this.parsePageRows(doc);
