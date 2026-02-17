@@ -110,15 +110,150 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         });
     }
 
-    // render() and attachListeners() unchanged — they only populate UI and fire this.onGenerateRequested
-    // (your existing implementations are fine — they already call this.onGenerateRequested with ISO strings)
-
+    /**
+     * Renders the order form content: header, presets, custom date selectors, generate button.
+     */
     render() {
-        // ... your existing render code (unchanged) ...
+        if (!this.container) {
+            return;
+        }
+
+        this.container.innerHTML = `
+            <div class="p-6 space-y-8">
+                <h2 class="text-3xl font-bold mb-8 text-white" 
+                    style="text-shadow: 0 0 25px ${this.theme.accentColor};">
+                    Generate Report for ${this.friendlyName}
+                </h2>
+
+                <!-- Quick Presets -->
+                <div class="flex flex-wrap gap-3">
+                    <button class="quick-btn px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-black font-medium rounded-2xl text-sm transition flex items-center gap-2 shadow-md" data-days="1">
+                        <i class="fas fa-calendar-day"></i> Last 1 day
+                    </button>
+                    <button class="quick-btn px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-black font-medium rounded-2xl text-sm transition flex items-center gap-2 shadow-md" data-days="7">
+                        <i class="fas fa-calendar-week"></i> Last 7 days
+                    </button>
+                    <button class="quick-btn px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-black font-medium rounded-2xl text-sm transition flex items-center gap-2 shadow-md" data-days="30">
+                        <i class="fas fa-calendar"></i> Last 30 days
+                    </button>
+                    <button class="quick-btn px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-black font-medium rounded-2xl text-sm transition flex items-center gap-2 shadow-md" data-days="90">
+                        <i class="fas fa-calendar-alt"></i> Last 90 days
+                    </button>
+                </div>
+
+                <!-- Custom Date Range -->
+                <div class="grid grid-cols-2 gap-8">
+                    <div>
+                        <label class="block text-xs uppercase tracking-widest text-zinc-500 mb-3">Start Date</label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <select id="start-year" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 text-sm"></select>
+                            <select id="start-month" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 text-sm"></select>
+                            <select id="start-day" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 text-sm"></select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase tracking-widest text-zinc-500 mb-3">End Date</label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <select id="end-year" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 text-sm"></select>
+                            <select id="end-month" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 text-sm"></select>
+                            <select id="end-day" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-3 text-white focus:border-emerald-500 text-sm"></select>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="generate-custom" class="w-full bg-emerald-500 hover:bg-emerald-600 text-black font-semibold py-4 rounded-2xl transition text-lg">
+                    Generate Report
+                </button>
+            </div>
+        `;
+
+        // ────────────────────────────────────────────────
+        // Populate date dropdowns with defaults
+        // ────────────────────────────────────────────────
+        // Calculate defaults
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth() + 1;
+        const currentDay = today.getDate();
+
+        const oneYearAgo = new Date(today);
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+        const defaultStartYear = oneYearAgo.getFullYear();
+        const defaultStartMonth = oneYearAgo.getMonth() + 1;
+        let defaultStartDay = oneYearAgo.getDate();  // Will be clamped below if needed
+
+        // Start date = exactly one year ago (clamped)
+        const sy = this.container.querySelector('#start-year');
+        const sm = this.container.querySelector('#start-month');
+        const sd = this.container.querySelector('#start-day');
+        if (sy) populateYears(sy, defaultStartYear);
+        if (sm) populateMonths(sm, defaultStartMonth);
+        if (sd) populateDays(sd, defaultStartYear, defaultStartMonth, defaultStartDay);
+
+        // End date = today
+        const ey = this.container.querySelector('#end-year');
+        const em = this.container.querySelector('#end-month');
+        const ed = this.container.querySelector('#end-day');
+        if (ey) populateYears(ey, currentYear);
+        if (em) populateMonths(em, currentMonth);
+        if (ed) populateDays(ed, currentYear, currentMonth, currentDay);
+
+        // ────────────────────────────────────────────────
+        // Update days listener for month/year changes
+        // ────────────────────────────────────────────────
+        const updateDays = (dayId, yearId, monthId) => {
+            const y = this.container.querySelector(`#${yearId}`);
+            const m = this.container.querySelector(`#${monthId}`);
+            const d = this.container.querySelector(`#${dayId}`);
+            if (!y || !m || !d) return;
+            populateDays(d, parseInt(y.value), parseInt(m.value), parseInt(d.value) || 1);
+        };
+
+        sy?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
+        sm?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
+        ey?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
+        em?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
     }
 
+    /**
+     * Attaches event listeners to presets and generate button.
+     * Fires onGenerateRequested callback with ISO dates on click.
+     */
     attachListeners() {
-        // ... your existing listeners (quick buttons, generate custom) ...
-        // They call this.onGenerateRequested(startIso, endIso) — perfect
+        // ────────────────────────────────────────────────
+        // Quick preset buttons
+        // ────────────────────────────────────────────────
+        this.container.querySelectorAll('.quick-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const days = parseInt(btn.dataset.days);
+                let start = new Date();
+                const end = new Date();
+                if (days) start.setDate(start.getDate() - days);
+                if (this.onGenerateRequested) this.onGenerateRequested(start.toISOString(), end.toISOString());
+            });
+        });
+
+        // ────────────────────────────────────────────────
+        // Custom generate button
+        // ────────────────────────────────────────────────
+        const genBtn = this.container.querySelector('#generate-custom');
+        if (genBtn) genBtn.addEventListener('click', (e) => {
+            const startY = parseInt(this.container.querySelector('#start-year')?.value);
+            const startM = parseInt(this.container.querySelector('#start-month')?.value) - 1;
+            const startD = parseInt(this.container.querySelector('#start-day')?.value);
+            const start = new Date(startY, startM, startD);
+
+            const endY = parseInt(this.container.querySelector('#end-year')?.value);
+            const endM = parseInt(this.container.querySelector('#end-month')?.value) - 1;
+            const endD = parseInt(this.container.querySelector('#end-day')?.value);
+            const end = new Date(endY, endM, endD);
+            end.setHours(23, 59, 59, 999);
+
+            if (start > end) {
+                alert('Start date must be before end date.');
+                return;
+            }
+            if (this.onGenerateRequested) this.onGenerateRequested(start.toISOString(), end.toISOString());
+        });
     }
 }
