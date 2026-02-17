@@ -16,9 +16,20 @@ class NeonovaProgressView extends BaseNeonovaView {
     }
 
     /**
-     * Shows the progress modal with animation.
+     * Shows the progress modal with smooth entrance animation.
+     * 
+     * Creates the overlay and modal elements dynamically, injects the progress UI
+     * (title, bar, status text, cancel button), applies entrance animation,
+     * sets up close handlers, and starts pagination with cancellation support.
+     * 
+     * This is the entry point for report generation from the UI — pagination is
+     * triggered here so the AbortController can be tied directly to the modal's
+     * lifecycle.
      */
     showModal() {
+        // ────────────────────────────────────────────────
+        // Create overlay (dark blurred backdrop)
+        // ────────────────────────────────────────────────
         const overlay = document.createElement('div');
         overlay.style.cssText = `
             position: fixed; inset: 0;
@@ -27,6 +38,9 @@ class NeonovaProgressView extends BaseNeonovaView {
             opacity: 0; transition: opacity 400ms ease;
         `;
 
+        // ────────────────────────────────────────────────
+        // Create modal card
+        // ────────────────────────────────────────────────
         const modal = document.createElement('div');
         modal.style.cssText = `
             background: #18181b; border: 1px solid #27272a; border-radius: 24px;
@@ -35,9 +49,13 @@ class NeonovaProgressView extends BaseNeonovaView {
             transform: translateX(-60px); opacity: 0; transition: all 500ms cubic-bezier(0.32, 0.72, 0, 1);
         `;
 
+        // Append to DOM
         document.body.appendChild(overlay);
         overlay.appendChild(modal);
 
+        // ────────────────────────────────────────────────
+        // Inject modal content
+        // ────────────────────────────────────────────────
         modal.innerHTML = `
             <div class="text-emerald-400 text-xs font-mono tracking-widest mb-2">GENERATING REPORT</div>
             <div class="text-2xl font-semibold text-white mb-8">${this.friendlyName}</div>
@@ -55,25 +73,64 @@ class NeonovaProgressView extends BaseNeonovaView {
             </button>
         `;
 
+        // Store reference for later updates (progress bar, status text)
         this.container = modal;
 
-        // Entrance animation
+        // ────────────────────────────────────────────────
+        // Entrance animation (fade in + slide from left)
+        // ────────────────────────────────────────────────
         requestAnimationFrame(() => {
             overlay.style.opacity = '1';
             modal.style.transform = 'translateX(0)';
             modal.style.opacity = '1';
         });
 
-        // Close handler
+        // ────────────────────────────────────────────────
+        // Setup cancellation via AbortController
+        // ────────────────────────────────────────────────
+        const abortController = new AbortController();
+
+        // Start pagination with abort signal
+        baseController.paginateReportLogs(
+            this.username,
+            null, null,
+            (collected, total, page) => this.updateProgress(collected, total, page),
+            abortController.signal
+        ).then(entries => {
+            // Success: finish report generation
+            this.finish({ username: this.username, friendlyName: this.friendlyName, entries });
+        }).catch(err => {
+            // Handle abort separately (no alert, just close)
+            if (err.name === 'AbortError') {
+                console.log('Report generation cancelled by user');
+                this.showError('Cancelled');
+                setTimeout(() => this._close?.(), 800);
+                return;
+            }
+            // Real error: show message and close
+            this.showError('Generation failed');
+            setTimeout(() => this._close?.(), 1500);
+        });
+
+        // ────────────────────────────────────────────────
+        // Close handler (exit animation + DOM removal + abort)
+        // ────────────────────────────────────────────────
         this._close = () => {
+            abortController.abort();  // Immediately stop pagination
+
             overlay.style.opacity = '0';
             modal.style.transform = 'translateX(-60px)';
             modal.style.opacity = '0';
             setTimeout(() => overlay.remove(), 500);
         };
 
+        // ────────────────────────────────────────────────
+        // Event listeners for closing
+        // ────────────────────────────────────────────────
         modal.querySelector('#cancel-btn').addEventListener('click', this._close);
-        overlay.addEventListener('click', e => { if (e.target === overlay) this._close(); });
+        overlay.addEventListener('click', e => { 
+            if (e.target === overlay) this._close(); 
+        });
     }
 
     /**
