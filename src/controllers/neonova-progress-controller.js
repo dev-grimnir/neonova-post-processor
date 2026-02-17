@@ -1,26 +1,27 @@
 /**
  * Controller for the progress modal during report generation.
  * 
+ * Extends BaseNeonovaController to directly access paginateReportLogs and other core methods.
  * Owns the NeonovaProgressView instance, starts pagination with cancellation support,
  * handles success/failure/abort, and forwards progress updates to the view.
  * 
- * Keeps all business logic out of the view for clean separation.
+ * Keeps all business logic in the controller — view remains pure UI.
  */
-class NeonovaProgressController {
+class NeonovaProgressController extends BaseNeonovaController {
     /**
      * @param {string} username 
      * @param {string} friendlyName 
-     * @param {BaseNeonovaController} baseController - Instance for pagination
      */
-    constructor(username, friendlyName, baseController) {
+    constructor(username, friendlyName) {
+        super();  // Inherits base URL, defaults, constants, etc.
+
         this.username = username;
         this.friendlyName = friendlyName;
-        this.baseController = baseController;
 
         // Create and own the view
         this.view = new NeonovaProgressView(this.friendlyName);
 
-        // Bind handlers
+        // Bind handlers for callbacks
         this.handleProgress = this.handleProgress.bind(this);
         this.handleCancel = this.handleCancel.bind(this);
         this.handleSuccess = this.handleSuccess.bind(this);
@@ -38,7 +39,8 @@ class NeonovaProgressController {
         // Attach cancel from view
         this.view.onCancel = () => abortController.abort();
 
-        this.baseController.paginateReportLogs(
+        // Use inherited paginateReportLogs directly
+        this.paginateReportLogs(
             this.username,
             null, null,
             this.handleProgress,
@@ -61,7 +63,7 @@ class NeonovaProgressController {
      * Handles successful completion — closes modal and opens report.
      */
     handleSuccess(entries) {
-        // Your existing finish logic (create report view, open tab, etc.)
+        // Your existing finish logic — create and open the report view
         const reportView = new NeonovaReportView(
             this.username,
             this.friendlyName,
@@ -70,7 +72,7 @@ class NeonovaProgressController {
             /* long disconnects */
         );
         reportView.openInNewTab();
-        this.view.close();  // or trigger finish animation
+        this.view.close();
     }
 
     /**
@@ -78,7 +80,7 @@ class NeonovaProgressController {
      */
     handleError(err) {
         if (err.name === 'AbortError') {
-            console.log('Report generation cancelled');
+            console.log('Report generation cancelled by user');
             this.view.showStatus('Cancelled');
         } else {
             console.error('Report generation failed:', err);
