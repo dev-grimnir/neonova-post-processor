@@ -62,7 +62,7 @@ class BaseNeonovaController {
      * @throws Never rejects — all errors are caught, logged, and shown to the user via alert.
      *         Returns [] instead so the rest of the app doesn't crash.
      */
-    async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
+    async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null, signal = null) {
         // ────────────────────────────────────────────────
         // 1. Legacy callback support (backward compatibility)
         // ────────────────────────────────────────────────
@@ -95,11 +95,17 @@ class BaseNeonovaController {
         try {
             // Delegate to the private worker method that handles actual pagination,
             // page delays, total extraction, progress callbacks, etc.
-            return await this.#fetchAllLogPages(username, rangeStart, rangeEnd, onProgress);
+            return await this.#fetchAllLogPages(username, rangeStart, rangeEnd, onProgress, signal);
         } catch (err) {
             // ────────────────────────────────────────────────
             // 4. Failure handling — never let the app crash
             // ────────────────────────────────────────────────
+            if (err.name === 'AbortError') {
+                // User-initiated cancellation — quiet, graceful exit
+                console.log('Pagination cancelled by user');
+                return [];
+            }
+
             // Log full error for debugging (console.error preserves stack trace)
             console.error('paginateReportLogs failed:', err);
 
@@ -141,67 +147,101 @@ class BaseNeonovaController {
     }
 
     /**
-     * Recursively fetches all paginated log pages and aggregates entries.
+     * Private worker method: Fetches ALL paginated log pages sequentially.
+     * 
+     * This is the heart of pagination — it runs the infinite loop, handles page fetching,
+     * parsing, progress reporting, stop conditions, delays, and final sorting.
+     * 
+     * Called only by paginateReportLogs() — never directly from UI code.
+     * 
      * @private
      * @param {string} username
-     * @param {Date} start
-     * @param {Date} end
-     * @param {Function} [onProgress]
-     * @returns {Promise<Array<Object>>}
+     * @param {Date} start - Start of date range
+     * @param {Date} end - End of date range
+     * @param {Function} [onProgress] - Callback(collected, estimatedTotal, currentPage)
+     * @returns {Promise<Array<Object>>} Sorted entries (newest first)
      */
     async #fetchAllLogPages(username, start, end, onProgress) {
-        console.log("BaseNeonovaController.#fetchAllLogPages -> START");
-        const entries = [];
-        let page = 1;
-        let offset = 0;
-        let knownTotal = null;
+        // ────────────────────────────────────────────────
+        // Initialize loop state
+        // ────────────────────────────────────────────────
+        const entries = [];           // Accumulates all parsed log entries across pages
+        let page = 1;                 // Current page number (for progress reporting)
+        let offset = 0;               // Pagination offset sent in URL (increments by HITS_PER_PAGE)
+        let knownTotal = null;        // Total entries reported by first page (null until parsed)
 
+        // ────────────────────────────────────────────────
+        // Main pagination loop (infinite until stop condition)
+        // ────────────────────────────────────────────────
         while (true) {
+            // Build URL for current page/offset
             const url = this.#buildPaginationUrl(username, start, end, offset);
+
+            // Fetch raw HTML for the page
             const html = await this.#fetchPageHtml(url);
+
+            // Network/server failure → stop quietly (caller handles error)
             if (!html) {
-                console.log("BaseNeonovaController.#fetchAllLogPages -> Not HTML Ending pagination.");
                 break;
             }
 
+            // Parse HTML into DOM for row extraction
             const doc = new DOMParser().parseFromString(html, 'text/html');
+
+            // Extract log entries from current page's table rows
             const pageEntries = this.parsePageRows(doc);
 
-            // First page: extract total count (primary stop condition)
+            // ────────────────────────────────────────────────
+            // First page only: extract reported total count
+            // ────────────────────────────────────────────────
+            // This is the primary source for "how many pages total?"
+            // Parsed once and used for progress + early stop detection.
             if (page === 1) {
                 knownTotal = this.#extractTotalFromFirstPage(doc);
 
+                // No results at all → exit early
                 if (knownTotal === 0) {
-                    console.log("BaseNeonovaController.#fetchAllLogPages -> page === 1 Ending pagination.");
                     break;
                 }
             }
 
+            // Accumulate entries from this page
             entries.push(...pageEntries);
 
-            // Progress callback (now using collected first, total second – more conventional)
+            // ────────────────────────────────────────────────
+            // Progress reporting
+            // ────────────────────────────────────────────────
+            // Called after every page if caller provided a callback.
+            // Uses knownTotal when available; falls back to current count.
             if (typeof onProgress === 'function') {
                 const total = knownTotal !== null ? knownTotal : entries.length;
                 onProgress(entries.length, total, page);
             }
 
-            // Stop conditions
+            // ────────────────────────────────────────────────
+            // Stop conditions (exit loop early when done)
+            // ────────────────────────────────────────────────
+            // 1. Last page detected (fewer than full page of results)
             if (pageEntries.length < this.HITS_PER_PAGE) {
-                console.log("BaseNeonovaController.#fetchallLogPages() -> less entries than 100.  Ending pagination.");
                 break;           // last page
             }
             
+            // 2. We've collected everything the server reported
             if (knownTotal !== null && entries.length >= knownTotal) {
-                console.log("BaseNeonovaController.#fetchallLogPages() -> length is greater than or equal to known total.  Ending pagination.");
                 break; // reached total
             }
 
+            // ────────────────────────────────────────────────
+            // Prepare for next page
+            // ────────────────────────────────────────────────
             offset += this.HITS_PER_PAGE;
             page++;
 
+            // Polite delay to avoid hammering the server
             await new Promise(r => setTimeout(r, this.DELAY_BETWEEN_PAGES_MS));
         }
 
+        // Final step: sort all collected entries newest → oldest
         return this.#sortNewestFirst(entries);
     }
 
