@@ -195,13 +195,9 @@ class BaseNeonovaController {
                 console.log("BaseNeonovaController.#fetchallLogPages() -> length is greater than or equal to known total.  Ending pagination.");
                 break; // reached total
             }
-            
 
-            // Safety: prevent infinite loop if total never parsed
-            if (page > 200) break;
-
-            offset += this.HITS_PER_PAGE;
-            page++;
+            //offset += this.HITS_PER_PAGE;
+            //page++;
 
             await new Promise(r => setTimeout(r, this.DELAY_BETWEEN_PAGES_MS));
         }
