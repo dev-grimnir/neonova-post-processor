@@ -10,15 +10,13 @@
  */
 class NeonovaReportOrderView extends BaseNeonovaView {
     /**
-     * @param {Element} container - Parent container (passed to super)
-     * @param {string} username - RADIUS username
      * @param {string} friendlyName - Display name for title
      * @param {Function} onGenerateRequested - Callback(startDateIso, endDateIso) when generate clicked
      */
-    constructor(username, friendlyName, onGenerateRequested) {
-        super(null);
-        this.friendlyName = friendlyName || username;
-        this.onGenerateRequested = onGenerateRequested;
+    constructor(friendlyName, onGenerateRequested) {
+        super(null);  // No container needed — modal appended to body
+        this.friendlyName = friendlyName;
+        this.onGenerateRequested = onGenerateRequested;  // Provided by controller
         this._close = null;
     }
 
@@ -173,13 +171,6 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         // ────────────────────────────────────────────────
         // Populate date dropdowns with defaults
         // ────────────────────────────────────────────────
-        this.#populateDateDropdowns();
-    }
-
-    /**
-     * Private helper: Populates all date dropdowns with defaults.
-     */
-    #populateDateDropdowns() {
         const today = new Date();
         const currentYear = today.getFullYear();
         const currentMonth = today.getMonth() + 1;
@@ -206,6 +197,64 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         if (ey) this.#populateYears(ey, currentYear);
         if (em) this.#populateMonths(em, currentMonth);
         if (ed) this.#populateDays(ed, currentYear, currentMonth, currentDay);
+
+        // ────────────────────────────────────────────────
+        // Update days listener for month/year changes
+        // ────────────────────────────────────────────────
+        const updateDays = (dayId, yearId, monthId) => {
+            const y = this.container.querySelector(`#${yearId}`);
+            const m = this.container.querySelector(`#${monthId}`);
+            const d = this.container.querySelector(`#${dayId}`);
+            if (!y || !m || !d) return;
+            this.#populateDays(d, parseInt(y.value), parseInt(m.value), parseInt(d.value) || 1);
+        };
+
+        sy?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
+        sm?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
+        ey?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
+        em?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
+    }
+
+    /**
+     * Attaches event listeners to presets and generate button.
+     * Fires onGenerateRequested callback with ISO dates on click.
+     */
+    attachListeners() {
+        // ────────────────────────────────────────────────
+        // Quick preset buttons
+        // ────────────────────────────────────────────────
+        this.container.querySelectorAll('.quick-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const days = parseInt(btn.dataset.days);
+                let start = new Date();
+                const end = new Date();
+                if (days) start.setDate(start.getDate() - days);
+                if (this.onGenerateRequested) this.onGenerateRequested(start.toISOString(), end.toISOString());
+            });
+        });
+
+        // ────────────────────────────────────────────────
+        // Custom generate button
+        // ────────────────────────────────────────────────
+        const genBtn = this.container.querySelector('#generate-custom');
+        if (genBtn) genBtn.addEventListener('click', (e) => {
+            const startY = parseInt(this.container.querySelector('#start-year')?.value);
+            const startM = parseInt(this.container.querySelector('#start-month')?.value) - 1;
+            const startD = parseInt(this.container.querySelector('#start-day')?.value);
+            const start = new Date(startY, startM, startD);
+
+            const endY = parseInt(this.container.querySelector('#end-year')?.value);
+            const endM = parseInt(this.container.querySelector('#end-month')?.value) - 1;
+            const endD = parseInt(this.container.querySelector('#end-day')?.value);
+            const end = new Date(endY, endM, endD);
+            end.setHours(23, 59, 59, 999);
+
+            if (start > end) {
+                alert('Start date must be before end date.');
+                return;
+            }
+            if (this.onGenerateRequested) this.onGenerateRequested(start.toISOString(), end.toISOString());
+        });
     }
 
     /**
@@ -256,68 +305,5 @@ class NeonovaReportOrderView extends BaseNeonovaView {
             if (d === defaultDay) opt.selected = true;
             select.add(opt);
         }
-    }
-
-    /**
-     * Attaches event listeners to presets and generate button.
-     * Fires onGenerateRequested callback with ISO dates on click.
-     */
-    attachListeners() {
-        // ────────────────────────────────────────────────
-        // Quick preset buttons
-        // ────────────────────────────────────────────────
-        this.container.querySelectorAll('.quick-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const days = parseInt(btn.dataset.days);
-                let start = new Date();
-                const end = new Date();
-                if (days) start.setDate(start.getDate() - days);
-                if (this.onGenerateRequested) this.onGenerateRequested(start.toISOString(), end.toISOString());
-            });
-        });
-
-        // ────────────────────────────────────────────────
-        // Custom generate button
-        // ────────────────────────────────────────────────
-        const genBtn = this.container.querySelector('#generate-custom');
-        if (genBtn) genBtn.addEventListener('click', (e) => {
-            const startY = parseInt(this.container.querySelector('#start-year')?.value);
-            const startM = parseInt(this.container.querySelector('#start-month')?.value) - 1;
-            const startD = parseInt(this.container.querySelector('#start-day')?.value);
-            const start = new Date(startY, startM, startD);
-
-            const endY = parseInt(this.container.querySelector('#end-year')?.value);
-            const endM = parseInt(this.container.querySelector('#end-month')?.value) - 1;
-            const endD = parseInt(this.container.querySelector('#end-day')?.value);
-            const end = new Date(endY, endM, endD);
-            end.setHours(23, 59, 59, 999);
-
-            if (start > end) {
-                alert('Start date must be before end date.');
-                return;
-            }
-            if (this.onGenerateRequested) this.onGenerateRequested(start.toISOString(), end.toISOString());
-        });
-
-        // ────────────────────────────────────────────────
-        // Update days listener for month/year changes
-        // ────────────────────────────────────────────────
-        const updateDays = (dayId, yearId, monthId) => {
-            const y = this.container.querySelector(`#${yearId}`);
-            const m = this.container.querySelector(`#${monthId}`);
-            const d = this.container.querySelector(`#${dayId}`);
-            if (!y || !m || !d) return;
-            this.#populateDays(d, parseInt(y.value), parseInt(m.value), parseInt(d.value) || 1);
-        };
-
-        const sy = this.container.querySelector('#start-year');
-        const sm = this.container.querySelector('#start-month');
-        sy?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
-        sm?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
-
-        const ey = this.container.querySelector('#end-year');
-        const em = this.container.querySelector('#end-month');
-        ey?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
-        em?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
     }
 }
