@@ -40,6 +40,9 @@ class NeonovaReportOrderController extends BaseNeonovaController {
      * @param {Date} endDate 
      */
     handleGenerateRequested(startDate, endDate) {
+        console.log("NeonovaReportOrderController.handleGenerateRequested() this = " + this);
+
+
         // Close order modal cleanly
         this.view.close();
 
