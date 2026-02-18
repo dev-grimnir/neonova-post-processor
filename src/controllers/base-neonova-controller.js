@@ -174,7 +174,12 @@ class BaseNeonovaController {
         let page = 1;                 // Current page number (for progress reporting)
         let offset = 0;               // Pagination offset sent in URL (increments by HITS_PER_PAGE)
         let knownTotal = null;        // Total entries reported by first page (null until parsed)
-
+    
+        // ────────────────────────────────────────────────
+        // Initialize collector
+        // ────────────────────────────────────────────────
+        const collector = new NeonovaCollector();  // Create collector instance
+    
         // ────────────────────────────────────────────────
         // Main pagination loop (infinite until stop condition)
         // ────────────────────────────────────────────────
@@ -183,29 +188,32 @@ class BaseNeonovaController {
             if (signal?.aborted) {
                 throw new DOMException('Pagination aborted', 'AbortError');
             }
-
+    
             // Build URL for current page/offset
             const url = this.#buildPaginationUrl(username, start, end, offset);
-
+    
             // Fetch raw HTML for the page
             const html = await this.#fetchPageHtml(url);
-
+    
             // Abort check after await (in case cancelled during fetch)
             if (signal?.aborted) {
                 throw new DOMException('Pagination aborted', 'AbortError');
             }
-
+    
             // Network/server failure → stop quietly (caller handles error)
             if (!html) {
                 break;
             }
-
+    
             // Parse HTML into DOM for row extraction
             const doc = new DOMParser().parseFromString(html, 'text/html');
-
-            // Extract log entries from current page's table rows
-            const pageEntries = this.parsePageRows(doc);
-
+    
+            // Use collector to extract entries from current page DOM
+            collector.table = doc.querySelector('table[cellspacing="2"][cellpadding="2"]');  // Override table with parsed doc
+            collector.collectFromPage();  // Collect from this page
+    
+            const pageEntries = collector.allEntries.slice(-collector.getPages());  // Get entries from this page (adjust if needed)
+    
             // ────────────────────────────────────────────────
             // First page only: extract reported total count
             // ────────────────────────────────────────────────
@@ -213,16 +221,16 @@ class BaseNeonovaController {
             // Parsed once and used for progress + early stop detection.
             if (page === 1) {
                 knownTotal = this.#extractTotalFromFirstPage(doc);
-
+    
                 // No results at all → exit early
                 if (knownTotal === 0) {
                     break;
                 }
             }
-
+    
             // Accumulate entries from this page
             entries.push(...pageEntries);
-
+    
             // ────────────────────────────────────────────────
             // Progress reporting
             // ────────────────────────────────────────────────
@@ -232,7 +240,7 @@ class BaseNeonovaController {
                 const total = knownTotal !== null ? knownTotal : entries.length;
                 onProgress(entries.length, total, page);
             }
-
+    
             // ────────────────────────────────────────────────
             // Stop conditions (exit loop early when done)
             // ────────────────────────────────────────────────
@@ -245,18 +253,18 @@ class BaseNeonovaController {
             if (knownTotal !== null && entries.length >= knownTotal) {
                 break; // reached total
             }
-
+    
             // ────────────────────────────────────────────────
             // Prepare for next page
             // ────────────────────────────────────────────────
             offset += this.HITS_PER_PAGE;
             page++;
-
+    
             // Polite delay with abort support
             // Creates a promise that resolves after delay OR rejects immediately on abort
             await new Promise((resolve, reject) => {
                 const timeout = setTimeout(resolve, this.DELAY_BETWEEN_PAGES_MS);
-
+    
                 // Listen for abort and clean up + reject
                 signal?.addEventListener('abort', () => {
                     clearTimeout(timeout);
@@ -264,9 +272,21 @@ class BaseNeonovaController {
                 });
             });
         }
-
-        // Final step: sort all collected entries newest → oldest
-        return this.#sortNewestFirst(entries);
+    
+        // ────────────────────────────────────────────────
+        // Post-pagination: clean and analyze
+        // ────────────────────────────────────────────────
+        const cleanedData = collector.cleanEntries(collector.allEntries);
+        const analyzer = new NeonovaAnalyzer(cleanedData);
+        const metrics = analyzer.computeMetrics();
+    
+        // ────────────────────────────────────────────────
+        // Cleanup collector state if complete
+        // ────────────────────────────────────────────────
+        collector.endAnalysis();
+    
+        // Final step: return sorted entries with metrics
+        return { entries: this.#sortNewestFirst(cleanedData.cleaned), metrics };
     }
 
     /**
