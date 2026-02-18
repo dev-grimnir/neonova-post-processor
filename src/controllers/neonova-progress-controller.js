@@ -60,7 +60,6 @@ class NeonovaProgressController extends BaseNeonovaController {
             this.handleProgress,
             abortController.signal
         ).then(entries => {
-            console.log("NeonovaProgressController.start() -> pagination complete.  entries = " + entries);
             this.handleSuccess(entries);
         }).catch(err => {
             this.handleError(err);
@@ -84,7 +83,7 @@ class NeonovaProgressController extends BaseNeonovaController {
         const reportView = new NeonovaReportView(
             this.username,
             this.friendlyName,
-            /* metrics from entries */
+            entries,
             entries.length,
             /* long disconnects */
         );
