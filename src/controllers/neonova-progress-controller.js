@@ -60,6 +60,7 @@ class NeonovaProgressController extends BaseNeonovaController {
             this.handleProgress,
             abortController.signal
         ).then(entries => {
+            console.log("NeonovaProgressController.start() -> pagination complete.  entries = " + entries);
             this.handleSuccess(entries);
         }).catch(err => {
             this.handleError(err);
