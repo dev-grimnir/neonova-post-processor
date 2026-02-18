@@ -33,90 +33,62 @@ class NeonovaProgressController extends BaseNeonovaController {
 
     }
 
-    /**
-     * Starts the report generation flow: shows modal, begins pagination with abort support.
-     */
     start() {
-        // ────────────────────────────────────────────────
-        // Show owned view and attach cancel handler
-        // ────────────────────────────────────────────────
-        this.view.showModal(this.handleCancel);
+    // ────────────────────────────────────────────────
+    // Show owned view and attach cancel handler
+    // ────────────────────────────────────────────────
+    this.view.showModal(this.handleCancel);
 
-        // ────────────────────────────────────────────────
-        // Setup cancellation
-        // ────────────────────────────────────────────────
-        const abortController = new AbortController();
+    // ────────────────────────────────────────────────
+    // Setup cancellation
+    // ────────────────────────────────────────────────
+    const abortController = new AbortController();
 
-        // Attach cancel from view
-        this.view.onCancel = () => abortController.abort();
+    // Attach cancel from view
+    this.view.onCancel = () => abortController.abort();
 
-        // ────────────────────────────────────────────────
-        // Start pagination (with custom dates if provided)
-        // ────────────────────────────────────────────────
-        this.paginateReportLogs(
-            this.username,
-            this.customStart,
-            this.customEnd,
-            this.handleProgress,
-            abortController.signal
-        ).then(entries => {
-            this.handleSuccess(entries);
-        }).catch(err => {
-            this.handleError(err);
-        });
-    }
+    // ────────────────────────────────────────────────
+    // Start pagination (with custom dates if provided)
+    // ────────────────────────────────────────────────
+    this.paginateReportLogs(
+        this.username,
+        this.customStart,
+        this.customEnd,
+        this.handleProgress,
+        abortController.signal
+    ).then(result => {
+        this.handleSuccess(result);  // ← pass the full result object
+    }).catch(err => {
+        this.handleError(err);
+    });
+}
 
-    /**
-     * Forwards progress updates to the view.
-     */
-    handleProgress(collected, total, page) {
-        this.view.updateProgress(collected, total, page);
-    }
+/**
+ * Handles successful completion — closes modal and opens report.
+ */
+handleSuccess(result) {
+    const { entries, metrics } = result;  // ← destructure the new return shape
 
-    /**
-     * Handles successful completion — closes modal and opens report.
-     */
-    handleSuccess(entries) {
-        // ────────────────────────────────────────────────
-        // Create and open report view in new tab
-        // ────────────────────────────────────────────────
-        const reportView = new NeonovaReportView(
-            this.username,
-            this.friendlyName,
-            entries,
-            entries.length,
-            entries.longDisconnects
-        );
-        reportView.openInNewTab();
+    // Debug logs (remove after testing)
+    console.log('Raw fetched entries count:', entries.length);
+    console.log('Computed metrics:', metrics);
 
-        // ────────────────────────────────────────────────
-        // Close progress modal
-        // ────────────────────────────────────────────────
-        this.view.close();
-    }
+    // ────────────────────────────────────────────────
+    // Create and open report view in new tab
+    // ────────────────────────────────────────────────
+    const reportView = new NeonovaReportView(
+        this.username,
+        this.friendlyName,
+        metrics,               // ← pass computed metrics (what the view likely expects)
+        entries.length,
+        metrics.longDisconnects || []  // ← use longDisconnects from analyzer, default to []
+    );
+    reportView.openInNewTab();
 
-    /**
-    *Handles the user cancelling the report.  
-    */
-    handleCancel() {
-        console.log('Progress cancelled by user');
-        // Optional: show "Cancelled" in view if not already handled
-        this.view.showStatus('Cancelled');
-        // The abort happens automatically via AbortController
-        // View close is handled in handleError(AbortError)
-    }
+    // ────────────────────────────────────────────────
+    // Close progress modal
+    // ────────────────────────────────────────────────
+    this.view.close();
+}
 
-    /**
-     * Handles errors/abort — shows message and closes modal.
-     */
-    handleError(err) {
-        if (err.name === 'AbortError') {
-            console.log('Report generation cancelled by user');
-            this.view.showStatus('Cancelled');
-        } else {
-            console.error('Report generation failed:', err);
-            this.view.showStatus('Generation failed');
-        }
-        setTimeout(() => this.view.close(), 1000);
-    }
 }
