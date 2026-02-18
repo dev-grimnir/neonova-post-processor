@@ -25,12 +25,13 @@ class NeonovaProgressController extends BaseNeonovaController {
         // Create and own the view
         this.view = new NeonovaProgressView(this.friendlyName);
 
+        /**
         // Bind handlers for callbacks
         this.handleProgress = this.handleProgress.bind(this);
         this.handleCancel = this.handleCancel.bind(this);
         this.handleSuccess = this.handleSuccess.bind(this);
         this.handleError = this.handleError.bind(this);
-
+        */
     }
 
     start() {
@@ -56,7 +57,7 @@ class NeonovaProgressController extends BaseNeonovaController {
         this.customEnd,
         this.handleProgress,
         abortController.signal
-    ).then(result => {
+    ).then(this.handleSuccess).catch(this.handleError);
         this.handleSuccess(result);  // ← pass the full result object
     }).catch(err => {
         this.handleError(err);
