@@ -416,7 +416,7 @@ class NeonovaReportView extends BaseNeonovaView {
      * @returns {string} Full section HTML
      */
     generateLongDisconnSection() {
-        longDisconnects = longDisconnects || [];
+        const longDisconnects = this.metrics.longDisconnects || [];
         if (this.longDisconnects.length === 0) {
             return `<p class="text-zinc-400 italic text-center py-12">No disconnects longer than 30 minutes.</p>`;
         }
