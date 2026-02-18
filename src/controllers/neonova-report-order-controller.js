@@ -39,19 +39,26 @@ class NeonovaReportOrderController extends BaseNeonovaController {
      * @param {Date} startDate 
      * @param {Date} endDate 
      */
-    handleGenerateRequested(startDate, endDate) {
-        console.log("NeonovaReportOrderController.handleGenerateRequested() this = " + this);
-
-
-        // Close order modal cleanly
+    handleGenerateRequested(startIso, endIso) {
+        // Convert ISO strings to Date objects
+        const startDate = new Date(startIso);
+        const endDate = new Date(endIso);
+    
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime()) || startDate > endDate) {
+            console.error('Invalid date range');
+            // Optional: alert('Invalid date range selected');
+            return;  // Early exit on bad dates
+        }
+    
+        // Close order modal
         this.view.close();
-
-        // Hand off to progress controller with selected range
+    
+        // Pass Date objects to progress controller
         const progressController = new NeonovaProgressController(
             this.username,
             this.friendlyName,
-            startDate,
-            endDate  // Pass custom dates
+            startDate,  // ← Date
+            endDate     // ← Date
         );
         progressController.start();
     }
