@@ -96,6 +96,17 @@ class NeonovaProgressController extends BaseNeonovaController {
     }
 
     /**
+    *Handles the user cancelling the report.  
+    */
+    handleCancel() {
+        console.log('Progress cancelled by user');
+        // Optional: show "Cancelled" in view if not already handled
+        this.view.showStatus('Cancelled');
+        // The abort happens automatically via AbortController
+        // View close is handled in handleError(AbortError)
+    }
+
+    /**
      * Handles errors/abort — shows message and closes modal.
      */
     handleError(err) {
