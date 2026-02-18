@@ -22,14 +22,15 @@ class NeonovaProgressController extends BaseNeonovaController {
         this.customStart = customStart;
         this.customEnd = customEnd;
 
-        // Create and own the view
-        this.view = new NeonovaProgressView(this.friendlyName);
-
         // Bind handlers for callbacks
         this.handleProgress = this.handleProgress.bind(this);
         this.handleCancel = this.handleCancel.bind(this);
         this.handleSuccess = this.handleSuccess.bind(this);
         this.handleError = this.handleError.bind(this);
+
+        // Create and own the view
+        this.view = new NeonovaProgressView(this.friendlyName);
+
     }
 
     /**
