@@ -35,34 +35,37 @@ class NeonovaProgressController extends BaseNeonovaController {
     }
 
     start() {
-    // ────────────────────────────────────────────────
-    // Show owned view and attach cancel handler
-    // ────────────────────────────────────────────────
-    this.view.showModal(this.handleCancel);
+        // ────────────────────────────────────────────────
+        // Show owned view and attach cancel handler
+        // ────────────────────────────────────────────────
+        this.view.showModal(this.handleCancel);
+    
+        // ────────────────────────────────────────────────
+        // Setup cancellation
+        // ────────────────────────────────────────────────
+        const abortController = new AbortController();
+    
+        // Attach cancel from view
+        this.view.onCancel = () => abortController.abort();
+    
+        // ────────────────────────────────────────────────
+        // Start pagination (with custom dates if provided)
+        // ────────────────────────────────────────────────
+        this.paginateReportLogs(
+            this.username,
+            this.customStart,
+            this.customEnd,
+            this.handleProgress,
+            abortController.signal
+        )
+        .then(result => {
+            this.handleSuccess(result);  // Pass the full { entries, metrics } result object
+        })
+        .catch(err => {
+            this.handleError(err);
+        });
+    }
 
-    // ────────────────────────────────────────────────
-    // Setup cancellation
-    // ────────────────────────────────────────────────
-    const abortController = new AbortController();
-
-    // Attach cancel from view
-    this.view.onCancel = () => abortController.abort();
-
-    // ────────────────────────────────────────────────
-    // Start pagination (with custom dates if provided)
-    // ────────────────────────────────────────────────
-    this.paginateReportLogs(
-        this.username,
-        this.customStart,
-        this.customEnd,
-        this.handleProgress,
-        abortController.signal
-    ).then(this.handleSuccess).catch(this.handleError);
-        this.handleSuccess(result);  // ← pass the full result object
-    }).catch(err => {
-        this.handleError(err);
-    });
-}
 
 /**
  * Handles successful completion — closes modal and opens report.
