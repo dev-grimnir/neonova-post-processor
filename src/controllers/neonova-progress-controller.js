@@ -85,7 +85,7 @@ class NeonovaProgressController extends BaseNeonovaController {
             this.friendlyName,
             entries,
             entries.length,
-            /* long disconnects */
+            entries.longDisconnects
         );
         reportView.openInNewTab();
 
