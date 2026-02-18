@@ -82,7 +82,7 @@ class NeonovaProgressController extends BaseNeonovaController {
         const reportView = new NeonovaReportView(
             this.username,
             this.friendlyName,
-            /* metrics from entries */,
+            /* metrics from entries */
             entries.length,
             /* long disconnects */
         );
