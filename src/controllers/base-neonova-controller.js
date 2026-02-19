@@ -167,6 +167,9 @@ class BaseNeonovaController {
      * @throws {DOMException} AbortError if cancelled
      */
     async #fetchAllLogPages(username, start, end, onProgress, signal) {
+        
+        console.log(`[Pagination] Starting for ${username} | Range: ${start?.toISOString()} → ${end?.toISOString()}`);
+        
         // ────────────────────────────────────────────────
         // Initialize loop state
         // ────────────────────────────────────────────────
@@ -179,6 +182,7 @@ class BaseNeonovaController {
         // Initialize collector
         // ────────────────────────────────────────────────
         const collector = new NeonovaCollector();  // Create collector instance
+        console.log('[Pagination] Collector initialized');
     
         // ────────────────────────────────────────────────
         // Main pagination loop (infinite until stop condition)
@@ -186,17 +190,20 @@ class BaseNeonovaController {
         while (true) {
             // Abort check before heavy work (fetch)
             if (signal?.aborted) {
+                console.log('[Pagination] Aborted by user');
                 throw new DOMException('Pagination aborted', 'AbortError');
             }
     
             // Build URL for current page/offset
             const url = this.#buildPaginationUrl(username, start, end, offset);
+            console.log(`[Pagination] Fetching page ${page} (offset ${offset}) → ${url}`);
     
             // Fetch raw HTML for the page
             const html = await this.#fetchPageHtml(url);
     
             // Abort check after await (in case cancelled during fetch)
             if (signal?.aborted) {
+                console.log('[Pagination] Aborted during fetch');
                 throw new DOMException('Pagination aborted', 'AbortError');
             }
     
@@ -213,6 +220,7 @@ class BaseNeonovaController {
             collector.collectFromPage();  // Collect from this page
     
             const pageEntries = collector.allEntries.slice(-collector.getPages());  // Get entries from this page (adjust if needed)
+            console.log(`[Pagination] Page ${page} collected ${pageEntries.length} entries (total so far: ${entries.length + pageEntries.length})`);
     
             // ────────────────────────────────────────────────
             // First page only: extract reported total count
@@ -221,9 +229,10 @@ class BaseNeonovaController {
             // Parsed once and used for progress + early stop detection.
             if (page === 1) {
                 knownTotal = this.#extractTotalFromFirstPage(doc);
-    
+                console.log(`[Pagination] First page total reported: ${knownTotal ?? 'not found'}`);
                 // No results at all → exit early
                 if (knownTotal === 0) {
+                    console.log('[Pagination] Server reported 0 total entries — exiting early');
                     break;
                 }
             }
@@ -246,11 +255,13 @@ class BaseNeonovaController {
             // ────────────────────────────────────────────────
             // 1. Last page detected (fewer than full page of results)
             if (pageEntries.length < this.HITS_PER_PAGE) {
+                console.log(`[Pagination] Last page detected (${pageEntries.length} < ${this.HITS_PER_PAGE})`);
                 break;           // last page
             }
             
             // 2. We've collected everything the server reported
             if (knownTotal !== null && entries.length >= knownTotal) {
+                console.log('[Pagination] Reached known total — stopping');
                 break; // reached total
             }
     
@@ -276,14 +287,18 @@ class BaseNeonovaController {
         // ────────────────────────────────────────────────
         // Post-pagination: clean and analyze
         // ────────────────────────────────────────────────
+        console.log(`[Pagination] Loop ended after ${page} pages | Total raw entries: ${entries.length}`);
         const cleanedData = collector.cleanEntries(collector.allEntries);
+        console.log(`[Pagination] Cleaned entries: ${cleanedData.cleaned.length} (ignored: ${cleanedData.ignoredCount})`);
         const analyzer = new NeonovaAnalyzer(cleanedData);
         const metrics = analyzer.computeMetrics();
+        console.log('[Pagination] Metrics computed:', metrics);
     
         // ────────────────────────────────────────────────
         // Cleanup collector state if complete
         // ────────────────────────────────────────────────
         collector.endAnalysis();
+        console.log('[Pagination] Collector cleaned up');
     
         // Final step: return sorted entries with metrics
         return { entries: this.#sortNewestFirst(cleanedData.cleaned), metrics };
