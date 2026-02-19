@@ -30,7 +30,10 @@ class NeonovaProgressController {
         .then(rawResult => {
             console.log('[ProgressCtrl] Raw result received — entries:', rawResult.rawEntries.length);
         
-            const { cleaned, ignoredCount } = NeonovaCollector.cleanEntries(rawResult.rawEntries);
+            // Create an instance (needed because cleanEntries is non-static)
+            const collector = new NeonovaCollector();
+        
+            const { cleaned, ignoredCount } = collector.cleanEntries(rawResult.rawEntries);
             console.log('[ProgressCtrl] Cleaned:', cleaned.length, 'Ignored:', ignoredCount);
         
             const analyzer = new NeonovaAnalyzer(cleaned);
@@ -39,6 +42,10 @@ class NeonovaProgressController {
         
             this.handleSuccess({ entries: cleaned, metrics, ignoredCount });
         })
+        .catch(err => {
+            console.error('[ProgressCtrl] Error during fetch/clean/analyze:', err);
+            this.handleError(err);
+        });
         .catch(err => {
             console.error('[ProgressCtrl] Error during fetch/clean/analyze:', err);
             this.handleError(err);
