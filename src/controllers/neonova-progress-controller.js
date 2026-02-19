@@ -64,7 +64,7 @@ class NeonovaProgressController {
             this.handleError(innerErr);
         }
     })
-    .catch(err => {
+    catch(err => {
         console.error('[ProgressCtrl] Top-level fetch rejection:', err);
         this.handleError(err);
     });
