@@ -1,22 +1,16 @@
 /**
  * Controller for the progress modal during report generation.
- * 
- * Extends BaseNeonovaController to directly access paginateReportLogs and other core methods.
- * Owns the NeonovaProgressView instance, starts pagination with cancellation support,
- * handles success/failure/abort, and forwards progress updates to the view.
- * 
- * Keeps all business logic in the controller — view remains pure UI.
+ * Owns the NeonovaProgressView instance, starts raw data fetching via NeonovaHTTPController,
+ * handles progress/cancellation/success/error, and forwards cleaned data to analyzer + report view.
  */
-class NeonovaProgressController extends BaseNeonovaController {
+class NeonovaProgressController {
     /**
      * @param {string} username 
      * @param {string} friendlyName 
-     * @param {Date} [customStart=null] - Optional custom start date for pagination
-     * @param {Date} [customEnd=null] - Optional custom end date for pagination
+     * @param {Date} [customStart=null] - Optional custom start date
+     * @param {Date} [customEnd=null] - Optional custom end date
      */
     constructor(username, friendlyName, customStart = null, customEnd = null) {
-        super();  // Inherits base URL, defaults, constants, etc.
-
         this.username = username;
         this.friendlyName = friendlyName;
         this.customStart = customStart;
@@ -25,74 +19,115 @@ class NeonovaProgressController extends BaseNeonovaController {
         // Create and own the view
         this.view = new NeonovaProgressView(this.friendlyName);
 
-        /**
-        // Bind handlers for callbacks
-        this.handleProgress = this.handleProgress.bind(this);
+        // Bind handlers
         this.handleCancel = this.handleCancel.bind(this);
         this.handleSuccess = this.handleSuccess.bind(this);
         this.handleError = this.handleError.bind(this);
-        */
+        this.handleProgress = this.handleProgress.bind(this);
     }
 
+    /**
+     * Starts the report generation process.
+     */
     start() {
-        // ────────────────────────────────────────────────
-        // Show owned view and attach cancel handler
-        // ────────────────────────────────────────────────
+        // Show modal and attach cancel handler
         this.view.showModal(this.handleCancel);
-    
-        // ────────────────────────────────────────────────
+
         // Setup cancellation
-        // ────────────────────────────────────────────────
-        const abortController = new AbortController();
-    
-        // Attach cancel from view
-        this.view.onCancel = () => abortController.abort();
-    
-        // ────────────────────────────────────────────────
-        // Start pagination (with custom dates if provided)
-        // ────────────────────────────────────────────────
-        this.paginateReportLogs(
+        this.abortController = new AbortController();
+
+        // Start fetching raw entries
+        NeonovaHTTPController.fetchAllRawEntries(
             this.username,
-            this.customStart,
-            this.customEnd,
-            this.handleProgress,
-            abortController.signal
+            this.customStart || new Date(),  // fallback to today if no custom start
+            this.customEnd || new Date(),
+            {
+                signal: this.abortController.signal,
+                onProgress: this.handleProgress
+            }
         )
-        .then(result => {
-            this.handleSuccess(result);  // Pass the full { entries, metrics } result object
+        .then(rawResult => {
+            // Raw fetch complete → clean → analyze → success
+            const { rawEntries } = rawResult;
+
+            // Clean (dedup, normalize) via Collector
+            const { cleaned, ignoredCount } = NeonovaCollector.cleanEntries(rawEntries);
+
+            // Analyze
+            const analyzer = new NeonovaAnalyzer(cleaned);
+            const metrics = analyzer.computeMetrics();
+
+            // Success with cleaned entries + metrics
+            this.handleSuccess({ entries: cleaned, metrics, ignoredCount });
         })
         .catch(err => {
             this.handleError(err);
         });
     }
 
+    /**
+     * Progress callback – forwards to view
+     * @param {{fetched: number, total?: number, page: number}} progress
+     */
+    handleProgress(progress) {
+        this.view.updateProgress(
+            progress.fetched,
+            progress.total || 0,
+            progress.page
+        );
+    }
 
-/**
- * Handles successful completion — closes modal and opens report.
- */
-handleSuccess(result) {
-    const { entries, metrics } = result;  // ← destructure the new return shape
+    /**
+     * Cancel handler – aborts fetch and closes modal
+     */
+    handleCancel() {
+        if (this.abortController) {
+            this.abortController.abort();
+        }
+        this.view.close();
+    }
 
-    // Debug logs (remove after testing)
-    console.log('Raw fetched entries count:', entries.length);
-    console.log('Computed metrics:', metrics);
+    /**
+     * Success handler – opens report and closes modal
+     * @param {{entries: LogEntry[], metrics: Object, ignoredCount: number}} result
+     */
+    handleSuccess(result) {
+        const { entries, metrics, ignoredCount } = result;
 
-    // ────────────────────────────────────────────────
-    // Create and open report view in new tab
-    // ────────────────────────────────────────────────
-    const reportView = new NeonovaReportView(
-        this.username,
-        this.friendlyName,
-        metrics,               // ← pass computed metrics (what the view likely expects)
-        entries.length,
-        metrics.longDisconnects || []  // ← use longDisconnects from analyzer, default to []
-    );
-    reportView.openInNewTab();
+        console.log('Raw fetched entries count:', entries.length); // debug
+        console.log('Computed metrics:', metrics);
 
-    // ────────────────────────────────────────────────
-    // Close progress modal
-    // ────────────────────────────────────────────────
-    this.view.close();
-}
+        // Create and open report view
+        const reportView = new NeonovaReportView(
+            this.username,
+            this.friendlyName,
+            metrics,
+            entries.length,
+            ignoredCount,
+            metrics.longDisconnects || []
+        );
+        reportView.openInNewTab();
 
+        // Close progress modal
+        this.view.close();
+    }
+
+    /**
+     * Error handler – shows error in view and closes modal
+     * @param {Error} err
+     */
+    handleError(err) {
+        let message = 'An error occurred during report generation.';
+        if (err.name === 'AbortError') {
+            message = 'Report generation cancelled.';
+        } else if (err.message.includes('HTTP')) {
+            message = 'Failed to fetch logs from server.';
+        }
+
+        this.view.showError(message);
+        console.error('Report error:', err);
+
+        // Close modal after short delay so user sees error
+        setTimeout(() => this.view.close(), 3000);
+    }
 }
