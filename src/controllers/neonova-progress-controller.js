@@ -26,15 +26,20 @@ class NeonovaProgressController {
                 signal: this.abortController.signal,
                 onProgress: this.handleProgress
             }
-        ).then(rawResult => {
-        
+        )
+        .then(rawResult => {
+            console.log('[ProgressCtrl] Raw result received — entries:', rawResult.rawEntries.length);
+    
+            // Step 1: Clean (static call)
             const { cleaned, ignoredCount } = NeonovaCollector.cleanEntries(rawResult.rawEntries);
-        
-            const analyzer = new NeonovaAnalyzer(cleaned);
-            const metrics = analyzer.computeMetrics();
+            console.log('[ProgressCtrl] Cleaned entries:', cleaned.length, 'Ignored:', ignoredCount);
+    
+            // Step 2: Analyze (static call — no new needed)
+            const metrics = NeonovaAnalyzer.computeMetrics(cleaned, ignoredCount);
             console.log('[ProgressCtrl] Metrics ready');
-        
-            this.handleSuccess({ entries: cleaned, metrics, ignoredCount });
+    
+            // Pass only what's needed — metrics already contains most data
+            this.handleSuccess({ metrics });
         })
         .catch(err => {
             console.error('[ProgressCtrl] Error during fetch/clean/analyze:', err);
@@ -58,18 +63,18 @@ class NeonovaProgressController {
     }
 
     handleSuccess(result) {
-        const { entries, metrics, ignoredCount } = result;
-
+        const { metrics } = result;
+    
+        console.log('Metrics for report view:', metrics);
+    
+        // Now only 3 arguments — metrics contains rawEntryCount, ignoredEntriesCount, longDisconnects, etc.
         const reportView = new NeonovaReportView(
             this.username,
             this.friendlyName,
-            metrics,
-            entries.length,
-            ignoredCount,
-            metrics.longDisconnects || []
+            metrics
         );
         reportView.openInNewTab();
-
+    
         this.view.close();
     }
 
