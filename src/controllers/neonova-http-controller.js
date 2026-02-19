@@ -88,13 +88,15 @@ class NeonovaHTTPController {
 
             // Stop conditions
             const tableRowCount = table.querySelectorAll('tr').length - 1; // subtract header
-            if (pageEntries.length < this.HITS_PER_PAGE || tableRowCount < this.HITS_PER_PAGE) {
-                console.log('[NeonovaHTTPController] Last page detected (fewer than 100 entries)');
+            if (pageEntries.length === 0 || tableRowCount < 1) {
+                console.log('[NeonovaHTTPController] Last page detected (no valid entries)');
                 break;
             }
 
             if (knownTotal !== null && allRawEntries.length >= knownTotal) {
                 console.log(`[NeonovaHTTPController] Reached reported total (${allRawEntries.length}/${knownTotal}) — stopping`);
+                // Trim any potential over-fetch (e.g. junk rows)
+                allRawEntries.splice(knownTotal);
                 break;
             }
 
@@ -112,7 +114,7 @@ class NeonovaHTTPController {
     }
 
     // ────────────────────────────────────────────────
-    // Private static helpers (unchanged from previous version)
+    // Private static helpers
     // ────────────────────────────────────────────────
 
     static #buildPaginationUrl(username, start, end, offset = 0) {
@@ -215,9 +217,31 @@ class NeonovaHTTPController {
     }
 
     static #extractReportedTotal(doc) {
-        // Adjust regex/pattern based on actual page text (e.g. "Displaying 1-100 of 392")
-        const totalText = doc.body.textContent.match(/of\s*(\d+)/i) || 
-                          doc.body.textContent.match(/Total Records?:\s*(\d+)/i);
-        return totalText ? parseInt(totalText[1], 10) : null;
+        const text = doc.body.textContent || '';
+    
+        // More robust patterns – ordered from most specific to general
+        const patterns = [
+            /Displaying \d+[-–]?\d* of (\d+)/i,          // "Displaying 1-100 of 858" or "1–100 of 858"
+            /Displaying \d+ to \d+ of (\d+)/i,           // classic "1 to 100 of 858"
+            /of (\d+) (entries|records|results)/i,       // "of 858 entries"
+            /Total (?:Records|Entries|Results)?:?\s*(\d+)/i,
+            /Found (\d+) (entries|records|results)/i,
+            /Showing \d+[-–]?\d* of (\d+)/i              // variations like "Showing 1-100 of 858"
+        ];
+    
+        for (const regex of patterns) {
+            const match = text.match(regex);
+            if (match) {
+                const total = parseInt(match[1], 10);
+                if (!isNaN(total) && total > 0) {
+                    console.log('[NeonovaHTTPController] Parsed total via pattern:', regex.source, '→', total);
+                    return total;
+                }
+            }
+        }
+    
+        // If nothing matched, log warning with context
+        console.warn('[NeonovaHTTPController] Could not parse total — first 500 chars:', text.substring(0, 500) + '...');
+        return null;
     }
 }
