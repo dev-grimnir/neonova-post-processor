@@ -46,7 +46,6 @@ class NeonovaHTTPController {
             }
         
             const url = this.#buildPaginationUrl(username, start, end, offset);
-            console.log(`[NeonovaHTTPController] Fetching page ${page} (offset ${offset}) → ${url}`);
         
             const html = await this.#fetchPageHtml(url, signal);
             if (!html) break;
@@ -58,11 +57,8 @@ class NeonovaHTTPController {
             const pageEntries = this.#extractRawEntriesFromTable(table);
             allRawEntries.push(...pageEntries);
         
-            console.log(`[NeonovaHTTPController] Page ${page} extracted ${pageEntries.length} raw entries (cumulative: ${allRawEntries.length})`);
-        
             if (page === 1) {
                 knownTotal = this.#extractReportedTotal(doc);
-                console.log(`[NeonovaHTTPController] Server reported total: ${knownTotal ?? 'unknown'}`);
             }
         
             if (typeof onProgress === 'function') {
@@ -75,22 +71,18 @@ class NeonovaHTTPController {
         
             // Core stop logic: trust the reported total
             if (knownTotal !== null && allRawEntries.length >= knownTotal) {
-                console.log(`[NeonovaHTTPController] Reached reported total (${allRawEntries.length}/${knownTotal}) — trimming & stopping`);
                 allRawEntries.length = knownTotal;  // Exact trim
                 break;
             }
         
             // Fallback stops (safety nets only)
             if (pageEntries.length === 0) {
-                console.log('[NeonovaHTTPController] Empty page — stopping');
                 break;
             }
         
             offset += this.HITS_PER_PAGE;
             page++;
         }
-
-        console.log(`[NeonovaHTTPController] Pagination complete — ${allRawEntries.length} raw entries fetched (${page} pages)`);
 
         return {
             rawEntries: allRawEntries,
@@ -213,7 +205,6 @@ class NeonovaHTTPController {
         if (match && match[1]) {
             const total = parseInt(match[1], 10);
             if (!isNaN(total) && total > 0) {
-                console.log('[NeonovaHTTPController] Parsed reported total:', total, '(matched pattern:', match[0], ')');
                 return total;
             }
         }
