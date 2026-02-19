@@ -43,18 +43,31 @@ class NeonovaProgressController {
                 onProgress: this.handleProgress
             }
         )
-        .then(rawResult => {
-            const { rawEntries } = rawResult;
-    
-            // Clean
-            const { cleaned, ignoredCount } = NeonovaCollector.cleanEntries(rawEntries);
-    
-            // Analyze
-            const analyzer = new NeonovaAnalyzer(cleaned);
-            const metrics = analyzer.computeMetrics();
-    
-            this.handleSuccess({ entries: cleaned, metrics, ignoredCount });
-        })
+.then(rawResult => {
+    console.log('[ProgressCtrl] Raw result received — entries:', rawResult.rawEntries.length);
+
+    try {
+        // Clean
+        console.log('[ProgressCtrl] Starting cleanEntries...');
+        const { cleaned, ignoredCount } = NeonovaCollector.cleanEntries(rawResult.rawEntries);
+        console.log('[ProgressCtrl] Cleaned:', cleaned.length, 'Ignored:', ignoredCount);
+
+        // Analyze
+        console.log('[ProgressCtrl] Starting analyzer...');
+        const analyzer = new NeonovaAnalyzer(cleaned);
+        const metrics = analyzer.computeMetrics();
+        console.log('[ProgressCtrl] Metrics ready');
+
+        this.handleSuccess({ entries: cleaned, metrics, ignoredCount });
+        } catch (innerErr) {
+            console.error('[ProgressCtrl] Error in clean/analyze chain:', innerErr.stack);
+            this.handleError(innerErr);
+        }
+    })
+    .catch(err => {
+        console.error('[ProgressCtrl] Top-level fetch rejection:', err);
+        this.handleError(err);
+    });
         .catch(err => {
             this.handleError(err);
         });
