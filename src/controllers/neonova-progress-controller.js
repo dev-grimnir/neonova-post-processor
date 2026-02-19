@@ -43,35 +43,23 @@ class NeonovaProgressController {
                 onProgress: this.handleProgress
             }
         )
-.then(rawResult => {
-    console.log('[ProgressCtrl] Raw result received — entries:', rawResult.rawEntries.length);
-
-    try {
-        // Clean
-        console.log('[ProgressCtrl] Starting cleanEntries...');
-        const { cleaned, ignoredCount } = NeonovaCollector.cleanEntries(rawResult.rawEntries);
-        console.log('[ProgressCtrl] Cleaned:', cleaned.length, 'Ignored:', ignoredCount);
-
-        // Analyze
-        console.log('[ProgressCtrl] Starting analyzer...');
-        const analyzer = new NeonovaAnalyzer(cleaned);
-        const metrics = analyzer.computeMetrics();
-        console.log('[ProgressCtrl] Metrics ready');
-
-        this.handleSuccess({ entries: cleaned, metrics, ignoredCount });
-        } catch (innerErr) {
-            console.error('[ProgressCtrl] Error in clean/analyze chain:', innerErr.stack);
-            this.handleError(innerErr);
-        }
-    })
-    catch(err => {
-        console.error('[ProgressCtrl] Top-level fetch rejection:', err);
-        this.handleError(err);
-    });
-        catch(err => {
+        .then(rawResult => {
+            console.log('[ProgressCtrl] Raw result received — entries:', rawResult.rawEntries.length);
+        
+            // No inner try/catch needed unless you want very granular logging
+            const { cleaned, ignoredCount } = NeonovaCollector.cleanEntries(rawResult.rawEntries);
+            console.log('[ProgressCtrl] Cleaned:', cleaned.length, 'Ignored:', ignoredCount);
+        
+            const analyzer = new NeonovaAnalyzer(cleaned);
+            const metrics = analyzer.computeMetrics();
+            console.log('[ProgressCtrl] Metrics ready');
+        
+            this.handleSuccess({ entries: cleaned, metrics, ignoredCount });
+        })
+        .catch(err => {
+            console.error('[ProgressCtrl] Error during fetch/clean/analyze:', err);
             this.handleError(err);
         });
-    }
 
     /**
      * Progress callback – forwards to view
