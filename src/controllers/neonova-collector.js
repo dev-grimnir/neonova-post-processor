@@ -92,35 +92,76 @@ class NeonovaCollector {
      * Returns an array of new LogEntry objects (does not mutate state).
      */
     #extractEntriesFromCurrentPage() {
+        console.groupCollapsed('[Collector] extractEntriesFromCurrentPage()');
+    
         if (!this.table) {
-            console.warn('[Collector] No table set for extraction');
+            console.warn('[Collector] No table set for extraction — returning empty array');
+            console.groupEnd();
             return [];
         }
     
-        // Use this.table (set to parsed doc table) instead of document
+        console.log('[Collector] Table reference exists:', !!this.table);
+        console.log('[Collector] Table outerHTML snippet:', this.table.outerHTML.substring(0, 200) + '...');
+    
+        // Find all <tr> inside the table (try both tbody and direct children)
         const rows = this.table.querySelectorAll("tbody tr");
-        console.log(`[Collector] Found ${rows.length} rows in table`);
+        console.log(`[Collector] Found ${rows.length} rows via tbody tr`);
+    
+        // Fallback: if no tbody rows, try direct tr children
+        if (rows.length === 0) {
+            const fallbackRows = this.table.querySelectorAll("tr");
+            console.log(`[Collector] Fallback: Found ${fallbackRows.length} direct tr elements`);
+            if (fallbackRows.length > 0) {
+                console.log('[Collector] Using fallback direct tr rows');
+                rows = fallbackRows; // reassign for processing
+            }
+        }
     
         const newEntries = [];
     
-        rows.forEach(row => {
+        rows.forEach((row, index) => {
+            console.group(`[Row ${index + 1}]`);
+    
             const cells = row.querySelectorAll("td");
-            if (cells.length < 7) return;
+            console.log(`  Cells in row: ${cells.length}`);
+    
+            if (cells.length < 7) {
+                console.log(`  Skipping row — too few cells (${cells.length} < 7)`);
+                console.groupEnd();
+                return;
+            }
     
             const dateStr = cells[0].textContent.trim();
             const status = cells[4].textContent.trim();
     
-            if ((status === "Start" || status === "Stop") && dateStr) {
-                const isoDateStr = dateStr.replace(" ", "T");
-                const date = new Date(isoDateStr);
+            console.log(`  Raw date cell: "${cells[0].textContent}" → trimmed: "${dateStr}"`);
+            console.log(`  Raw status cell: "${cells[4].textContent}" → trimmed: "${status}"`);
     
-                if (!isNaN(date)) {
+            if ((status === "Start" || status === "Stop") && dateStr) {
+                console.log('  Status is valid (Start/Stop) and dateStr exists');
+    
+                const isoDateStr = dateStr.replace(" ", "T");
+                console.log(`  Converted date string: "${isoDateStr}"`);
+    
+                const date = new Date(isoDateStr);
+                console.log(`  Parsed date: ${date.toISOString()} | isValid: ${!isNaN(date.getTime())}`);
+    
+                if (!isNaN(date.getTime())) {
+                    console.log('  Valid date — adding LogEntry');
                     newEntries.push(new LogEntry(date.getTime(), status, date));
+                } else {
+                    console.warn('  Invalid date — skipped');
                 }
+            } else {
+                console.log('  Skipped: invalid status or no date string');
             }
+    
+            console.groupEnd();
         });
     
         console.log(`[Collector] Extracted ${newEntries.length} valid entries from page`);
+        console.groupEnd();
+    
         return newEntries;
     }
 
