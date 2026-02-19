@@ -46,11 +46,7 @@ class NeonovaProgressController {
             console.error('[ProgressCtrl] Error during fetch/clean/analyze:', err);
             this.handleError(err);
         });
-        .catch(err => {
-            console.error('[ProgressCtrl] Error during fetch/clean/analyze:', err);
-            this.handleError(err);
-        });
-    }  // ←←← THIS CLOSING BRACE WAS MISSING
+    }
 
     handleProgress(progress) {
         this.view.updateProgress(
