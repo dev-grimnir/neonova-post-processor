@@ -30,16 +30,13 @@ class NeonovaProgressController {
      * Starts the report generation process.
      */
     start() {
-        // Show modal and attach cancel handler
         this.view.showModal(this.handleCancel);
-
-        // Setup cancellation
+    
         this.abortController = new AbortController();
-
-        // Start fetching raw entries
+    
         NeonovaHTTPController.fetchAllRawEntries(
             this.username,
-            this.customStart || new Date(),  // fallback to today if no custom start
+            this.customStart || new Date(),
             this.customEnd || new Date(),
             {
                 signal: this.abortController.signal,
@@ -47,17 +44,15 @@ class NeonovaProgressController {
             }
         )
         .then(rawResult => {
-            // Raw fetch complete → clean → analyze → success
             const { rawEntries } = rawResult;
-
-            // Clean (dedup, normalize) via Collector
+    
+            // Clean
             const { cleaned, ignoredCount } = NeonovaCollector.cleanEntries(rawEntries);
-
+    
             // Analyze
             const analyzer = new NeonovaAnalyzer(cleaned);
             const metrics = analyzer.computeMetrics();
-
-            // Success with cleaned entries + metrics
+    
             this.handleSuccess({ entries: cleaned, metrics, ignoredCount });
         })
         .catch(err => {
