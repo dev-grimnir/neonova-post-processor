@@ -10,13 +10,13 @@ class NeonovaReportView extends BaseNeonovaView {
      * @param {number} numEntries - Total raw log entries processed
      * @param {Array} longDisconnects - Array of long disconnect objects
      */
-    constructor(username, friendlyName, metrics, numEntries, longDisconnects) {
+    constructor(username, friendlyName, metrics) {
         super(null);
         this.username = username;
         this.friendlyName = friendlyName;
         this.metrics = metrics;
-        this.numEntries = numEntries;
-        this.longDisconnects = longDisconnects;
+        this.numEntries = this.metrics.numEntries;
+        this.longDisconnects = this.metrics.longDisconnects;
     }
 
     /**
