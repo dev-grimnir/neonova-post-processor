@@ -44,40 +44,27 @@ class NeonovaHTTPController {
             if (signal?.aborted) {
                 throw new DOMException('Pagination aborted', 'AbortError');
             }
-
+        
             const url = this.#buildPaginationUrl(username, start, end, offset);
             console.log(`[NeonovaHTTPController] Fetching page ${page} (offset ${offset}) → ${url}`);
-
+        
             const html = await this.#fetchPageHtml(url, signal);
-
-            if (!html) {
-                console.warn('[NeonovaHTTPController] Empty HTML response — stopping');
-                break;
-            }
-
+            if (!html) break;
+        
             const doc = new DOMParser().parseFromString(html, 'text/html');
-
-            // Select the correct log table
             const table = this.#selectLogTable(doc);
-            if (!table) {
-                console.warn('[NeonovaHTTPController] No log table found on page — stopping');
-                break;
-            }
-
-            // Extract raw entries from this page's table
+            if (!table) break;
+        
             const pageEntries = this.#extractRawEntriesFromTable(table);
-
             allRawEntries.push(...pageEntries);
-
+        
             console.log(`[NeonovaHTTPController] Page ${page} extracted ${pageEntries.length} raw entries (cumulative: ${allRawEntries.length})`);
-
-            // On first page, try to extract the reported total
+        
             if (page === 1) {
                 knownTotal = this.#extractReportedTotal(doc);
-                console.log(`[NeonovaHTTPController] Server reported total entries: ${knownTotal ?? 'unknown'}`);
+                console.log(`[NeonovaHTTPController] Server reported total: ${knownTotal ?? 'unknown'}`);
             }
-
-            // Progress callback
+        
             if (typeof onProgress === 'function') {
                 onProgress({
                     fetched: allRawEntries.length,
@@ -85,22 +72,20 @@ class NeonovaHTTPController {
                     page
                 });
             }
-
-            // Stop conditions
-            const tableRowCount = table.querySelectorAll('tr').length - 1; // subtract header
-            if (pageEntries.length === 0 || tableRowCount < 1) {
-                console.log('[NeonovaHTTPController] Last page detected (no valid entries)');
-                break;
-            }
-
+        
+            // Core stop logic: trust the reported total
             if (knownTotal !== null && allRawEntries.length >= knownTotal) {
-                console.log(`[NeonovaHTTPController] Reached reported total (${allRawEntries.length}/${knownTotal}) — stopping`);
-                // Trim any potential over-fetch (e.g. junk rows)
-                allRawEntries.splice(knownTotal);
+                console.log(`[NeonovaHTTPController] Reached reported total (${allRawEntries.length}/${knownTotal}) — trimming & stopping`);
+                allRawEntries.length = knownTotal;  // Exact trim
                 break;
             }
-
-            // Next page
+        
+            // Fallback stops (safety nets only)
+            if (pageEntries.length === 0) {
+                console.log('[NeonovaHTTPController] Empty page — stopping');
+                break;
+            }
+        
             offset += this.HITS_PER_PAGE;
             page++;
         }
@@ -219,29 +204,21 @@ class NeonovaHTTPController {
     static #extractReportedTotal(doc) {
         const text = doc.body.textContent || '';
     
-        // More robust patterns – ordered from most specific to general
-        const patterns = [
-            /Displaying \d+[-–]?\d* of (\d+)/i,          // "Displaying 1-100 of 858" or "1–100 of 858"
-            /Displaying \d+ to \d+ of (\d+)/i,           // classic "1 to 100 of 858"
-            /of (\d+) (entries|records|results)/i,       // "of 858 entries"
-            /Total (?:Records|Entries|Results)?:?\s*(\d+)/i,
-            /Found (\d+) (entries|records|results)/i,
-            /Showing \d+[-–]?\d* of (\d+)/i              // variations like "Showing 1-100 of 858"
-        ];
+        // Direct match for the format in your log
+        const match = text.match(/Entry:\s*\d+-\d+\s*of\s*(\d+)/i) ||
+                      text.match(/of\s*(\d+)/i) ||  // broad fallback for "of 860"
+                      text.match(/Displaying.*?of\s*(\d+)/i) ||
+                      text.match(/Total.*?(\d+)/i);
     
-        for (const regex of patterns) {
-            const match = text.match(regex);
-            if (match) {
-                const total = parseInt(match[1], 10);
-                if (!isNaN(total) && total > 0) {
-                    console.log('[NeonovaHTTPController] Parsed total via pattern:', regex.source, '→', total);
-                    return total;
-                }
+        if (match && match[1]) {
+            const total = parseInt(match[1], 10);
+            if (!isNaN(total) && total > 0) {
+                console.log('[NeonovaHTTPController] Parsed reported total:', total, '(matched pattern:', match[0], ')');
+                return total;
             }
         }
     
-        // If nothing matched, log warning with context
-        console.warn('[NeonovaHTTPController] Could not parse total — first 500 chars:', text.substring(0, 500) + '...');
+        console.warn('[NeonovaHTTPController] Could not parse reported total — snippet:', text.substring(0, 300) + '...');
         return null;
     }
 }
