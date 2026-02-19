@@ -1,90 +1,164 @@
+/**
+ * Static utility class for analyzing cleaned RADIUS log entries.
+ * No instance needed — call NeonovaAnalyzer.computeMetrics(...) directly.
+ * 
+ * Input: array of LogEntry objects + optional ignored count
+ * Output: full metrics object (same shape as before)
+ */
 class NeonovaAnalyzer {
-    constructor(cleanedEntriesData) {
-        // Expect object from collector: { cleaned: [...], ignoredCount: number }
-        const { cleaned: cleanEntries = [], ignoredCount = 0 } = cleanedEntriesData || {};
-
-        this.cleanEntries = cleanEntries;
-        this.ignoredEntriesCount = ignoredCount;   // ← new
-
-        this.disconnects = 0;
-        this.sessionSeconds = [];
-        this.reconnectSeconds = [];
-        this.reconnects = [];
-        this.longDisconnects = [];
-        this.firstDate = null;
-        this.lastDate = null;
-        this.lastDisconnectDate = null;
-        this.hourlyDisconnects = Array(24).fill(0);
-        this.dayOfWeekDisconnects = Array(7).fill(0);
-        this.hourlyCount = Array(24).fill(0);
-        this.dailyCount = {};
-        this.disconnectDates = [];
-        this.metrics = {};
-        this.analyze();
-    }
 
     /**
-     * Routes each log entry to the correct handler based on its status.
-     * Also updates firstDate / lastDate.
+     * Computes all metrics from cleaned entries.
+     * This is the only public method — everything else is private/static.
      * 
-     * @param {Object} entry - Raw log entry from cleanedEntries
-     * @param {string|null} currentState - Current state machine state ("up", "down", or null)
-     * @param {number|null} lastTransitionTime - Timestamp of previous state change
+     * @param {Array<LogEntry>} cleanedEntries - Array of cleaned LogEntry objects
+     * @param {number} [ignoredEntriesCount=0] - From collector.cleanEntries
+     * @returns {Object} Complete metrics object
      */
-    #processEntry(entry, currentState, lastTransitionTime) {
-        const date = entry.dateObj;
-        const ts = date.getTime();
-
-        // Track overall time range
-        if (!this.firstDate) this.firstDate = date;
-        this.lastDate = date;
-
-        if (entry.status === "Start") {
-            this.#handleStart(entry, currentState, lastTransitionTime);
-        } 
-        else if (entry.status === "Stop") {
-            this.#handleStop(entry, currentState, lastTransitionTime);
+    static computeMetrics(cleanedEntries, ignoredEntriesCount = 0) {
+        if (!Array.isArray(cleanedEntries) || cleanedEntries.length === 0) {
+            return this.#buildEmptyMetrics(ignoredEntriesCount);
         }
+
+        // All state is local — no 'this'
+        let disconnects = 0;
+        let sessionSeconds = [];
+        let reconnectSeconds = [];
+        let reconnects = [];
+        let longDisconnects = [];
+        let firstDate = null;
+        let lastDate = null;
+        let lastDisconnectDate = null;
+        let hourlyDisconnects = Array(24).fill(0);
+        let dayOfWeekDisconnects = Array(7).fill(0);
+        let hourlyCount = Array(24).fill(0);
+        let dailyCount = {};
+        let disconnectDates = [];
+
+        let currentState = null;
+        let lastTransitionTime = null;
+
+        // Main processing loop
+        cleanedEntries.forEach(entry => {
+            const date = entry.dateObj;
+            const ts = date.getTime();
+
+            if (!firstDate) firstDate = date;
+            lastDate = date;
+
+            if (entry.status === "Start") {
+                if (currentState === "down" && lastTransitionTime !== null) {
+                    this.#recordReconnect(lastTransitionTime, ts, reconnectSeconds, reconnects, longDisconnects);
+                }
+                currentState = "up";
+                lastTransitionTime = ts;
+            } else if (entry.status === "Stop") {
+                this.#recordDisconnect(entry, disconnects, hourlyDisconnects, hourlyCount, dailyCount, dayOfWeekDisconnects, disconnectDates);
+                lastDisconnectDate = date;
+
+                if (currentState === "up" && lastTransitionTime !== null) {
+                    this.#recordSessionDuration(lastTransitionTime, ts, sessionSeconds);
+                }
+
+                currentState = "down";
+                lastTransitionTime = ts;
+            }
+        });
+
+        // Finalize open session
+        if (currentState === "up" && lastTransitionTime !== null && lastDate) {
+            const finalDuration = (lastDate.getTime() - lastTransitionTime) / 1000;
+            if (finalDuration > 0) sessionSeconds.push(finalDuration);
+        }
+
+        // Compute derived stats
+        const daysSpanned = firstDate && lastDate ? (lastDate - firstDate) / (1000 * 86400) : 0;
+
+        const peakHourStr = this.#calculatePeakHourStr(hourlyCount);
+        const peakDayStr = this.#calculatePeakDayStr(dailyCount);
+        const { businessDisconnects, offHoursDisconnects } = this.#calculateBusinessVsOffHours(hourlyDisconnects);
+        const timeSinceLastStr = lastDisconnectDate ? this.#formatDuration((new Date() - lastDisconnectDate) / 1000) + ' ago' : 'N/A';
+        const avgDaily = this.#calculateAverageDailyDisconnects(dailyCount);
+
+        const sessionStats = this.#calculateSessionStatistics(sessionSeconds);
+        const reconnectStats = this.#calculateReconnectStatistics(reconnectSeconds);
+        const uptimeStats = this.#calculateUptimeAndPercentConnected(sessionSeconds, firstDate, lastDate);
+
+        const scoring = this.#computeStabilityScores(
+            uptimeStats.uptimeScore,
+            sessionStats.avgSessionMin,
+            sessionStats.medianSessionMin,
+            daysSpanned,
+            disconnects,
+            longDisconnects.length,
+            reconnectSeconds
+        );
+
+        // Build final object (same shape as original)
+        const sortedKeys = Object.keys(dailyCount).sort((a, b) => new Date(a) - new Date(b));
+        const sortedDailyDisconnects = sortedKeys.map(k => dailyCount[k]);
+
+        return {
+            peakHourStr,
+            peakDayStr,
+            businessDisconnects,
+            offHoursDisconnects,
+            timeSinceLastStr,
+            avgDaily,
+            daysSpanned,
+            totalConnectedSec: uptimeStats.totalConnectedSec,
+            totalDisconnectedSec: uptimeStats.totalDisconnectedSec,
+            percentConnected: uptimeStats.percentConnected,
+            numSessions: sessionStats.numSessions,
+            avgSessionMin: sessionStats.avgSessionMin,
+            longestSessionMin: sessionStats.longestSessionMin,
+            shortestSessionMin: sessionStats.shortestSessionMin,
+            medianSessionMin: sessionStats.medianSessionMin,
+            avgReconnectMin: reconnectStats.avgReconnectMin,
+            medianReconnectMin: reconnectStats.medianReconnectMin,
+            p95ReconnectMin: reconnectStats.p95ReconnectMin,
+            quickReconnects: reconnectStats.quickReconnects,
+            uptimeComponent: scoring.uptimeComponent,
+            sessionBonusMean: scoring.sessionBonusMean,
+            sessionBonusMedian: scoring.sessionBonusMedian,
+            totalFastBonus: scoring.totalFastBonus,
+            flappingPenalty: scoring.flappingPenalty,
+            longOutagePenalty: scoring.longOutagePenalty,
+            rawMeanScore: scoring.rawMeanScore,
+            meanStabilityScore: scoring.meanStabilityScore,
+            rawMedianScore: scoring.rawMedianScore,
+            medianStabilityScore: scoring.medianStabilityScore,
+            monitoringPeriod: firstDate && lastDate 
+                ? `${firstDate.toLocaleString()} to ${lastDate.toLocaleString()}` 
+                : 'N/A',
+            sessionBins: this.#computeSessionBins(sessionSeconds),
+            reconnectBins: this.#computeReconnectBins(reconnectSeconds),
+            rolling7Day: this.#computeRolling7Day(disconnectDates, firstDate, lastDate),
+            rollingLabels: this.#computeRolling7DayLabels(firstDate, lastDate),
+            longDisconnects,
+            disconnects,
+            hourlyDisconnects,
+            cleanedEntriesLength: cleanedEntries.length,
+            dailyDisconnects: sortedDailyDisconnects,
+            dailyLabels: sortedKeys,
+            hourlyCount,
+            ignoredEntriesCount
+        };
     }
 
-    /**
-     * Handles a "Start" event (modem came back online).
-     * If we were previously down, this marks the end of a disconnect/reconnect.
-     */
-    #handleStart(entry, currentState, lastTransitionTime) {
-        if (currentState === "down" && lastTransitionTime !== null) {
-            this.#recordReconnect(lastTransitionTime, entry.dateObj.getTime());
-        }
-    }
+    // ────────────────────────────────────────────────
+    // All private static helpers — take params, no 'this'
+    // ────────────────────────────────────────────────
 
-    /**
-     * Handles a "Stop" event (modem went offline).
-     * Records the disconnect and, if we were previously up, records the completed session.
-     */
-    #handleStop(entry, currentState, lastTransitionTime) {
-        this.#recordDisconnect(entry);
-
-        if (currentState === "up" && lastTransitionTime !== null) {
-            this.#recordSessionDuration(lastTransitionTime, entry.dateObj.getTime());
-        }
-    }
-
-    /**
-     * Records a reconnect event (end of a disconnect period).
-     * Calculates duration and checks if it qualifies as a long disconnect.
-     */
-    #recordReconnect(downTime, upTime) {
+    static #recordReconnect(downTime, upTime, reconnectSeconds, reconnects, longDisconnects) {
         const reconnectSec = (upTime - downTime) / 1000;
         if (reconnectSec <= 0) return;
 
-        this.reconnectSeconds.push(reconnectSec);
-        this.reconnects.push({
-            dateObj: new Date(upTime),
-            sec: reconnectSec
-        });
+        reconnectSeconds.push(reconnectSec);
+        reconnects.push({ dateObj: new Date(upTime), sec: reconnectSec });
 
-        if (reconnectSec > 1800) {   // 30 minutes
-            this.longDisconnects.push({
+        if (reconnectSec > 1800) {  // 30 minutes
+            longDisconnects.push({
                 stopDate: new Date(downTime),
                 startDate: new Date(upTime),
                 durationSec: reconnectSec
@@ -92,78 +166,46 @@ class NeonovaAnalyzer {
         }
     }
 
-    /**
-     * Calculates the number of days spanned by the log data.
-     * This belongs here, not in the builder method.
-     */
-    #calculateDaysSpanned() {
-        if (!this.firstDate || !this.lastDate) return 0;
-
-        const totalRangeSec = (this.lastDate - this.firstDate) / 1000;
-        return totalRangeSec / 86400;   // seconds in a day
-    }
-
-    /**
-     * Records a completed session (from Start → Stop).
-     */
-    #recordSessionDuration(startTime, stopTime) {
-        const duration = (stopTime - startTime) / 1000;
-        if (duration > 0) {
-            this.sessionSeconds.push(duration);
-        }
-    }
-
-    /**
-     * Records all statistical data when a disconnect occurs.
-     * This is the only place that updates hourly, daily, and day-of-week counters.
-     */
-    #recordDisconnect(entry) {
-        this.disconnects++;
+    static #recordDisconnect(entry, disconnects, hourlyDisconnects, hourlyCount, dailyCount, dayOfWeekDisconnects, disconnectDates) {
+        disconnects++;
 
         const date = entry.dateObj;
         const hour = date.getHours();
 
-        this.hourlyDisconnects[hour]++;
-        this.hourlyCount[hour]++;
+        hourlyDisconnects[hour]++;
+        hourlyCount[hour]++;
 
         const dayKey = date.toLocaleDateString();
-        this.dailyCount[dayKey] = (this.dailyCount[dayKey] || 0) + 1;
+        dailyCount[dayKey] = (dailyCount[dayKey] || 0) + 1;
 
-        this.dayOfWeekDisconnects[date.getDay()]++;
+        dayOfWeekDisconnects[date.getDay()]++;
 
-        this.disconnectDates.push(date);
+        disconnectDates.push(date);
     }
 
-    /**
-     * Handles the final open session if the modem was "up" at the end of the log.
-     * This is very important for accurate uptime/session calculations.
-     */
-    #finalizeLastSession(currentState, lastTransitionTime) {
-        if (currentState === "up" && lastTransitionTime !== null && this.lastDate) {
-            const finalDuration = (this.lastDate.getTime() - lastTransitionTime) / 1000;
-            if (finalDuration > 0) {
-                this.sessionSeconds.push(finalDuration);
-            }
-        }
+    static #recordSessionDuration(startTime, stopTime, sessionSeconds) {
+        const duration = (stopTime - startTime) / 1000;
+        if (duration > 0) sessionSeconds.push(duration);
     }
 
-        // ────────────────────────────────────────────────
-    // Private helper methods — each does one focused job
-    // ────────────────────────────────────────────────
+    static #calculateDaysSpanned(firstDate, lastDate) {
+        if (!firstDate || !lastDate) return 0;
+        return (lastDate - firstDate) / (1000 * 86400);
+    }
 
-    #calculatePeakHourStr() {
-        const peakHourCount = Math.max(...this.hourlyCount);
-        const peakHour = this.hourlyCount.indexOf(peakHourCount);
+    static #calculatePeakHourStr(hourlyCount) {
+        const peakHourCount = Math.max(...hourlyCount);
+        const peakHour = hourlyCount.indexOf(peakHourCount);
         return peakHourCount > 0 
             ? `${peakHour}:00-${peakHour + 1}:00 (${peakHourCount} disconnects)` 
             : 'None';
     }
 
-    #calculatePeakDayStr() {
+    static #calculatePeakDayStr(dailyCount) {
         let peakDayStr = 'None';
         let peakDayCount = 0;
 
-        for (const [day, count] of Object.entries(this.dailyCount)) {
+        for (const [day, count] of Object.entries(dailyCount)) {
             if (count > peakDayCount) {
                 peakDayCount = count;
                 peakDayStr = `${day} (${count} disconnects)`;
@@ -172,129 +214,97 @@ class NeonovaAnalyzer {
         return peakDayStr;
     }
 
-    #calculateBusinessVsOffHours() {
-        let businessDisconnects = 0;
-        let offHoursDisconnects = 0;
+    static #calculateBusinessVsOffHours(hourlyDisconnects) {
+        let business = 0;
+        let offHours = 0;
 
         for (let h = 0; h < 24; h++) {
-            if (h >= 8 && h < 18) {
-                businessDisconnects += this.hourlyDisconnects[h];
-            } else {
-                offHoursDisconnects += this.hourlyDisconnects[h];
-            }
+            if (h >= 8 && h < 18) business += hourlyDisconnects[h];
+            else offHours += hourlyDisconnects[h];
         }
-        return { businessDisconnects, offHoursDisconnects };
+        return { businessDisconnects: business, offHoursDisconnects: offHours };
     }
 
-    #calculateTimeSinceLastDisconnect() {
-        if (!this.lastDisconnectDate) return 'N/A';
-
-        const sinceSec = (new Date() - this.lastDisconnectDate) / 1000;
-        return formatDuration(sinceSec) + ' ago';
+    static #calculateTimeSinceLastDisconnect(lastDisconnectDate) {
+        if (!lastDisconnectDate) return 'N/A';
+        const sinceSec = (new Date() - lastDisconnectDate) / 1000;
+        return this.#formatDuration(sinceSec) + ' ago';
     }
 
-    #calculateAverageDailyDisconnects() {
-        const dailyValues = Object.values(this.dailyCount);
-        return dailyValues.length 
-            ? (dailyValues.reduce((a, b) => a + b, 0) / dailyValues.length).toFixed(1) 
-            : '0';
+    static #formatDuration(seconds) {
+        if (seconds < 60) return seconds + 's';
+        if (seconds < 3600) return Math.floor(seconds / 60) + 'm ' + (seconds % 60) + 's';
+        if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ' + Math.floor((seconds % 3600) / 60) + 'm';
+        return Math.floor(seconds / 86400) + 'd ' + Math.floor((seconds % 86400) / 3600) + 'h';
     }
 
-    #calculateSessionStatistics() {
-        const numSessions = this.sessionSeconds.length;
+    static #calculateAverageDailyDisconnects(dailyCount) {
+        const values = Object.values(dailyCount);
+        return values.length ? (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1) : '0';
+    }
+
+    static #calculateSessionStatistics(sessionSeconds) {
+        const numSessions = sessionSeconds.length;
 
         const avgSessionMin = numSessions 
-            ? (this.sessionSeconds.reduce((a, b) => a + b, 0) / numSessions / 60).toFixed(1) 
+            ? (sessionSeconds.reduce((a, b) => a + b, 0) / numSessions / 60).toFixed(1) 
             : 'N/A';
 
-        const longestSessionMin = numSessions ? Math.max(...this.sessionSeconds) / 60 : 0;
+        const longestSessionMin = numSessions ? Math.max(...sessionSeconds) / 60 : 0;
         const shortestSessionMin = numSessions 
-            ? Math.min(...this.sessionSeconds.filter(s => s > 0)) / 60 
+            ? Math.min(...sessionSeconds.filter(s => s > 0)) / 60 
             : 'N/A';
 
-        // Median session
         let medianSessionMin = 'N/A';
         if (numSessions > 0) {
-            const sorted = [...this.sessionSeconds].sort((a, b) => a - b);
+            const sorted = [...sessionSeconds].sort((a, b) => a - b);
             const mid = Math.floor(numSessions / 2);
-            const medianSec = numSessions % 2 
-                ? sorted[mid] 
-                : (sorted[mid - 1] + sorted[mid]) / 2;
+            const medianSec = numSessions % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
             medianSessionMin = (medianSec / 60).toFixed(1);
         }
 
-        return {
-            numSessions,
-            avgSessionMin,
-            longestSessionMin,
-            shortestSessionMin,
-            medianSessionMin
-        };
+        return { numSessions, avgSessionMin, longestSessionMin, shortestSessionMin, medianSessionMin };
     }
 
-    #calculateReconnectStatistics() {
-        const reconnects = this.reconnectSeconds;
-        const count = reconnects.length;
+    static #calculateReconnectStatistics(reconnectSeconds) {
+        const count = reconnectSeconds.length;
 
         const avgReconnectMin = count 
-            ? (reconnects.reduce((a, b) => a + b, 0) / count / 60).toFixed(1) 
+            ? (reconnectSeconds.reduce((a, b) => a + b, 0) / count / 60).toFixed(1) 
             : 'N/A';
 
         let medianReconnectMin = 'N/A';
         let p95ReconnectMin = 'N/A';
 
         if (count > 0) {
-            const sorted = [...reconnects].sort((a, b) => a - b);
-
-            // Median
+            const sorted = [...reconnectSeconds].sort((a, b) => a - b);
             const mid = Math.floor(count / 2);
-            const medianSec = count % 2 
-                ? sorted[mid] 
-                : (sorted[mid - 1] + sorted[mid]) / 2;
+            const medianSec = count % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
             medianReconnectMin = (medianSec / 60).toFixed(1);
 
-            // 95th percentile
             const p95Index = Math.floor(count * 0.95);
             const p95Sec = sorted[p95Index];
             p95ReconnectMin = (p95Sec / 60).toFixed(1);
         }
 
-        const quickReconnects = reconnects.filter(s => s <= 300).length;
+        const quickReconnects = reconnectSeconds.filter(s => s <= 300).length;
 
-        return {
-            avgReconnectMin,
-            medianReconnectMin,
-            p95ReconnectMin,
-            quickReconnects
-        };
+        return { avgReconnectMin, medianReconnectMin, p95ReconnectMin, quickReconnects };
     }
 
-    #calculateUptimeAndPercentConnected() {
-        const totalConnectedSec = this.sessionSeconds.reduce((a, b) => a + b, 0) || 0;
-        const totalRangeSec = this.firstDate && this.lastDate 
-            ? (this.lastDate - this.firstDate) / 1000 
-            : 1;
+    static #calculateUptimeAndPercentConnected(sessionSeconds, firstDate, lastDate) {
+        const totalConnectedSec = sessionSeconds.reduce((a, b) => a + b, 0) || 0;
+        const totalRangeSec = firstDate && lastDate ? (lastDate - firstDate) / 1000 : 1;
 
         const totalDisconnectedSec = totalRangeSec - totalConnectedSec;
-        const percentConnected = totalRangeSec > 0 
-            ? (totalConnectedSec / totalRangeSec * 100).toFixed(1) 
-            : 'N/A';
+        const percentConnected = totalRangeSec > 0 ? (totalConnectedSec / totalRangeSec * 100).toFixed(1) : 'N/A';
 
         const uptimeScore = parseFloat(percentConnected) || 0;
 
-        return {
-            totalConnectedSec,
-            totalDisconnectedSec,
-            percentConnected,
-            uptimeScore
-        };
+        return { totalConnectedSec, totalDisconnectedSec, percentConnected, uptimeScore };
     }
 
-    /**
-     * Contains the entire new scoring logic (uptime dominant, capped penalties).
-     * Returns rawMeanScore, rawMedianScore, and all component values.
-     */
-    #computeStabilityScores(uptimeScore, avgSessionMin, medianSessionMin) {
+    static #computeStabilityScores(uptimeScore, avgSessionMin, medianSessionMin, daysSpanned, disconnects, longDisconnectCount, reconnectSeconds) {
         const UPTIME_WEIGHT = 0.90;
         const SESSION_BONUS_MAX = 20;
         const FAST_RECOVERY_MAX = 12;
@@ -302,24 +312,22 @@ class NeonovaAnalyzer {
         const LONG_OUTAGE_PENALTY_MAX = 28;
         const MIN_SCORE_FLOOR = 30;
 
-        const days = Math.max(this.daysSpanned || 1, 1);
+        const days = Math.max(daysSpanned || 1, 1);
 
         const uptimePoints = uptimeScore * UPTIME_WEIGHT;
 
-        const sessionBonusMean = Math.min(SESSION_BONUS_MAX, getSessionBonus(avgSessionMin) || 0);
-        const sessionBonusMedian = Math.min(SESSION_BONUS_MAX, getSessionBonus(medianSessionMin) || 0);
+        const sessionBonusMean = Math.min(SESSION_BONUS_MAX, this.#getSessionBonus(avgSessionMin) || 0);
+        const sessionBonusMedian = Math.min(SESSION_BONUS_MAX, this.#getSessionBonus(medianSessionMin) || 0);
 
-        const totalReconnects = this.reconnectSeconds.length;
-        const quickRatio = totalReconnects > 0 
-            ? this.reconnectSeconds.filter(s => s <= 300).length / totalReconnects 
-            : 0;
+        const totalReconnects = reconnectSeconds.length;
+        const quickRatio = totalReconnects > 0 ? reconnectSeconds.filter(s => s <= 300).length / totalReconnects : 0;
         const fastBonus = Math.min(FAST_RECOVERY_MAX, quickRatio * 50);
 
-        const shortDisconnects = this.disconnects - this.longDisconnects.length;
+        const shortDisconnects = disconnects - longDisconnectCount;
         const flapsPerDay = shortDisconnects / days;
         const flappingPenalty = -Math.min(FLAPPING_PENALTY_MAX, Math.pow(flapsPerDay + 1, 1.3) * 4);
 
-        const longOutagesPerWeek = (this.longDisconnects.length / days) * 7;
+        const longOutagesPerWeek = (longDisconnectCount / days) * 7;
         const longOutagePenalty = -Math.min(LONG_OUTAGE_PENALTY_MAX, longOutagesPerWeek * 8);
 
         let rawMeanScore = uptimePoints + sessionBonusMean + fastBonus + flappingPenalty + longOutagePenalty;
@@ -344,171 +352,36 @@ class NeonovaAnalyzer {
         };
     }
 
-    /**
-     * Builds the final return object.
-     * This method ensures the exact same shape as the original computeMetrics().
-     * No spread operators — fully compatible with older JS environments.
-     */
-    #buildReturnObject(stats) {
-        const sortedKeys = Object.keys(this.dailyCount).sort((a, b) => new Date(a) - new Date(b));
-        const sortedDailyDisconnects = sortedKeys.map(k => this.dailyCount[k]);
+    static #getSessionBonus(min) {
+        if (!min || min <= 0) return 0;
+        if (min <= 5) return 2;
+        if (min <= 15) return 5;
+        if (min <= 30) return 10;
+        if (min <= 60) return 15;
+        return 20;
+    }
 
+    static #buildEmptyMetrics(ignoredEntriesCount) {
         return {
-            peakHourStr: stats.peakHourStr,
-            peakDayStr: stats.peakDayStr,
-            businessDisconnects: stats.businessDisconnects,
-            offHoursDisconnects: stats.offHoursDisconnects,
-            timeSinceLastStr: stats.timeSinceLastStr,
-            avgDaily: stats.avgDaily,
-            totalConnectedSec: stats.totalConnectedSec,
-            totalDisconnectedSec: stats.totalDisconnectedSec,
-            percentConnected: stats.percentConnected,
-            numSessions: stats.numSessions,
-            avgSessionMin: stats.avgSessionMin,
-            longestSessionMin: stats.longestSessionMin,
-            shortestSessionMin: stats.shortestSessionMin,
-            medianReconnectMin: stats.medianReconnectMin,
-            p95ReconnectMin: stats.p95ReconnectMin,
-            avgReconnectMin: stats.avgReconnectMin,
-            quickReconnects: stats.quickReconnects,
-            daysSpanned: stats.daysSpanned,
-            uptimeComponent: stats.uptimeComponent,
-            sessionBonusMean: stats.sessionBonusMean,
-            sessionBonusMedian: stats.sessionBonusMedian,
-            totalFastBonus: stats.totalFastBonus,
-            flappingPenalty: stats.flappingPenalty,
-            longOutagePenalty: stats.longOutagePenalty,
-            meanStabilityScore: stats.meanStabilityScore,
-            medianStabilityScore: stats.medianStabilityScore,
-            rawMeanScore: stats.rawMeanScore,
-            rawMedianScore: stats.rawMedianScore,
-            monitoringPeriod: this.firstDate && this.lastDate 
-                ? `${this.firstDate.toLocaleString()} to ${this.lastDate.toLocaleString()}` 
-                : 'N/A',
-            sessionBins: this.computeSessionBins(),
-            reconnectBins: this.computeReconnectBins(),
-            rolling7Day: this.computeRolling7Day(),
-            rollingLabels: this.rollingLabels || [],
-            longDisconnects: this.longDisconnects,
-            disconnects: this.disconnects,
-            hourlyDisconnects: this.hourlyDisconnects,
-            cleanedEntriesLength: this.cleanEntries.length,
-            dailyDisconnects: sortedDailyDisconnects,
-            dailyLabels: sortedKeys,
-            hourlyCount: this.hourlyCount,
-            ignoredEntriesCount: this.ignoredEntriesCount   // ← your new field
+            disconnects: 0,
+            percentConnected: '0.0',
+            meanStabilityScore: 0,
+            medianStabilityScore: 0,
+            rawEntryCount: 0,
+            ignoredEntriesCount,
+            longDisconnects: [],
+            hourlyDisconnects: Array(24).fill(0),
+            dailyDisconnects: [],
+            dailyLabels: [],
+            rolling7Day: [],
+            rollingLabels: [],
+            // ... add other defaults as needed
         };
     }
 
-    /**
-     * Main entry point for analysis.
-     * Orchestrates the entire state-machine processing of RADIUS log entries.
-     * This method is now short and readable — it no longer contains the actual logic.
-     */
-    analyze() {
-        // Reset all data structures
-        this.disconnects = 0;
-        this.sessionSeconds = [];
-        this.reconnectSeconds = [];
-        this.reconnects = [];
-        this.longDisconnects = [];
-        this.firstDate = null;
-        this.lastDate = null;
-        this.lastDisconnectDate = null;
-        this.hourlyDisconnects = Array(24).fill(0);
-        this.dayOfWeekDisconnects = Array(7).fill(0);
-        this.hourlyCount = Array(24).fill(0);
-        this.dailyCount = {};
-        this.disconnectDates = [];
-
-        // State machine variables
-        let currentState = null;          // "up", "down", or null (before first entry)
-        let lastTransitionTime = null;    // timestamp of the most recent state change
-
-        // Process every log entry in chronological order
-        this.cleanEntries.forEach(entry => {
-            this.#processEntry(entry, currentState, lastTransitionTime);
-            
-            // Update state machine for next iteration
-            if (entry.status === "Start") {
-                currentState = "up";
-                lastTransitionTime = entry.dateObj.getTime();
-            } else if (entry.status === "Stop") {
-                currentState = "down";
-                lastTransitionTime = entry.dateObj.getTime();
-                this.lastDisconnectDate = entry.dateObj;
-            }
-        });
-
-        // Handle any open session at the very end of the log
-        this.#finalizeLastSession(currentState, lastTransitionTime);
-    }
-
-    /**
-     * Computes all metrics from the raw analyzed data.
-     * This method is now the orchestrator only — short and readable.
-     * All heavy calculations have been moved to focused private methods.
-     * 
-     * The returned object shape is 100% identical to the previous version.
-     */
-    computeMetrics() {
-        const peakHourStr = this.#calculatePeakHourStr();
-        const peakDayStr = this.#calculatePeakDayStr();
-
-        const { businessDisconnects, offHoursDisconnects } = this.#calculateBusinessVsOffHours();
-
-        const timeSinceLastStr = this.#calculateTimeSinceLastDisconnect();
-        const avgDaily = this.#calculateAverageDailyDisconnects();
-
-        const sessionStats = this.#calculateSessionStatistics();
-        const reconnectStats = this.#calculateReconnectStatistics();
-        const uptimeStats = this.#calculateUptimeAndPercentConnected();
-        const scoring = this.#computeStabilityScores(
-            uptimeStats.uptimeScore,
-            sessionStats.avgSessionMin,
-            sessionStats.medianSessionMin
-        );
-
-        const daysSpanned = this.#calculateDaysSpanned();
-
-        // No spread operators — manually build the stats object
-        return this.#buildReturnObject({
-            peakHourStr,
-            peakDayStr,
-            businessDisconnects,
-            offHoursDisconnects,
-            timeSinceLastStr,
-            avgDaily,
-            daysSpanned,
-            totalConnectedSec: uptimeStats.totalConnectedSec,
-            totalDisconnectedSec: uptimeStats.totalDisconnectedSec,
-            percentConnected: uptimeStats.percentConnected,
-            uptimeScore: uptimeStats.uptimeScore,
-            numSessions: sessionStats.numSessions,
-            avgSessionMin: sessionStats.avgSessionMin,
-            longestSessionMin: sessionStats.longestSessionMin,
-            shortestSessionMin: sessionStats.shortestSessionMin,
-            medianSessionMin: sessionStats.medianSessionMin,
-            avgReconnectMin: reconnectStats.avgReconnectMin,
-            medianReconnectMin: reconnectStats.medianReconnectMin,
-            p95ReconnectMin: reconnectStats.p95ReconnectMin,
-            quickReconnects: reconnectStats.quickReconnects,
-            uptimeComponent: scoring.uptimeComponent,
-            sessionBonusMean: scoring.sessionBonusMean,
-            sessionBonusMedian: scoring.sessionBonusMedian,
-            totalFastBonus: scoring.totalFastBonus,
-            flappingPenalty: scoring.flappingPenalty,
-            longOutagePenalty: scoring.longOutagePenalty,
-            rawMeanScore: scoring.rawMeanScore,
-            meanStabilityScore: scoring.meanStabilityScore,
-            rawMedianScore: scoring.rawMedianScore,
-            medianStabilityScore: scoring.medianStabilityScore
-        });
-    }
-    
-    computeSessionBins() {
+    static #computeSessionBins(sessionSeconds) {
         const bins = [0, 0, 0, 0, 0];
-        this.sessionSeconds.forEach(sec => {
+        sessionSeconds.forEach(sec => {
             const min = sec / 60;
             if (min <= 5) bins[0]++;
             else if (min <= 30) bins[1]++;
@@ -519,9 +392,9 @@ class NeonovaAnalyzer {
         return bins;
     }
 
-    computeReconnectBins() {
+    static #computeReconnectBins(reconnectSeconds) {
         const bins = [0, 0, 0, 0];
-        this.reconnectSeconds.forEach(sec => {
+        reconnectSeconds.forEach(sec => {
             const min = sec / 60;
             if (min <= 1) bins[0]++;
             else if (min <= 5) bins[1]++;
@@ -531,27 +404,43 @@ class NeonovaAnalyzer {
         return bins;
     }
 
-    computeRolling7Day() {
-        if (this.disconnectDates === undefined || this.disconnectDates === null) {
-            this.disconnectDates = [];
-        }
-    
-        this.disconnectDates.sort((a, b) => a - b);
-    
+    static #computeRolling7Day(disconnectDates, firstDate, lastDate) {
+        if (!disconnectDates || disconnectDates.length === 0) return [];
+
+        disconnectDates = [...disconnectDates].sort((a, b) => a - b);
+
         const rolling7Day = [];
-        this.rollingLabels = [];
+        const rollingLabels = [];
         const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-    
-        let currentDate = new Date(this.firstDate || Date.now());
-        currentDate.setHours(0,0,0,0);
-    
-        while (currentDate <= (this.lastDate || new Date())) {
+
+        let currentDate = new Date(firstDate || Date.now());
+        currentDate.setHours(0, 0, 0, 0);
+
+        while (currentDate <= (lastDate || new Date())) {
             const windowStart = new Date(currentDate - sevenDaysMs);
-            const count = this.disconnectDates.filter(d => d >= windowStart && d <= currentDate).length;
+            const count = disconnectDates.filter(d => d >= windowStart && d <= currentDate).length;
             rolling7Day.push(count);
-            this.rollingLabels.push(currentDate.toLocaleDateString());
-            currentDate = new Date(currentDate.getTime() + 24*60*60*1000);
+            rollingLabels.push(currentDate.toLocaleDateString());
+            currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
         }
+
         return rolling7Day;
+    }
+
+    static #computeRolling7DayLabels(firstDate, lastDate) {
+        if (!firstDate || !lastDate) return [];
+
+        const labels = [];
+        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+
+        let currentDate = new Date(firstDate);
+        currentDate.setHours(0, 0, 0, 0);
+
+        while (currentDate <= lastDate) {
+            labels.push(currentDate.toLocaleDateString());
+            currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
+        }
+
+        return labels;
     }
 }
