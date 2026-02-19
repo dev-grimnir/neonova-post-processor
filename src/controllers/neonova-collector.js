@@ -95,88 +95,81 @@ class NeonovaCollector {
         console.groupCollapsed('[Collector] extractEntriesFromCurrentPage()');
     
         if (!this.table) {
-            console.warn('[Collector] No table initially set — attempting fallback search');
-            // Fallback: find any table with log-like content (header has [Date])
-            const candidateTables = document.querySelectorAll('table');
-            for (let t of candidateTables) {
-                if (t.innerHTML.includes('[Date]') || t.getAttribute('width') === '500') {
-                    console.log('[Collector] Fallback found log table');
-                    this.table = t;
-                    break;
-                }
-            }
-            if (!this.table) {
-                console.error('[Collector] No log table found anywhere — site change?');
-                console.groupEnd();
-                return [];
-            }
+            console.warn('[Collector] No table set');
+            console.groupEnd();
+            return [];
         }
     
-        console.log('[Collector] Table found — tag/attrs:', this.table.tagName, this.table.getAttribute('cellspacing'), this.table.getAttribute('cellpadding'), this.table.getAttribute('width'));
-        console.log('[Collector] Table HTML start:', this.table.outerHTML.substring(0, 300) + '...');
+        console.log('[Collector] Table OK — attrs:', this.table.outerHTML.match(/<table[^>]*>/)[0]);
     
-        // Find rows — prefer tbody, fallback to direct tr
         let rows = this.table.querySelectorAll("tbody tr");
-        console.log(`[Collector] Rows via tbody tr: ${rows.length}`);
+        console.log(`[Collector] tbody tr rows: ${rows.length}`);
     
         if (rows.length === 0) {
             rows = this.table.querySelectorAll("tr");
-            console.log(`[Collector] Fallback rows via direct tr: ${rows.length}`);
+            console.log(`[Collector] direct tr fallback: ${rows.length}`);
         }
     
         if (rows.length === 0) {
-            console.warn('[Collector] Zero rows detected — table empty or wrong structure');
-            console.log('[Collector] Table innerHTML snippet:', this.table.innerHTML.substring(0, 500) + '...');
+            console.warn('[Collector] Zero rows — table snippet:', this.table.innerHTML.substring(0, 500) + '...');
             console.groupEnd();
             return [];
         }
     
         const newEntries = [];
     
-        rows.forEach((row, index) => {
-            console.group(`[Row ${index + 1}]`);
+        rows.forEach((row, i) => {
+            console.group(`[Row ${i+1}] Raw HTML: ${row.outerHTML.substring(0, 300) + (row.outerHTML.length > 300 ? '...' : '')}`);
     
             const cells = row.querySelectorAll("td");
-            console.log(`  Cells count: ${cells.length}`);
+            console.log(`  → ${cells.length} <td> cells`);
     
             if (cells.length < 7) {
-                console.log(`  Skip: too few cells (${cells.length})`);
+                console.log('  → Skipped: <7 cells');
                 console.groupEnd();
                 return;
             }
     
-            // Log raw cell contents for debugging
-            console.log(`  Cell 0 (Date): "${cells[0].textContent.trim()}"`);
-            console.log(`  Cell 4 (Status): "${cells[4].textContent.trim()}"`);
+            const dateTd = cells[0];
+            const statusTd = cells[4];
     
-            const dateStr = cells[0].textContent.trim();
-            const status = cells[4].textContent.trim();
+            const dateRaw = dateTd.innerHTML.trim();
+            const statusRaw = statusTd.innerHTML.trim();
     
-            if ((status === "Start" || status === "Stop") && dateStr) {
-                console.log('  Valid status and date — parsing...');
+            console.log(`  Date cell innerHTML: "${dateRaw}"`);
+            console.log(`  Status cell innerHTML: "${statusRaw}"`);
     
-                const isoDateStr = dateStr.replace(/\s+/g, 'T');  // Handle any whitespace
-                console.log(`  ISO string: "${isoDateStr}"`);
+            const dateText = dateTd.textContent.trim();
+            const statusText = statusTd.textContent.trim();
     
-                const date = new Date(isoDateStr);
+            console.log(`  Date textContent: "${dateText}"`);
+            console.log(`  Status textContent: "${statusText}"`);
+    
+            if ((statusText === "Start" || statusText === "Stop") && dateText) {
+                console.log('  → Valid status + date — parsing');
+    
+                const iso = dateText.replace(/\s+/g, 'T');
+                console.log(`  → ISO attempt: "${iso}"`);
+    
+                const date = new Date(iso);
                 const valid = !isNaN(date.getTime());
     
-                console.log(`  Parsed: ${valid ? date.toISOString() : 'INVALID'}`);
+                console.log(`  → Parsed date: ${valid ? date.toISOString() : 'INVALID'}`);
     
                 if (valid) {
-                    console.log('  SUCCESS: Adding entry');
-                    newEntries.push(new LogEntry(date.getTime(), status, date));
+                    console.log('  → SUCCESS: LogEntry added');
+                    newEntries.push(new LogEntry(date.getTime(), statusText, date));
                 } else {
-                    console.warn('  Date invalid — skipped');
+                    console.warn('  → Date parse failed');
                 }
             } else {
-                console.log('  Skip: invalid status/date');
+                console.log('  → Skip: bad status or no date');
             }
     
             console.groupEnd();
         });
     
-        console.log(`[Collector] Total valid entries extracted: ${newEntries.length}`);
+        console.log(`[Collector] Final valid entries: ${newEntries.length}`);
         console.groupEnd();
     
         return newEntries;
