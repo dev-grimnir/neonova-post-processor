@@ -167,120 +167,121 @@ class BaseNeonovaController {
      * @throws {DOMException} AbortError if cancelled
      */
     async #fetchAllLogPages(username, start, end, onProgress, signal) {
-        
         console.log(`[Pagination] Starting for ${username} | Range: ${start?.toISOString()} → ${end?.toISOString()}`);
-        
-        // ────────────────────────────────────────────────
-        // Initialize loop state
-        // ────────────────────────────────────────────────
-        const entries = [];           // Accumulates all parsed log entries across pages
-        let page = 1;                 // Current page number (for progress reporting)
-        let offset = 0;               // Pagination offset sent in URL (increments by HITS_PER_PAGE)
-        let knownTotal = null;        // Total entries reported by first page (null until parsed)
     
-        // ────────────────────────────────────────────────
-        // Initialize collector
-        // ────────────────────────────────────────────────
-        const collector = new NeonovaCollector();  // Create collector instance
+        const entries = [];
+        let page = 1;
+        let offset = 0;
+        let knownTotal = null;
+    
+        const collector = new NeonovaCollector();
         console.log('[Pagination] Collector initialized');
     
-        // ────────────────────────────────────────────────
-        // Main pagination loop (infinite until stop condition)
-        // ────────────────────────────────────────────────
         while (true) {
-            // Abort check before heavy work (fetch)
             if (signal?.aborted) {
                 console.log('[Pagination] Aborted by user');
                 throw new DOMException('Pagination aborted', 'AbortError');
             }
     
-            // Build URL for current page/offset
             const url = this.#buildPaginationUrl(username, start, end, offset);
             console.log(`[Pagination] Fetching page ${page} (offset ${offset}) → ${url}`);
     
-            // Fetch raw HTML for the page
             const html = await this.#fetchPageHtml(url);
     
-            // Abort check after await (in case cancelled during fetch)
             if (signal?.aborted) {
                 console.log('[Pagination] Aborted during fetch');
                 throw new DOMException('Pagination aborted', 'AbortError');
             }
     
-            // Network/server failure → stop quietly (caller handles error)
             if (!html) {
+                console.log('[Pagination] No HTML returned — stopping');
                 break;
             }
     
-            // Parse HTML into DOM for row extraction
             const doc = new DOMParser().parseFromString(html, 'text/html');
     
-            // Use collector to extract entries from current page DOM
-            collector.table = doc.querySelector('table[cellspacing="2"][cellpadding="2"], table[width="500"], table[border="0"][width="500"]');
-            console.log(`[Pagination] Page ${page} table found: ${!!collector.table}`);
-            if (collector.table) {
-                console.log('[Pagination] Table attrs:', collector.table.getAttribute('cellspacing'), collector.table.getAttribute('cellpadding'), collector.table.getAttribute('width'));
-            }
-            collector.collectFromPage();  // Collect from this page
+            // ────────────────────────────────────────────────
+            // Select the correct log results table
+            // ────────────────────────────────────────────────
+            let logTable = null;
     
-            const pageEntries = collector.allEntries.slice(-collector.getPages());  // Get entries from this page (adjust if needed)
+            // Primary: find table containing "[Date]" in header
+            const candidateTables = doc.querySelectorAll('table[cellspacing="2"][cellpadding="2"]');
+            for (const t of candidateTables) {
+                if (t.innerHTML.includes('[Date]')) {
+                    logTable = t;
+                    console.log('[Pagination] Selected log table via [Date] header match');
+                    break;
+                }
+            }
+    
+            // Fallback 1: width="500" (matches your sample)
+            if (!logTable) {
+                logTable = doc.querySelector('table[width="500"][cellspacing="2"][cellpadding="2"]');
+                if (logTable) console.log('[Pagination] Fallback: selected table with width="500"');
+            }
+    
+            // Fallback 2: table with the most rows (safety net)
+            if (!logTable && candidateTables.length > 0) {
+                let maxRows = 0;
+                for (const t of candidateTables) {
+                    const rows = t.querySelectorAll('tr');
+                    if (rows.length > maxRows) {
+                        maxRows = rows.length;
+                        logTable = t;
+                    }
+                }
+                if (logTable) console.log(`[Pagination] Fallback: selected table with most rows (${maxRows})`);
+            }
+    
+            collector.table = logTable;
+    
+            console.log(`[Pagination] Page ${page} log table selected: ${!!collector.table}`);
+            if (collector.table) {
+                const firstRow = collector.table.querySelector('tr');
+                console.log('[Pagination] First row snippet:', firstRow ? firstRow.outerHTML.substring(0, 200) + '...' : 'No rows');
+                console.log('[Pagination] Contains [Date]? ', collector.table.innerHTML.includes('[Date]'));
+                console.log('[Pagination] Row count in table: ', collector.table.querySelectorAll('tr').length);
+            } else {
+                console.warn('[Pagination] No suitable log table found on this page');
+            }
+    
+            collector.collectFromPage();
+    
+            const pageEntries = collector.allEntries.slice(-collector.getPages());
             console.log(`[Pagination] Page ${page} collected ${pageEntries.length} entries (total so far: ${entries.length + pageEntries.length})`);
     
-            // ────────────────────────────────────────────────
-            // First page only: extract reported total count
-            // ────────────────────────────────────────────────
-            // This is the primary source for "how many pages total?"
-            // Parsed once and used for progress + early stop detection.
             if (page === 1) {
                 knownTotal = this.#extractTotalFromFirstPage(doc);
                 console.log(`[Pagination] First page total reported: ${knownTotal ?? 'not found'}`);
-                // No results at all → exit early
                 if (knownTotal === 0) {
                     console.log('[Pagination] Server reported 0 total entries — exiting early');
                     break;
                 }
             }
     
-            // Accumulate entries from this page
             entries.push(...pageEntries);
     
-            // ────────────────────────────────────────────────
-            // Progress reporting
-            // ────────────────────────────────────────────────
-            // Called after every page if caller provided a callback.
-            // Uses knownTotal when available; falls back to current count.
             if (typeof onProgress === 'function') {
                 const total = knownTotal !== null ? knownTotal : entries.length;
                 onProgress(entries.length, total, page);
             }
     
-            // ────────────────────────────────────────────────
-            // Stop conditions (exit loop early when done)
-            // ────────────────────────────────────────────────
-            // 1. Last page detected (fewer than full page of results)
             if (pageEntries.length < this.HITS_PER_PAGE) {
                 console.log(`[Pagination] Last page detected (${pageEntries.length} < ${this.HITS_PER_PAGE})`);
-                break;           // last page
-            }
-            
-            // 2. We've collected everything the server reported
-            if (knownTotal !== null && entries.length >= knownTotal) {
-                console.log('[Pagination] Reached known total — stopping');
-                break; // reached total
+                break;
             }
     
-            // ────────────────────────────────────────────────
-            // Prepare for next page
-            // ────────────────────────────────────────────────
+            if (knownTotal !== null && entries.length >= knownTotal) {
+                console.log('[Pagination] Reached known total — stopping');
+                break;
+            }
+    
             offset += this.HITS_PER_PAGE;
             page++;
     
-            // Polite delay with abort support
-            // Creates a promise that resolves after delay OR rejects immediately on abort
             await new Promise((resolve, reject) => {
                 const timeout = setTimeout(resolve, this.DELAY_BETWEEN_PAGES_MS);
-    
-                // Listen for abort and clean up + reject
                 signal?.addEventListener('abort', () => {
                     clearTimeout(timeout);
                     reject(new DOMException('Pagination aborted', 'AbortError'));
@@ -288,23 +289,18 @@ class BaseNeonovaController {
             });
         }
     
-        // ────────────────────────────────────────────────
-        // Post-pagination: clean and analyze
-        // ────────────────────────────────────────────────
         console.log(`[Pagination] Loop ended after ${page} pages | Total raw entries: ${entries.length}`);
+    
         const cleanedData = collector.cleanEntries(collector.allEntries);
         console.log(`[Pagination] Cleaned entries: ${cleanedData.cleaned.length} (ignored: ${cleanedData.ignoredCount})`);
+    
         const analyzer = new NeonovaAnalyzer(cleanedData);
         const metrics = analyzer.computeMetrics();
         console.log('[Pagination] Metrics computed:', metrics);
     
-        // ────────────────────────────────────────────────
-        // Cleanup collector state if complete
-        // ────────────────────────────────────────────────
         collector.endAnalysis();
         console.log('[Pagination] Collector cleaned up');
     
-        // Final step: return sorted entries with metrics
         return { entries: this.#sortNewestFirst(cleanedData.cleaned), metrics };
     }
 
