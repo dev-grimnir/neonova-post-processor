@@ -1,6 +1,6 @@
 /**
- * @file src/utils/neonova-http-paginator.js
- * Static utility class responsible exclusively for HTTP pagination and raw data extraction.
+ * @file src/utils/neonova-http-controller.js
+ * Static controller responsible exclusively for HTTP pagination and raw data extraction.
  * 
  * Responsibilities:
  * - Build pagination URLs
@@ -13,7 +13,7 @@
  * This class has NO knowledge of cleaning, deduplication, analysis, or rendering.
  * It returns only raw LogEntry[] for downstream processing.
  */
-class NeonovaHttpPaginator {
+class NeonovaHTTPController {
 
     /** Base URL for the RADIUS admin interface */
     static BASE_URL = 'https://admin.neonova.net/rat/index.php';
@@ -46,12 +46,12 @@ class NeonovaHttpPaginator {
             }
 
             const url = this.#buildPaginationUrl(username, start, end, offset);
-            console.log(`[HttpPaginator] Fetching page ${page} (offset ${offset}) → ${url}`);
+            console.log(`[NeonovaHTTPController] Fetching page ${page} (offset ${offset}) → ${url}`);
 
             const html = await this.#fetchPageHtml(url, signal);
 
             if (!html) {
-                console.warn('[HttpPaginator] Empty HTML response — stopping');
+                console.warn('[NeonovaHTTPController] Empty HTML response — stopping');
                 break;
             }
 
@@ -60,7 +60,7 @@ class NeonovaHttpPaginator {
             // Select the correct log table
             const table = this.#selectLogTable(doc);
             if (!table) {
-                console.warn('[HttpPaginator] No log table found on page — stopping');
+                console.warn('[NeonovaHTTPController] No log table found on page — stopping');
                 break;
             }
 
@@ -69,12 +69,12 @@ class NeonovaHttpPaginator {
 
             allRawEntries.push(...pageEntries);
 
-            console.log(`[HttpPaginator] Page ${page} extracted ${pageEntries.length} raw entries (cumulative: ${allRawEntries.length})`);
+            console.log(`[NeonovaHTTPController] Page ${page} extracted ${pageEntries.length} raw entries (cumulative: ${allRawEntries.length})`);
 
             // On first page, try to extract the reported total
             if (page === 1) {
                 knownTotal = this.#extractReportedTotal(doc);
-                console.log(`[HttpPaginator] Server reported total entries: ${knownTotal ?? 'unknown'}`);
+                console.log(`[NeonovaHTTPController] Server reported total entries: ${knownTotal ?? 'unknown'}`);
             }
 
             // Progress callback
@@ -89,12 +89,12 @@ class NeonovaHttpPaginator {
             // Stop conditions
             const tableRowCount = table.querySelectorAll('tr').length - 1; // subtract header
             if (pageEntries.length < this.HITS_PER_PAGE || tableRowCount < this.HITS_PER_PAGE) {
-                console.log('[HttpPaginator] Last page detected (fewer than 100 entries)');
+                console.log('[NeonovaHTTPController] Last page detected (fewer than 100 entries)');
                 break;
             }
 
             if (knownTotal !== null && allRawEntries.length >= knownTotal) {
-                console.log(`[HttpPaginator] Reached reported total (${allRawEntries.length}/${knownTotal}) — stopping`);
+                console.log(`[NeonovaHTTPController] Reached reported total (${allRawEntries.length}/${knownTotal}) — stopping`);
                 break;
             }
 
@@ -103,7 +103,7 @@ class NeonovaHttpPaginator {
             page++;
         }
 
-        console.log(`[HttpPaginator] Pagination complete — ${allRawEntries.length} raw entries fetched (${page} pages)`);
+        console.log(`[NeonovaHTTPController] Pagination complete — ${allRawEntries.length} raw entries fetched (${page} pages)`);
 
         return {
             rawEntries: allRawEntries,
@@ -111,10 +111,10 @@ class NeonovaHttpPaginator {
         };
     }
 
-    /**
-     * Builds the pagination URL with all required parameters.
-     * @private
-     */
+    // ────────────────────────────────────────────────
+    // Private static helpers (unchanged from previous version)
+    // ────────────────────────────────────────────────
+
     static #buildPaginationUrl(username, start, end, offset = 0) {
         const params = new URLSearchParams({
             acctsearch: '2',
@@ -144,10 +144,6 @@ class NeonovaHttpPaginator {
         return `${this.BASE_URL}?${params.toString()}`;
     }
 
-    /**
-     * Fetches a single page's HTML.
-     * @private
-     */
     static async #fetchPageHtml(url, signal) {
         try {
             const response = await fetch(url, {
@@ -162,15 +158,11 @@ class NeonovaHttpPaginator {
             return await response.text();
         } catch (err) {
             if (err.name === 'AbortError') throw err;
-            console.error('[HttpPaginator] Fetch failed:', err);
+            console.error('[NeonovaHTTPController] Fetch failed:', err);
             return null;
         }
     }
 
-    /**
-     * Selects the correct log results table from the document.
-     * @private
-     */
     static #selectLogTable(doc) {
         let table = null;
 
@@ -191,10 +183,6 @@ class NeonovaHttpPaginator {
         return table;
     }
 
-    /**
-     * Extracts raw LogEntry objects from a single table.
-     * @private
-     */
     static #extractRawEntriesFromTable(table) {
         let rows = table.querySelectorAll('tbody tr');
         if (rows.length === 0) {
@@ -226,13 +214,10 @@ class NeonovaHttpPaginator {
         return entries;
     }
 
-    /**
-     * Attempts to extract the server's reported total entry count from the first page.
-     * @private
-     */
     static #extractReportedTotal(doc) {
-        // Example: look for text like "Total Records: 392" or similar pattern
-        const totalText = doc.body.textContent.match(/Total Records?:\s*(\d+)/i);
+        // Adjust regex/pattern based on actual page text (e.g. "Displaying 1-100 of 392")
+        const totalText = doc.body.textContent.match(/of\s*(\d+)/i) || 
+                          doc.body.textContent.match(/Total Records?:\s*(\d+)/i);
         return totalText ? parseInt(totalText[1], 10) : null;
     }
 }
