@@ -30,11 +30,7 @@ class NeonovaProgressController {
         .then(rawResult => {
             console.log('[ProgressCtrl] Raw result received — entries:', rawResult.rawEntries.length);
         
-            // Create an instance (needed because cleanEntries is non-static)
-            const collector = new NeonovaCollector();
-        
-            const { cleaned, ignoredCount } = collector.cleanEntries(rawResult.rawEntries);
-            console.log('[ProgressCtrl] Cleaned:', cleaned.length, 'Ignored:', ignoredCount);
+            const { cleaned, ignoredCount } = NeonovaCollector.cleanEntries(rawResult.rawEntries);
         
             const analyzer = new NeonovaAnalyzer(cleaned);
             const metrics = analyzer.computeMetrics();
