@@ -92,27 +92,35 @@ class NeonovaCollector {
      * Returns an array of new LogEntry objects (does not mutate state).
      */
     #extractEntriesFromCurrentPage() {
-        const rows = document.querySelectorAll("table tbody tr");
+        if (!this.table) {
+            console.warn('[Collector] No table set for extraction');
+            return [];
+        }
+    
+        // Use this.table (set to parsed doc table) instead of document
+        const rows = this.table.querySelectorAll("tbody tr");
+        console.log(`[Collector] Found ${rows.length} rows in table`);
+    
         const newEntries = [];
-
+    
         rows.forEach(row => {
             const cells = row.querySelectorAll("td");
             if (cells.length < 7) return;
-
+    
             const dateStr = cells[0].textContent.trim();
             const status = cells[4].textContent.trim();
-
+    
             if ((status === "Start" || status === "Stop") && dateStr) {
-                // Convert space-separated date to ISO-like for reliable parsing
                 const isoDateStr = dateStr.replace(" ", "T");
                 const date = new Date(isoDateStr);
-
+    
                 if (!isNaN(date)) {
                     newEntries.push(new LogEntry(date.getTime(), status, date));
                 }
             }
         });
-
+    
+        console.log(`[Collector] Extracted ${newEntries.length} valid entries from page`);
         return newEntries;
     }
 
