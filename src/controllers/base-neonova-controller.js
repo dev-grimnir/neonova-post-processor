@@ -216,7 +216,11 @@ class BaseNeonovaController {
             const doc = new DOMParser().parseFromString(html, 'text/html');
     
             // Use collector to extract entries from current page DOM
-            collector.table = doc.querySelector('table[cellspacing="2"][cellpadding="2"]');  // Override table with parsed doc
+            collector.table = doc.querySelector('table[cellspacing="2"][cellpadding="2"], table[width="500"], table[border="0"][width="500"]');
+            console.log(`[Pagination] Page ${page} table found: ${!!collector.table}`);
+            if (collector.table) {
+                console.log('[Pagination] Table attrs:', collector.table.getAttribute('cellspacing'), collector.table.getAttribute('cellpadding'), collector.table.getAttribute('width'));
+            }
             collector.collectFromPage();  // Collect from this page
     
             const pageEntries = collector.allEntries.slice(-collector.getPages());  // Get entries from this page (adjust if needed)
