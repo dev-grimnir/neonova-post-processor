@@ -26,9 +26,7 @@ class NeonovaProgressController {
                 signal: this.abortController.signal,
                 onProgress: this.handleProgress
             }
-        )
-        .then(rawResult => {
-            console.log('[ProgressCtrl] Raw result received — entries:', rawResult.rawEntries.length);
+        ).then(rawResult => {
         
             const { cleaned, ignoredCount } = NeonovaCollector.cleanEntries(rawResult.rawEntries);
         
@@ -61,9 +59,6 @@ class NeonovaProgressController {
 
     handleSuccess(result) {
         const { entries, metrics, ignoredCount } = result;
-
-        console.log('Raw fetched entries count:', entries.length);
-        console.log('Computed metrics:', metrics);
 
         const reportView = new NeonovaReportView(
             this.username,
