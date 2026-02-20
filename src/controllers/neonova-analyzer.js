@@ -298,7 +298,7 @@ static #getLastStopDate(cleanedEntries) {
     });
 
     if (lastStop) {
-        console.log("NeonovaAnalyzer.#getLastStopDate() - Stop detected.  Time: " + lastStop.dateObj);
+        console.log("NeonovaAnalyzer.#getLastStopDate() - Last stop detected.  Time: " + lastStop.dateObj);
         return lastStop.dateObj;
     }
 
