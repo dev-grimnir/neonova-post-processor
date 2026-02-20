@@ -28,15 +28,15 @@ class NeonovaProgressController {
             }
         )
         .then(rawResult => {
-            console.log('[ProgressCtrl] Raw result received — entries:', rawResult.rawEntries.length);
+            
     
             // Step 1: Clean (static call)
             const { cleaned, ignoredCount } = NeonovaCollector.cleanEntries(rawResult.rawEntries);
-            console.log('[ProgressCtrl] Cleaned entries:', cleaned.length, 'Ignored:', ignoredCount);
+            
     
             // Step 2: Analyze (static call — no new needed)
             const metrics = NeonovaAnalyzer.computeMetrics(cleaned, ignoredCount);
-            console.log('[ProgressCtrl] Metrics ready');
+            
     
             // Pass only what's needed — metrics already contains most data
             this.handleSuccess({ metrics });
@@ -64,8 +64,6 @@ class NeonovaProgressController {
 
     handleSuccess(result) {
         const { metrics } = result;
-    
-        console.log('Metrics for report view:', metrics);
     
         // Now only 3 arguments — metrics contains rawEntryCount, ignoredEntriesCount, longDisconnects, etc.
         const reportView = new NeonovaReportView(
