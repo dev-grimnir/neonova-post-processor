@@ -2,6 +2,7 @@
 
 class BaseNeonovaController {
     constructor() {
+        console.log("BaseController v2 being constructed.");
         this.baseSearchUrl = 'https://admin.neonova.net/rat/index.php';
         this.defaultFormData = {
             ip: '',
