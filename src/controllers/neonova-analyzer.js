@@ -457,12 +457,14 @@ class NeonovaAnalyzer {
      * @returns {Date|null} The date/time of the last Stop, or null if none found
      */
     static #findLastStopTimestamp(cleanedEntries) {
+        console.log("NeonovaAnalyzer.#findLastStopTimestamp() START");
         if (!cleanedEntries || cleanedEntries.length === 0) {
             return null;
         }
     
         // Scan backwards — most efficient for recent events
         for (let i = cleanedEntries.length - 1; i >= 0; i--) {
+            console.log("NeonovaAnalyzer.#findLastStopTimestamp() -> cleanedEntries[i] status = " + cleanedEntries[i].status);
             if (cleanedEntries[i].status === "Stop") {
                 return cleanedEntries[i].dateObj;
             }
