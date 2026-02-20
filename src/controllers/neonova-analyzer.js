@@ -73,6 +73,8 @@ class NeonovaAnalyzer {
 
         const lastStopDate = this.#findLastStopTimestamp(cleanedEntries);
 
+        const lastStopDate = this.#getLastStopDate(cleanedEntries);
+        
         const timeSinceLastStr = lastStopDate
             ? `${this.#formatDuration((new Date() - lastStopDate) / 1000)} ago (last disconnect: ${lastStopDate.toLocaleString()})`
             : 'No disconnects recorded';
