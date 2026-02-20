@@ -71,13 +71,18 @@ class NeonovaAnalyzer {
             if (finalDuration > 0) sessionSeconds.push(finalDuration);
         }
 
+        const lastStopDate = this.#findLastStopTimestamp(cleanedEntries);
+
+        const timeSinceLastStr = lastStopDate
+            ? `${this.#formatDuration((new Date() - lastStopDate) / 1000)} ago (last disconnect: ${lastStopDate.toLocaleString()})`
+            : 'No disconnects recorded';
+        
         // Compute derived stats
         const daysSpanned = firstDate && lastDate ? (lastDate - firstDate) / (1000 * 86400) : 0;
 
         const peakHourStr = this.#calculatePeakHourStr(hourlyCount);
         const peakDayStr = this.#calculatePeakDayStr(dailyCount);
         const { businessDisconnects, offHoursDisconnects } = this.#calculateBusinessVsOffHours(hourlyDisconnects);
-        const timeSinceLastStr = lastDisconnectDate ? this.#formatDuration((new Date() - lastDisconnectDate) / 1000) + ' ago' : 'N/A';
         const avgDaily = this.#calculateAverageDailyDisconnects(dailyCount);
 
         const sessionStats = this.#calculateSessionStatistics(sessionSeconds);
@@ -442,5 +447,27 @@ class NeonovaAnalyzer {
         }
 
         return labels;
+    }
+
+    /**
+     * Finds the timestamp of the most recent "Stop" event by scanning backwards
+     * from the end of the cleaned entries.
+     * 
+     * @param {Array<LogEntry>} cleanedEntries - The sorted or unsorted cleaned entries
+     * @returns {Date|null} The date/time of the last Stop, or null if none found
+     */
+    static #findLastStopTimestamp(cleanedEntries) {
+        if (!cleanedEntries || cleanedEntries.length === 0) {
+            return null;
+        }
+    
+        // Scan backwards — most efficient for recent events
+        for (let i = cleanedEntries.length - 1; i >= 0; i--) {
+            if (cleanedEntries[i].status === "Stop") {
+                return cleanedEntries[i].dateObj;
+            }
+        }
+    
+        return null;
     }
 }
