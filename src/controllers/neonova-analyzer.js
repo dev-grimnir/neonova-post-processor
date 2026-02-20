@@ -466,6 +466,7 @@ class NeonovaAnalyzer {
         for (let i = cleanedEntries.length - 1; i >= 0; i--) {
             console.log("NeonovaAnalyzer.#findLastStopTimestamp() -> cleanedEntries[i] status = " + cleanedEntries[i].status);
             if (cleanedEntries[i].status === "Stop") {
+                console.log("NeonovaAnalyzer.#findLastStopTimestamp() -> Stop found Timestamp:  " + cleanedEntries[i].dateObj);
                 return cleanedEntries[i].dateObj;
             }
         }
