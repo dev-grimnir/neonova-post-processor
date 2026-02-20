@@ -298,6 +298,7 @@ class NeonovaAnalyzer {
         // Start from the end (most recent)
         for (let i = cleanedEntries.length - 1; i >= 0; i--) {
             if (cleanedEntries[i].status === 'Stop') {
+                console.log("NeonovaAnalyzer.#getLastStopDate() - Stop detected.  Time: " + cleanedEntries[i].dateObj);
                 return cleanedEntries[i].dateObj;
             }
         }
