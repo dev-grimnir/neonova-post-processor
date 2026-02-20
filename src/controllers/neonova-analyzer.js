@@ -369,8 +369,6 @@ class NeonovaAnalyzer {
             if (finalDuration > 0) sessionSeconds.push(finalDuration);
         }
 
-        const lastStopDate = this.#findLastStopTimestamp(cleanedEntries);
-
         const lastStopDate = this.#getLastStopDate(cleanedEntries);
         
         const timeSinceLastStr = lastStopDate
