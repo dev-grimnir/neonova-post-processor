@@ -23,17 +23,161 @@ class BaseNeonovaController {
         };
     }
 
-    async getLatestEntry(username) {
-        const url = this.baseSearchUrl + encodeURIComponent(username); // missing separator? Add & if needed
-        const entries = await this.paginateReportLogs(username); // or pass url
-        return entries[0] || null;
+    /**************************************************************************
+     * PRIVATE METHODS
+     * 
+     * These are declared at the very top of the class (immediately after the
+     * constructor) because Tampermonkey/Greasemonkey userscript environments
+     * parse the class top-to-bottom and can throw if a private method is called
+     * before its declaration is encountered.
+     **************************************************************************/
+
+    /**
+     * Builds the URLSearchParams for a specific pagination request.
+     * This exactly mirrors the original parameter logic but is now isolated
+     * for readability and reusability.
+     * 
+     * Important note on pagination:
+     * - direction='0' + increasing location=offset is the working forward pagination
+     *   mechanism on this decades-old site. It does NOT fetch the same page repeatedly
+     *   when offset is incremented — each new offset value requests the next page.
+     * 
+     * @private
+     */
+    #buildPaginationParams(username, sDate, eDate, hitsPerPage, offset) {
+        return new URLSearchParams({
+            acctsearch: '2',
+            sd: 'fairpoint.net',
+            iuserid: username,
+            ip: '',
+            session: '',
+            nasip: '',
+            statusview: 'both',
+            syear: sDate.getFullYear().toString(),
+            smonth: (sDate.getMonth() + 1).toString().padStart(2, '0'),
+            sday: sDate.getDate().toString().padStart(2, '0'),
+            shour: '00',
+            smin: '00',
+            eyear: eDate.getFullYear().toString(),
+            emonth: (eDate.getMonth() + 1).toString().padStart(2, '0'),
+            eday: eDate.getDate().toString().padStart(2, '0'),
+            ehour: '23',
+            emin: '59',
+            order: 'date',
+            hits: hitsPerPage.toString(),
+            location: offset.toString(),
+            direction: '0',     // forward pagination when combined with increasing offset
+            dump: ''
+        });
     }
-    
+
+    /**
+     * Builds the full URL for a pagination request from the params object.
+     * @private
+     */
+    #buildPageUrl(params) {
+        return `${this.baseSearchUrl}?${params.toString()}`;
+    }
+
+    /**
+     * Fetches a single pagination page.
+     * Returns the raw HTML string on success, or null on any failure
+     * (HTTP error, network error, etc.). This matches the original behavior
+     * of breaking the loop on !res.ok without throwing.
+     * 
+     * All original headers are preserved exactly.
+     * @private
+     */
+    async #fetchPageHtml(url) {
+        try {
+            const res = await fetch(url, {
+                method: 'GET',
+                credentials: 'include',
+                cache: 'no-cache',
+                headers: {
+                    'Referer': url,
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.5',
+                    'Sec-Fetch-Dest': 'document',
+                    'Sec-Fetch-Mode': 'navigate',
+                    'Sec-Fetch-Site': 'same-origin',
+                    'Upgrade-Insecure-Requests': '1'
+                }
+            });
+
+            if (!res.ok) {
+                return null; // mimics original "break" on HTTP error
+            }
+
+            return await res.text();
+        } catch (error) {
+            // Network errors, aborted fetches, etc.
+            console.warn('Pagination page fetch failed:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Parses the HTML of a results page into an array of entry objects.
+     * Thin wrapper around #parsePageRows for clarity.
+     * @private
+     */
+    #parsePageEntries(html) {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        return this.#parsePageRows(doc);
+    }
+
+    /**
+     * Parses the RADIUS log table rows from a DOM document.
+     * This is the original parsing logic, now made private because it is
+     * only used internally by pagination.
+     * @private
+     */
+    #parsePageRows(doc) {
+        const table = doc.querySelector('table[width="500"]') || doc.querySelector('table[cellspacing="2"][cellpadding="2"]');
+        if (!table) {
+            return [];
+        }
+
+        const rows = Array.from(table.querySelectorAll('tr'));
+        const entries = [];
+
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length < 7) return;  // Skip headers/short rows
+
+            const timestampStr = cells[0].textContent.trim();  // e.g., "2026-01-29 22:14:00"
+            const status = cells[4].textContent.trim();        // "Start" or "Stop"
+            const sessionTime = cells[6].textContent.trim();   // Duration string
+
+            const dateObj = new Date(timestampStr);
+            if (isNaN(dateObj.getTime())) {
+                return;
+            }
+
+            entries.push({
+                timestamp: timestampStr,
+                status,
+                sessionTime,
+                dateObj
+            });
+        });
+
+        return entries;
+    }
+
+    /**************************************************************************
+     * PUBLIC METHODS
+     **************************************************************************/
+
+    /**
+     * Generic safe fetch wrapper with defaults (credentials, no-cache).
+     * Kept public in case other code uses it.
+     */
     async safeFetch(url, options = {}) {
         const defaultOptions = {
             credentials: 'include',
             cache: 'no-cache',
-            // add signal if needed for abort
         };
         const res = await fetch(url, { ...defaultOptions, ...options });
         if (!res.ok) {
@@ -41,12 +185,10 @@ class BaseNeonovaController {
         }
         return res;
     }
-    
+
     /**
-     * Submits the search form and returns the parsed DOM document of the results page.
-     * @param {string} username 
-     * @param {Object} [overrides={}] - optional overrides for form fields
-     * @returns {Promise<Document>} parsed DOM
+     * Submits the search form via POST and returns the parsed DOM.
+     * Unchanged from original.
      */
     async submitSearch(username, overrides = {}) {
         const formData = new URLSearchParams({
@@ -56,7 +198,6 @@ class BaseNeonovaController {
             ...overrides
         });
 
-        // Dynamic current month start (can be overridden)
         const now = new Date();
         const currentYear = now.getFullYear().toString();
         const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');
@@ -85,49 +226,8 @@ class BaseNeonovaController {
     }
 
     /**
- * Parses the RADIUS log table from a parsed document.
- * Skips header row, extracts timestamp, status, session time.
- * Returns array of entry objects.
- * 
- * @param {Document} doc
- * @returns {Array<{timestamp: string, status: string, sessionTime: string, dateObj: Date}>}
- */
-parsePageRows(doc) {
-    const table = doc.querySelector('table[width="500"]') || doc.querySelector('table[cellspacing="2"][cellpadding="2"]');
-    if (!table) {
-        return [];
-    }
-
-    const rows = Array.from(table.querySelectorAll('tr'));
-    const entries = [];
-
-    rows.forEach(row => {
-        const cells = row.querySelectorAll('td');
-        if (cells.length < 7) return;  // Skip headers/short rows
-
-        const timestampStr = cells[0].textContent.trim();  // e.g., "2026-01-29 22:14:00"
-        const status = cells[4].textContent.trim();  // Assuming "Start" or "Stop"
-        const sessionTime = cells[6].textContent.trim();  // Duration string
-
-        const dateObj = new Date(timestampStr);  // Parses ISO-like strings
-        if (isNaN(dateObj.getTime())) {
-            return;
-        }
-
-        entries.push({
-            timestamp: timestampStr,  // Keep raw for debug
-            status,
-            sessionTime,
-            dateObj  // Valid Date
-        });
-    });
-    return entries;
-}
-
-    /**
-     * Finds the next page link using the exact logic from the report builder.
-     * @param {Document} doc 
-     * @returns {HTMLAnchorElement|null}
+     * Finds the "NEXT @" link in a results page.
+     * Kept public (original was public) in case other code uses it.
      */
     findNextPageLink(doc) {
         return Array.from(doc.querySelectorAll('a'))
@@ -135,17 +235,14 @@ parsePageRows(doc) {
     }
 
     /**
-     * Builds the full search URL for a given username.
-     * Uses current month start as the default from-date.
-     * All other params match the working cURL capture.
-     * @param {string} username
-     * @returns {string} Full search URL
+     * Builds a single-page search URL (first page only).
+     * Unchanged from original.
      */
     getSearchUrl(username) {
         const now = new Date();
         const currentYear = now.getFullYear().toString();
-        const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0'); // 01-12
-    
+        const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');
+
         const params = new URLSearchParams({
             acctsearch: '2',
             sd: 'fairpoint.net',
@@ -156,10 +253,10 @@ parsePageRows(doc) {
             statusview: 'both',
             syear: currentYear,
             smonth: currentMonth,
-            sday: '01',                     // Start of current month
+            sday: '01',
             shour: '00',
             smin: '00',
-            emonth: '',                     // Empty end = up to present
+            emonth: '',
             eday: '',
             eyear: '',
             ehour: '',
@@ -170,133 +267,88 @@ parsePageRows(doc) {
             direction: '1',
             dump: ''
         });
-    
+
         return `https://admin.neonova.net/rat/index.php?${params.toString()}`;
     }
-    
-        /**
-         * Fetches all available RADIUS log pages for a user using predictable offset pagination.
-         * Uses location=0,50,100,... with direction=0 (forward).
-         * Stops when last page has < hitsPerPage rows.
-         * Returns all entries sorted newest-first.
-         * 
-         * @param {string} username
-         * @param {Date|null} startDate - Optional start date for the search range (defaults to start of current month).
-         * @param {Date|null} endDate - Optional end date for the search range (defaults to now).
-         * @param {Function|null} onProgress - Optional callback (totalEntries, currentPage)
-         * @returns {Promise<Array<{timestamp: string, status: string, sessionTime: string, dateObj: Date}>>}
-         */
-        async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
-            // Handle legacy calls where second arg might be onProgress
-            if (typeof startDate === 'function') {
-                onProgress = startDate;
-                startDate = null;
-                endDate = null;
-            } else if (typeof endDate === 'function') {
-                onProgress = endDate;
-                endDate = null;
-            }
-    
-            const entries = [];
-            let page = 1;
-            let offset = 0;
-            const hitsPerPage = 50;
-            const maxPages = 50; // safety cap
-    
-            const now = new Date();
-            const sDate = startDate || new Date(now.getFullYear(), now.getMonth(), 1); // Start of current month if null
-            const eDate = endDate || now;
-    
-            while (page <= maxPages) {
-                const params = new URLSearchParams({
-                    acctsearch: '2',
-                    sd: 'fairpoint.net',
-                    iuserid: username,
-                    ip: '',
-                    session: '',
-                    nasip: '',
-                    statusview: 'both',
-                    syear: sDate.getFullYear().toString(),
-                    smonth: (sDate.getMonth() + 1).toString().padStart(2, '0'),
-                    sday: sDate.getDate().toString().padStart(2, '0'),
-                    shour: '00',
-                    smin: '00',
-                    eyear: eDate.getFullYear().toString(),
-                    emonth: (eDate.getMonth() + 1).toString().padStart(2, '0'),
-                    eday: eDate.getDate().toString().padStart(2, '0'),
-                    ehour: '23',
-                    emin: '59',
-                    order: 'date',
-                    hits: hitsPerPage.toString(),
-                    location: offset.toString(),
-                    direction: '0', // forward/next
-                    dump: ''
-                });
-    
-                const url = `https://admin.neonova.net/rat/index.php?${params.toString()}`;
-                const res = await fetch(url, {
-                    credentials: 'include',
-                    cache: 'no-cache',
-                    headers: {
-                        'Referer': url,
-                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                        'Accept-Language': 'en-US,en;q=0.5',
-                        'Sec-Fetch-Dest': 'document',
-                        'Sec-Fetch-Mode': 'navigate',
-                        'Sec-Fetch-Site': 'same-origin',
-                        'Upgrade-Insecure-Requests': '1'
-                    }
-                });
-    
-                if (!res.ok) {
-                    break;
-                }
-    
-                const html = await res.text();
-                const doc = new DOMParser().parseFromString(html, 'text/html');
-        
-                const pageEntries = this.parsePageRows(doc);
-                entries.push(...pageEntries);
-        
-                if (typeof onProgress === 'function') {
-                    onProgress(entries.length, page);
-                }
-        
-                // Stop when fewer than full page (last page)
-                if (pageEntries.length < hitsPerPage) {
-                    break;
-                }
-    
-                offset += hitsPerPage;
-                page++;
-            }
-    
-            // Sort newest first (important for status)
-            entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
-        
-            return entries;
+
+    /**
+     * Main pagination method — now a clean orchestrator.
+     * 
+     * Changes from original:
+     * - hits per page increased to 100
+     * - artificial maxPages=50 limit removed (loop now relies solely on
+     *   detecting an incomplete final page)
+     * - broken into small private helpers for readability/maintainability
+     * - legacy callback argument handling preserved exactly
+     * 
+     * Public signature is unchanged.
+     */
+    async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null) {
+        // Backward-compatibility for legacy calls that passed onProgress as 2nd arg
+        if (typeof startDate === 'function') {
+            onProgress = startDate;
+            startDate = null;
+            endDate = null;
+        } else if (typeof endDate === 'function') {
+            onProgress = endDate;
+            endDate = null;
         }
 
-    
-/**
- * Gets the most recent RADIUS log entry for the user.
- * Fetches all pages and returns the newest (most recent timestamp).
- * 
- * @param {string} username
- * @returns {Promise<Object|null>} Newest entry or null
- */
-async getLatestEntry(username) {
+        const now = new Date();
+        const sDate = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
+        const eDate = endDate ? new Date(endDate) : new Date(now);
+
+        const hitsPerPage = 100; // increased as requested
+        const entries = [];
+        let offset = 0;
+        let page = 1;
+
+        while (true) {
+            const params = this.#buildPaginationParams(username, sDate, eDate, hitsPerPage, offset);
+            const url = this.#buildPageUrl(params);
+
+            const html = await this.#fetchPageHtml(url);
+            if (!html) {
+                break; // HTTP or network error — stop pagination gracefully
+            }
+
+            const pageEntries = this.#parsePageEntries(html);
+            entries.push(...pageEntries);
+
+            if (typeof onProgress === 'function') {
+                onProgress(entries.length, page);
+            }
+
+            // Last page detected when server returns fewer than a full page of results
+            if (pageEntries.length < hitsPerPage) {
+                break;
+            }
+
+            offset += hitsPerPage;
+            page++;
+        }
+
+        // Final sort newest-first (critical for correct "latest entry" logic)
+        entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+
+        return entries;
+    }
+
+    /**
+     * Returns the most recent RADIUS log entry for the user.
+     * Robust version with try/catch — the earlier stub version has been removed.
+     */
+    async getLatestEntry(username) {
         try {
             const entries = await this.paginateReportLogs(username);
             if (entries.length === 0) {
                 return null;
             }
-    
-            // Already sorted newest-first in paginateReportLogs
-            const newest = entries[0];
-    
-            return newest;
+
+            // Already sorted newest-first by paginateReportLogs
+            return entries[0];
         } catch (err) {
+            console.error('getLatestEntry failed:', err);
             return null;
         }
     }
