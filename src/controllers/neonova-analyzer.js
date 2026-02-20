@@ -318,6 +318,15 @@ static #getLastStopDate(cleanedEntries) {
             return null;
         }
 
+        // Add this right after the start of computeMetrics, e.g., after the if (!Array.isArray... check
+        const tableData = cleanedEntries.map((entry, index) => ({
+            index,
+            status: entry.status,
+            timestamp: entry.dateObj.toISOString(),  // or .toLocaleString() if you prefer local time
+            rawDateObj: entry.dateObj  // for sorting check
+        }));
+        console.table(tableData);
+
         // All state is local — no 'this'
         let disconnects = 0;
         let sessionSeconds = [];
