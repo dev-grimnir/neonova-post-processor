@@ -287,24 +287,23 @@ class NeonovaAnalyzer {
         return labels;
     }
 
-    /**
-     * Scans backward from the most recent entry to find the timestamp of the last "Stop" event.
-     * @param {Array<LogEntry>} cleanedEntries
-     * @returns {Date|null} Timestamp of the most recent Stop, or null if none
-     */
-    static #getLastStopDate(cleanedEntries) {
-        if (!cleanedEntries || cleanedEntries.length === 0) return null;
-    
-        // Start from the end (most recent)
-        for (let i = cleanedEntries.length - 1; i >= 0; i--) {
-            if (cleanedEntries[i].status === 'Stop') {
-                console.log("NeonovaAnalyzer.#getLastStopDate() - Stop detected.  Time: " + cleanedEntries[i].dateObj);
-                return cleanedEntries[i].dateObj;
-            }
+static #getLastStopDate(cleanedEntries) {
+    if (!cleanedEntries || cleanedEntries.length === 0) return null;
+
+    let lastStop = null;
+    cleanedEntries.forEach(entry => {
+        if (entry.status === 'Stop' && (!lastStop || entry.dateObj > lastStop.dateObj)) {
+            lastStop = entry;
         }
-    
-        return null;
+    });
+
+    if (lastStop) {
+        console.log("NeonovaAnalyzer.#getLastStopDate() - Stop detected.  Time: " + lastStop.dateObj);
+        return lastStop.dateObj;
     }
+
+    return null;
+}
 
     /**
      * Computes all metrics from cleaned entries.
