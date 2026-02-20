@@ -7,152 +7,6 @@
  */
 class NeonovaAnalyzer {
 
-    /**
-     * Computes all metrics from cleaned entries.
-     * This is the only public method — everything else is private/static.
-     * 
-     * @param {Array<LogEntry>} cleanedEntries - Array of cleaned LogEntry objects
-     * @param {number} [ignoredEntriesCount=0] - From collector.cleanEntries
-     * @returns {Object} Complete metrics object
-     */
-    static computeMetrics(cleanedEntries, ignoredEntriesCount = 0) {
-        if (!Array.isArray(cleanedEntries) || cleanedEntries.length === 0) {
-            return null;
-        }
-
-        // All state is local — no 'this'
-        let disconnects = 0;
-        let sessionSeconds = [];
-        let reconnectSeconds = [];
-        let reconnects = [];
-        let longDisconnects = [];
-        let firstDate = null;
-        let lastDate = null;
-        let lastDisconnectDate = null;
-        let hourlyDisconnects = Array(24).fill(0);
-        let dayOfWeekDisconnects = Array(7).fill(0);
-        let hourlyCount = Array(24).fill(0);
-        let dailyCount = {};
-        let disconnectDates = [];
-
-        let currentState = null;
-        let lastTransitionTime = null;
-
-        // Main processing loop
-        cleanedEntries.forEach(entry => {
-            const date = entry.dateObj;
-            const ts = date.getTime();
-
-            if (!firstDate) firstDate = date;
-            lastDate = date;
-
-            if (entry.status === "Start") {
-                if (currentState === "down" && lastTransitionTime !== null) {
-                    this.#recordReconnect(lastTransitionTime, ts, reconnectSeconds, reconnects, longDisconnects);
-                }
-                currentState = "up";
-                lastTransitionTime = ts;
-            } else if (entry.status === "Stop") {
-                this.#recordDisconnect(entry, disconnects, hourlyDisconnects, hourlyCount, dailyCount, dayOfWeekDisconnects, disconnectDates);
-                lastDisconnectDate = date;
-
-                if (currentState === "up" && lastTransitionTime !== null) {
-                    this.#recordSessionDuration(lastTransitionTime, ts, sessionSeconds);
-                }
-
-                currentState = "down";
-                lastTransitionTime = ts;
-            }
-        });
-
-        // Finalize open session
-        if (currentState === "up" && lastTransitionTime !== null && lastDate) {
-            const finalDuration = (lastDate.getTime() - lastTransitionTime) / 1000;
-            if (finalDuration > 0) sessionSeconds.push(finalDuration);
-        }
-
-        const lastStopDate = this.#findLastStopTimestamp(cleanedEntries);
-
-        const lastStopDate = this.#getLastStopDate(cleanedEntries);
-        
-        const timeSinceLastStr = lastStopDate
-            ? `${this.#formatDuration((new Date() - lastStopDate) / 1000)} ago (last disconnect: ${lastStopDate.toLocaleString()})`
-            : 'No disconnects recorded';
-        
-        // Compute derived stats
-        const daysSpanned = firstDate && lastDate ? (lastDate - firstDate) / (1000 * 86400) : 0;
-
-        const peakHourStr = this.#calculatePeakHourStr(hourlyCount);
-        const peakDayStr = this.#calculatePeakDayStr(dailyCount);
-        const { businessDisconnects, offHoursDisconnects } = this.#calculateBusinessVsOffHours(hourlyDisconnects);
-        const avgDaily = this.#calculateAverageDailyDisconnects(dailyCount);
-
-        const sessionStats = this.#calculateSessionStatistics(sessionSeconds);
-        const reconnectStats = this.#calculateReconnectStatistics(reconnectSeconds);
-        const uptimeStats = this.#calculateUptimeAndPercentConnected(sessionSeconds, firstDate, lastDate);
-
-        const scoring = this.#computeStabilityScores(
-            uptimeStats.uptimeScore,
-            sessionStats.avgSessionMin,
-            sessionStats.medianSessionMin,
-            daysSpanned,
-            disconnects,
-            longDisconnects.length,
-            reconnectSeconds
-        );
-
-        // Build final object (same shape as original)
-        const sortedKeys = Object.keys(dailyCount).sort((a, b) => new Date(a) - new Date(b));
-        const sortedDailyDisconnects = sortedKeys.map(k => dailyCount[k]);
-
-        return {
-            peakHourStr,
-            peakDayStr,
-            businessDisconnects,
-            offHoursDisconnects,
-            timeSinceLastStr,
-            avgDaily,
-            daysSpanned,
-            totalConnectedSec: uptimeStats.totalConnectedSec,
-            totalDisconnectedSec: uptimeStats.totalDisconnectedSec,
-            percentConnected: uptimeStats.percentConnected,
-            numSessions: sessionStats.numSessions,
-            avgSessionMin: sessionStats.avgSessionMin,
-            longestSessionMin: sessionStats.longestSessionMin,
-            shortestSessionMin: sessionStats.shortestSessionMin,
-            medianSessionMin: sessionStats.medianSessionMin,
-            avgReconnectMin: reconnectStats.avgReconnectMin,
-            medianReconnectMin: reconnectStats.medianReconnectMin,
-            p95ReconnectMin: reconnectStats.p95ReconnectMin,
-            quickReconnects: reconnectStats.quickReconnects,
-            uptimeComponent: scoring.uptimeComponent,
-            sessionBonusMean: scoring.sessionBonusMean,
-            sessionBonusMedian: scoring.sessionBonusMedian,
-            totalFastBonus: scoring.totalFastBonus,
-            flappingPenalty: scoring.flappingPenalty,
-            longOutagePenalty: scoring.longOutagePenalty,
-            rawMeanScore: scoring.rawMeanScore,
-            meanStabilityScore: scoring.meanStabilityScore,
-            rawMedianScore: scoring.rawMedianScore,
-            medianStabilityScore: scoring.medianStabilityScore,
-            monitoringPeriod: firstDate && lastDate 
-                ? `${firstDate.toLocaleString()} to ${lastDate.toLocaleString()}` 
-                : 'N/A',
-            sessionBins: this.#computeSessionBins(sessionSeconds),
-            reconnectBins: this.#computeReconnectBins(reconnectSeconds),
-            rolling7Day: this.#computeRolling7Day(disconnectDates, firstDate, lastDate),
-            rollingLabels: this.#computeRolling7DayLabels(firstDate, lastDate),
-            longDisconnects,
-            disconnects,
-            hourlyDisconnects,
-            cleanedEntriesLength: cleanedEntries.length,
-            dailyDisconnects: sortedDailyDisconnects,
-            dailyLabels: sortedKeys,
-            hourlyCount,
-            ignoredEntriesCount
-        };
-    }
-
     // ────────────────────────────────────────────────
     // All private static helpers — take params, no 'this'
     // ────────────────────────────────────────────────
@@ -449,5 +303,151 @@ class NeonovaAnalyzer {
         }
     
         return null;
+    }
+
+    /**
+     * Computes all metrics from cleaned entries.
+     * This is the only public method — everything else is private/static.
+     * 
+     * @param {Array<LogEntry>} cleanedEntries - Array of cleaned LogEntry objects
+     * @param {number} [ignoredEntriesCount=0] - From collector.cleanEntries
+     * @returns {Object} Complete metrics object
+     */
+    static computeMetrics(cleanedEntries, ignoredEntriesCount = 0) {
+        if (!Array.isArray(cleanedEntries) || cleanedEntries.length === 0) {
+            return null;
+        }
+
+        // All state is local — no 'this'
+        let disconnects = 0;
+        let sessionSeconds = [];
+        let reconnectSeconds = [];
+        let reconnects = [];
+        let longDisconnects = [];
+        let firstDate = null;
+        let lastDate = null;
+        let lastDisconnectDate = null;
+        let hourlyDisconnects = Array(24).fill(0);
+        let dayOfWeekDisconnects = Array(7).fill(0);
+        let hourlyCount = Array(24).fill(0);
+        let dailyCount = {};
+        let disconnectDates = [];
+
+        let currentState = null;
+        let lastTransitionTime = null;
+
+        // Main processing loop
+        cleanedEntries.forEach(entry => {
+            const date = entry.dateObj;
+            const ts = date.getTime();
+
+            if (!firstDate) firstDate = date;
+            lastDate = date;
+
+            if (entry.status === "Start") {
+                if (currentState === "down" && lastTransitionTime !== null) {
+                    this.#recordReconnect(lastTransitionTime, ts, reconnectSeconds, reconnects, longDisconnects);
+                }
+                currentState = "up";
+                lastTransitionTime = ts;
+            } else if (entry.status === "Stop") {
+                this.#recordDisconnect(entry, disconnects, hourlyDisconnects, hourlyCount, dailyCount, dayOfWeekDisconnects, disconnectDates);
+                lastDisconnectDate = date;
+
+                if (currentState === "up" && lastTransitionTime !== null) {
+                    this.#recordSessionDuration(lastTransitionTime, ts, sessionSeconds);
+                }
+
+                currentState = "down";
+                lastTransitionTime = ts;
+            }
+        });
+
+        // Finalize open session
+        if (currentState === "up" && lastTransitionTime !== null && lastDate) {
+            const finalDuration = (lastDate.getTime() - lastTransitionTime) / 1000;
+            if (finalDuration > 0) sessionSeconds.push(finalDuration);
+        }
+
+        const lastStopDate = this.#findLastStopTimestamp(cleanedEntries);
+
+        const lastStopDate = this.#getLastStopDate(cleanedEntries);
+        
+        const timeSinceLastStr = lastStopDate
+            ? `${this.#formatDuration((new Date() - lastStopDate) / 1000)} ago (last disconnect: ${lastStopDate.toLocaleString()})`
+            : 'No disconnects recorded';
+        
+        // Compute derived stats
+        const daysSpanned = firstDate && lastDate ? (lastDate - firstDate) / (1000 * 86400) : 0;
+
+        const peakHourStr = this.#calculatePeakHourStr(hourlyCount);
+        const peakDayStr = this.#calculatePeakDayStr(dailyCount);
+        const { businessDisconnects, offHoursDisconnects } = this.#calculateBusinessVsOffHours(hourlyDisconnects);
+        const avgDaily = this.#calculateAverageDailyDisconnects(dailyCount);
+
+        const sessionStats = this.#calculateSessionStatistics(sessionSeconds);
+        const reconnectStats = this.#calculateReconnectStatistics(reconnectSeconds);
+        const uptimeStats = this.#calculateUptimeAndPercentConnected(sessionSeconds, firstDate, lastDate);
+
+        const scoring = this.#computeStabilityScores(
+            uptimeStats.uptimeScore,
+            sessionStats.avgSessionMin,
+            sessionStats.medianSessionMin,
+            daysSpanned,
+            disconnects,
+            longDisconnects.length,
+            reconnectSeconds
+        );
+
+        // Build final object (same shape as original)
+        const sortedKeys = Object.keys(dailyCount).sort((a, b) => new Date(a) - new Date(b));
+        const sortedDailyDisconnects = sortedKeys.map(k => dailyCount[k]);
+
+        return {
+            peakHourStr,
+            peakDayStr,
+            businessDisconnects,
+            offHoursDisconnects,
+            timeSinceLastStr,
+            avgDaily,
+            daysSpanned,
+            totalConnectedSec: uptimeStats.totalConnectedSec,
+            totalDisconnectedSec: uptimeStats.totalDisconnectedSec,
+            percentConnected: uptimeStats.percentConnected,
+            numSessions: sessionStats.numSessions,
+            avgSessionMin: sessionStats.avgSessionMin,
+            longestSessionMin: sessionStats.longestSessionMin,
+            shortestSessionMin: sessionStats.shortestSessionMin,
+            medianSessionMin: sessionStats.medianSessionMin,
+            avgReconnectMin: reconnectStats.avgReconnectMin,
+            medianReconnectMin: reconnectStats.medianReconnectMin,
+            p95ReconnectMin: reconnectStats.p95ReconnectMin,
+            quickReconnects: reconnectStats.quickReconnects,
+            uptimeComponent: scoring.uptimeComponent,
+            sessionBonusMean: scoring.sessionBonusMean,
+            sessionBonusMedian: scoring.sessionBonusMedian,
+            totalFastBonus: scoring.totalFastBonus,
+            flappingPenalty: scoring.flappingPenalty,
+            longOutagePenalty: scoring.longOutagePenalty,
+            rawMeanScore: scoring.rawMeanScore,
+            meanStabilityScore: scoring.meanStabilityScore,
+            rawMedianScore: scoring.rawMedianScore,
+            medianStabilityScore: scoring.medianStabilityScore,
+            monitoringPeriod: firstDate && lastDate 
+                ? `${firstDate.toLocaleString()} to ${lastDate.toLocaleString()}` 
+                : 'N/A',
+            sessionBins: this.#computeSessionBins(sessionSeconds),
+            reconnectBins: this.#computeReconnectBins(reconnectSeconds),
+            rolling7Day: this.#computeRolling7Day(disconnectDates, firstDate, lastDate),
+            rollingLabels: this.#computeRolling7DayLabels(firstDate, lastDate),
+            longDisconnects,
+            disconnects,
+            hourlyDisconnects,
+            cleanedEntriesLength: cleanedEntries.length,
+            dailyDisconnects: sortedDailyDisconnects,
+            dailyLabels: sortedKeys,
+            hourlyCount,
+            ignoredEntriesCount
+        };
     }
 }
