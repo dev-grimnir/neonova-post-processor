@@ -12,7 +12,6 @@ class NeonovaCollector {
         console.log('[Collector Debug] Last 5 statuses:', entries.slice(-5).map(e => e.status));
     
         let normalized = this.#normalizeEntries(entries);
-        normalized = this.#sortEntries(normalized);
     
         console.log('[Collector Debug] After normalize/sort:', normalized.length);
     
@@ -44,13 +43,6 @@ class NeonovaCollector {
                 return { date: dateMs, status: entry.status, dateObj: entry.dateObj };
             })
             .filter(entry => entry !== null);
-    }
-
-    static #sortEntries(entries) {
-        const sorted = [...entries].sort((a, b) => a.date - b.date);
-        console.log('[Collector Debug] Sort check — first timestamp:', sorted[0]?.date);
-        console.log('[Collector Debug] Sort check — last timestamp:', sorted[sorted.length-1]?.date);
-        return sorted;
     }
 
     static #deduplicateEntries(entries) {
