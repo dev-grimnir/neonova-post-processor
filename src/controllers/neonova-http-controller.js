@@ -34,18 +34,19 @@ class NeonovaHTTPController {
      */
     static async fetchAllRawEntries(username, start, end, options = {}) {
         const { signal, onProgress } = options;
-
+    
         const allRawEntries = [];
-        let offset = 0;
+        let location = 0;
         let page = 1;
         let knownTotal = null;
-
+    
         while (true) {
             if (signal?.aborted) {
                 throw new DOMException('Pagination aborted', 'AbortError');
             }
         
-            const url = this.#buildPaginationUrl(username, start, end, offset);
+            const url = this.#buildPaginationUrl(username, start, end, location);
+            console.log(`Fetching page ${page} with URL:`, url);  // Debug log
         
             const html = await this.#fetchPageHtml(url, signal);
             if (!html) break;
@@ -80,10 +81,10 @@ class NeonovaHTTPController {
                 break;
             }
         
-            offset += this.HITS_PER_PAGE;
+            location += this.HITS_PER_PAGE;
             page++;
         }
-
+    
         return {
             rawEntries: allRawEntries,
             totalReported: knownTotal
