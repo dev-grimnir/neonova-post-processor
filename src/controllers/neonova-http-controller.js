@@ -95,7 +95,7 @@ class NeonovaHTTPController {
     // Private static helpers
     // ────────────────────────────────────────────────
 
-    static #buildPaginationUrl(username, start, end, offset = 0) {
+    static #buildPaginationUrl(username, start, end, location = 0) {
         const params = new URLSearchParams({
             acctsearch: '2',
             sd: 'fairpoint.net',
@@ -109,18 +109,18 @@ class NeonovaHTTPController {
             sday: String(start.getDate()).padStart(2, '0'),
             shour: '00',
             smin: '00',
-            eyear: end.getFullYear().toString(),
-            emonth: String(end.getMonth() + 1).padStart(2, '0'),
-            eday: String(end.getDate()).padStart(2, '0'),
-            ehour: '23',
-            emin: '59',
+            eyear: '',  // Blank for "up to now"
+            emonth: '',
+            eday: '',
+            ehour: '',
+            emin: '',
             order: 'date',
             hits: this.HITS_PER_PAGE.toString(),
-            location: offset.toString(),
+            location: location.toString(),
             direction: '0',
             dump: ''
         });
-
+    
         return `${this.BASE_URL}?${params.toString()}`;
     }
 
