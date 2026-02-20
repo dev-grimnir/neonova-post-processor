@@ -458,6 +458,7 @@ class NeonovaAnalyzer {
      */
     static #findLastStopTimestamp(cleanedEntries) {
         console.log("NeonovaAnalyzer.#findLastStopTimestamp() START");
+        console.log("NeonovaAnalyzer.#findLastStopTimestamp() cleanedEntries = " + cleanedEntries);
         if (!cleanedEntries || cleanedEntries.length === 0) {
             return null;
         }
