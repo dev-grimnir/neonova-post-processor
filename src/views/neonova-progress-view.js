@@ -1,14 +1,21 @@
 class NeonovaProgressView extends BaseNeonovaView {
     constructor(username, friendlyName) {
         super(null);                              // container will be set later
-
+        this.abortController = null;
         this.username = username;
         this.friendlyName = friendlyName;
         this._close = null;
     }
 
+    get signal() {
+        return this.abortController?.signal ?? null;
+    }
+
     showModal() {
         const overlay = document.createElement('div');
+
+        this.abortController = new AbortController();
+        
         overlay.style.cssText = `
             position: fixed; inset: 0;
             background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
@@ -60,43 +67,49 @@ class NeonovaProgressView extends BaseNeonovaView {
             setTimeout(() => overlay.remove(), 500);
         };
 
-        modal.querySelector('#cancel-btn').addEventListener('click', this._close);
-        overlay.addEventListener('click', e => { if (e.target === overlay) this._close(); });
+        const cancelBtn = modal.querySelector('#cancel-btn');
+        cancelBtn.addEventListener('click', () => {
+            if (this.abortController) {
+                this.abortController.abort();
+            }
+            this._close();
+        });
     }
 
     /**
      * New signature matches the updated callback from paginateReportLogs:
      * onProgress(totalRows, currentEntries, currentPage)
      */
-    updateProgress(totalRows, currentEntries, currentPage) {
+    updateProgress(fetchedCount, page, total = null) {
         const bar = this.container.querySelector('#progress-bar');
         const status = this.container.querySelector('#status');
-
+    
         let percent = 0;
         let statusText = 'Starting fetch...';
-
-        if (totalRows && totalRows > 0) {
-            percent = Math.min(99, Math.round((currentEntries / totalRows) * 100));
-            const totalPages = Math.ceil(totalRows / 100);
-
-            statusText = `Page ${currentPage} of ${totalPages} — ` +
-                        `${currentEntries.toLocaleString()} / ${totalRows.toLocaleString()} entries ` +
-                        `(${percent}%)`;
+    
+        if (total !== null && total > 0) {
+            percent = Math.min(99, Math.round((fetchedCount / total) * 100)); // cap at 99% until finish
+            const totalPages = Math.ceil(total / 100);
+    
+            statusText = `Page ${page} of ${totalPages} — ` +
+                         `${fetchedCount.toLocaleString()} of ${total.toLocaleString()} entries ` +
+                         `(${percent}%)`;
         } else {
-            // fallback (should never happen now)
-            percent = Math.min(99, currentPage * 2);
-            statusText = `Fetching page ${currentPage}...`;
+            // Fallback estimate before total is known
+            percent = Math.min(99, page * 3); // rough guess, adjusts faster than *2
+            statusText = `Fetching page ${page}... (${fetchedCount.toLocaleString()} entries so far)`;
         }
-
-        if (bar) bar.style.width = percent + '%';
+    
+        if (bar) bar.style.width = `${percent}%`;
         if (status) status.textContent = statusText;
     }
 
     finish(data) {
-        console.log('Progress finish() received data:', data);
-        console.log('data.metrics keys:', Object.keys(data.metrics || {}));
-        console.log('uptimeComponent exists?', 'uptimeComponent' in (data.metrics || {}));
-        console.log('uptimeComponent value:', data.metrics?.uptimeComponent);
+        const bar = this.container.querySelector('#progress-bar');
+        if (bar) bar.style.width = '100%';
+        
+        const status = this.container.querySelector('#status');
+        if (status) status.textContent = 'Report complete — opening...';
         this._close && this._close();
 
         const reportView = new NeonovaReportView(
