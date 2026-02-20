@@ -17,7 +17,7 @@ class NeonovaAnalyzer {
      */
     static computeMetrics(cleanedEntries, ignoredEntriesCount = 0) {
         if (!Array.isArray(cleanedEntries) || cleanedEntries.length === 0) {
-            return this.#buildEmptyMetrics(ignoredEntriesCount);
+            return null;
         }
 
         // All state is local — no 'this'
@@ -366,24 +366,6 @@ class NeonovaAnalyzer {
         if (min <= 30) return 10;
         if (min <= 60) return 15;
         return 20;
-    }
-
-    static #buildEmptyMetrics(ignoredEntriesCount) {
-        return {
-            disconnects: 0,
-            percentConnected: '0.0',
-            meanStabilityScore: 0,
-            medianStabilityScore: 0,
-            rawEntryCount: 0,
-            ignoredEntriesCount,
-            longDisconnects: [],
-            hourlyDisconnects: Array(24).fill(0),
-            dailyDisconnects: [],
-            dailyLabels: [],
-            rolling7Day: [],
-            rollingLabels: [],
-            // ... add other defaults as needed
-        };
     }
 
     static #computeSessionBins(sessionSeconds) {
