@@ -450,20 +450,16 @@ class NeonovaAnalyzer {
     }
 
     /**
-     * Finds the timestamp of the most recent "Stop" event by scanning backwards
-     * from the end of the cleaned entries.
-     * 
-     * @param {Array<LogEntry>} cleanedEntries - The sorted or unsorted cleaned entries
-     * @returns {Date|null} The date/time of the last Stop, or null if none found
+     * Scans backward from the most recent entry to find the timestamp of the last "Stop" event.
+     * @param {Array<LogEntry>} cleanedEntries
+     * @returns {Date|null} Timestamp of the most recent Stop, or null if none
      */
-    static #findLastStopTimestamp(cleanedEntries) {
-        if (!cleanedEntries || cleanedEntries.length === 0) {
-            return null;
-        }
+    static #getLastStopDate(cleanedEntries) {
+        if (!cleanedEntries || cleanedEntries.length === 0) return null;
     
-        // Scan backwards — most efficient for recent events
+        // Start from the end (most recent)
         for (let i = cleanedEntries.length - 1; i >= 0; i--) {
-            if (cleanedEntries[i].status === "Stop") {
+            if (cleanedEntries[i].status === 'Stop') {
                 return cleanedEntries[i].dateObj;
             }
         }
