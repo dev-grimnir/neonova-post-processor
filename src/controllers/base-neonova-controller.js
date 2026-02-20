@@ -2,15 +2,13 @@
 
 class BaseNeonovaController {
     constructor() {
-        console.log("Constructing BaseNeonovaController");
         this.baseSearchUrl = 'https://admin.neonova.net/rat/index.php';
-        // You can add defaults for form fields here if they rarely change
         this.defaultFormData = {
             ip: '',
             session: '',
             nasip: '',
             statusview: 'both',
-            sd: 'fairpoint.net',  // domain — make configurable if needed
+            sd: 'fairpoint.net',
             shour: '00',
             smin: '00',
             emonth: '',
@@ -25,17 +23,9 @@ class BaseNeonovaController {
     }
 
     /**************************************************************************
-     * PRIVATE METHODS
-     * 
-     * Declared at the very top of the class for Tampermonkey compatibility
-     * (it parses top-to-bottom and fails if a private method is called before
-     * its declaration).
+     * PRIVATE METHODS — declared first for Tampermonkey compatibility
      **************************************************************************/
 
-    /**
-     * Builds the URLSearchParams for a specific pagination request.
-     * @private
-     */
     #buildPaginationParams(username, sDate, eDate, hitsPerPage, offset) {
         return new URLSearchParams({
             acctsearch: '2',
@@ -58,25 +48,18 @@ class BaseNeonovaController {
             order: 'date',
             hits: hitsPerPage.toString(),
             location: offset.toString(),
-            direction: '0',     // forward pagination when combined with increasing offset
+            direction: '0',
             dump: ''
         });
     }
 
-    /**
-     * Builds the full URL for a pagination request.
-     * @private
-     */
     #buildPageUrl(params) {
         return `${this.baseSearchUrl}?${params.toString()}`;
     }
 
     /**
-     * Fetches a single pagination page.
-     * - Returns HTML string on success (HTTP 200-299).
-     * - Returns null on HTTP error status (!res.ok).
-     * - Throws on network errors or AbortError (propagates to caller for special handling).
-     * @private
+     * Fetches a page — returns HTML string or null on HTTP error.
+     * Throws on network errors or AbortError (handled by caller).
      */
     async #fetchPageHtml(url, signal = null) {
         const res = await fetch(url, {
@@ -104,11 +87,8 @@ class BaseNeonovaController {
     }
 
     /**
-     * Extracts the total number of entries from the results header on the first page.
-     * Looks for the gray row (<tr bgcolor="gray">) and finds the "of" cell, then takes
-     * the number from the next cell (robust against minor HTML changes).
-     * Returns a number or null if not found.
-     * @private
+     * Extracts the total entry count from the gray header row on the first results page.
+     * Returns a number or null if the header is missing/not parsable.
      */
     #extractTotalEntries(doc) {
         const grayTr = doc.querySelector('tr[bgcolor="gray"]');
@@ -121,37 +101,28 @@ class BaseNeonovaController {
         if (ofIndex === -1 || ofIndex + 1 >= tds.length) return null;
 
         const totalText = tds[ofIndex + 1].textContent.trim();
-        const num = parseInt(totalText, 10);
+        const num = parseInt(totalText.replace(/[^0-9]/g, ''), 10); // strip any non-digits just in case
 
         return isNaN(num) ? null : num;
     }
 
-    /**
-     * Parses the RADIUS log table rows from a DOM document.
-     * Isolated as private because it's only used internally.
-     * @private
-     */
     #parsePageRows(doc) {
         const table = doc.querySelector('table[width="500"]') || doc.querySelector('table[cellspacing="2"][cellpadding="2"]');
-        if (!table) {
-            return [];
-        }
+        if (!table) return [];
 
         const rows = Array.from(table.querySelectorAll('tr'));
         const entries = [];
 
         rows.forEach(row => {
             const cells = row.querySelectorAll('td');
-            if (cells.length < 7) return;  // Skip headers/short rows
+            if (cells.length < 7) return;
 
             const timestampStr = cells[0].textContent.trim();
             const status = cells[4].textContent.trim();
             const sessionTime = cells[6].textContent.trim();
 
             const dateObj = new Date(timestampStr);
-            if (isNaN(dateObj.getTime())) {
-                return;
-            }
+            if (isNaN(dateObj.getTime())) return;
 
             entries.push({
                 timestamp: timestampStr,
@@ -254,21 +225,14 @@ class BaseNeonovaController {
     }
 
     /**
-     * Main pagination method — enhanced orchestrator.
-     * 
-     * New features:
-     * - Scrapes total entry count from first page header (for accurate progress + safety).
-     * - Optional AbortSignal as final argument for cancellation support.
-     * - Returns { entries, total } instead of just entries.
-     * - onProgress now receives three arguments when total is known: (fetchedCount, page, total).
-     *   Old callers that expect only two arguments will safely ignore the third.
-     * - Added safety check using total to prevent infinite loops.
-     * - On abort, returns partial results collected so far.
-     * 
-     * Backward compatibility for legacy argument order is preserved.
+     * paginateReportLogs — now with:
+     *   • Total count scraped from first page and passed to onProgress as 3rd arg
+     *   • AbortSignal support for cancellation (pass as final argument)
+     *   • Returns the entries array directly (fixes .map error in NeonovaProgressView)
+     *   • Backward-compatible: old onProgress handlers ignoring the 3rd arg still work
      */
     async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null, signal = null) {
-        // Backward-compatibility for legacy calls (onProgress as 2nd or 3rd arg)
+        // Legacy argument handling
         if (typeof startDate === 'function') {
             onProgress = startDate;
             startDate = null;
@@ -288,7 +252,7 @@ class BaseNeonovaController {
         const entries = [];
         let offset = 0;
         let page = 1;
-        let total = null; // Discovered from first page
+        let total = null;
 
         while (true) {
             const params = this.#buildPaginationParams(username, sDate, eDate, hitsPerPage, offset);
@@ -300,61 +264,50 @@ class BaseNeonovaController {
             } catch (err) {
                 if (err.name === 'AbortError') {
                     console.log('Pagination cancelled by user');
-                    return { entries, total };
+                    // Return whatever was collected so far
+                    entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+                    return entries;
                 }
                 console.warn('Unexpected error fetching page:', err);
                 break;
             }
 
             if (html === null) {
-                break; // HTTP error — stop as in original behaviour
+                break; // HTTP error
             }
 
             const doc = new DOMParser().parseFromString(html, 'text/html');
 
-            // Extract total only from the very first page
-            if (offset === 0 && total === null) {
+            // Extract total only from the first page
+            if (page === 1 && total === null) {
                 total = this.#extractTotalEntries(doc);
             }
 
             const pageEntries = this.#parsePageRows(doc);
             entries.push(...pageEntries);
 
-            // Progress callback — third argument (total) is null until discovered
+            // onProgress: (fetchedCount, page, total|null)
             if (typeof onProgress === 'function') {
                 onProgress(entries.length, page, total);
             }
 
-            // Termination conditions
-            if (pageEntries.length < hitsPerPage) {
+            // Termination: incomplete page OR we have reached/exceeded the authoritative total
+            if (pageEntries.length < hitsPerPage || (total !== null && entries.length >= total)) {
                 break;
-            }
-            if (total !== null && entries.length >= total) {
-                break; // Safety net using authoritative total count
             }
 
             offset += hitsPerPage;
             page++;
         }
 
-        // Final sort newest-first
         entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
-
-        return { entries, total };
+        return entries;
     }
 
-    /**
-     * Returns the most recent RADIUS log entry for the user.
-     * Updated to handle the new { entries, total } return shape from paginateReportLogs.
-     */
     async getLatestEntry(username) {
         try {
-            const result = await this.paginateReportLogs(username);
-            if (!result.entries || result.entries.length === 0) {
-                return null;
-            }
-            // Already sorted newest-first
-            return result.entries[0];
+            const entries = await this.paginateReportLogs(username);
+            return entries.length > 0 ? entries[0] : null;
         } catch (err) {
             console.error('getLatestEntry failed:', err);
             return null;
