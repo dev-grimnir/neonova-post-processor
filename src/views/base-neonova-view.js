@@ -1,5 +1,6 @@
-class BaseNeonovaView {
+class BaseNeonovaView extends EventTarget{
     constructor(container = null) {
+        super();
         this.theme = {
             accent: 'emerald',
             accentColor: '#34d399',
