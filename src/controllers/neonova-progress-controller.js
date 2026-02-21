@@ -13,29 +13,29 @@
  */
 class NeonovaProgressController {
     constructor() {
-        // No parameters needed
+        // No parameters needed — all handled in start()
     }
 
     /**
-     * Starts the full report generation pipeline.
+     * Starts the progress modal and begins the full report generation pipeline.
      * 
      * @param {string} username 
-     * @param {Date|null} startDate 
-     * @param {Date|null} endDate 
-     * @param {NeonovaProgressView} view 
-     * @param {AbortSignal|null} signal 
+     * @param {string} friendlyName 
      */
-    async start(username, startDate, endDate, view, signal) {
+    async start(username, friendlyName) {
+        const progressView = new NeonovaProgressView(username, friendlyName);
+        progressView.showModal();
+
         let rawEntries = [];
 
         try {
             // Fetch raw entries using static NeonovaHTTPController
             rawEntries = await NeonovaHTTPController.paginateReportLogs(
                 username,
-                startDate,              // Customizable startDate
-                endDate,                // Customizable endDate
-                view.updateProgress.bind(view), // onProgress
-                signal                  // AbortSignal for cancellation
+                null,                                           // startDate
+                null,                                           // endDate
+                progressView.updateProgress.bind(progressView), // onProgress
+                progressView.signal                             // AbortSignal
             );
 
             // Sanitize/dedupe using static NeonovaCollector
@@ -45,11 +45,11 @@ class NeonovaProgressController {
             const metrics = NeonovaAnalyzer.computeMetrics(sanitizedEntries);
 
             // Success — hand final data to view (view handles report creation in new tab)
-            view.finish({
-                username: view.username,
-                friendlyName: view.friendlyName,
+            progressView.finish({
+                username,
+                friendlyName,
                 metrics,
-                entries: sanitizedEntries  // cleaned/deduped entries (for length, etc.)
+                entries: sanitizedEntries  // cleaned/deduped entries
             });
         } catch (err) {
             if (err.name === 'AbortError') {
@@ -58,7 +58,7 @@ class NeonovaProgressController {
             }
 
             console.error('Report generation failed:', err);
-            view.showError(err.message || 'Failed to generate report');
+            progressView.showError(err.message || 'Failed to generate report');
         }
     }
 }
