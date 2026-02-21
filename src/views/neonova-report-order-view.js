@@ -250,10 +250,4 @@ class NeonovaReportOrderView extends BaseNeonovaView {
             }));
         });
     }
-
-    dispatchGenerateEvent(startIso, endIso) {
-        this.dispatchEvent(new CustomEvent('generateRequested', {
-            detail: { startIso, endIso }
-        }));
-    }
 }
