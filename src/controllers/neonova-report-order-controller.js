@@ -1,43 +1,37 @@
-class NeonovaReportOrderController extends BaseNeonovaController{
+class NeonovaReportOrderController extends BaseNeonovaController {
     constructor(username, friendlyName, view) {
         super();
         this.username = username;
         this.friendlyName = friendlyName || username;
         this.view = view;
-        this.view.onGenerateRequested = (startDate) => this.generateReport(startDate);
+
+        // View notifies us when user clicks Generate
+        this.view.onGenerateRequested = (startDate, endDate) => {
+            this.generateReport(startDate, endDate);
+        };
     }
 
     start() {
-
         try {
             this.view.renderOrderForm();
-            
+            this.view.showModal();  // Assuming view has this; if not, call it here or adjust
         } catch (err) {
+            console.error('Failed to start order view:', err);
+            // Show error in view or dashboard
         }
     }
 
-    handleGenerate(startDate) {
-        this.view.showProgress();
-        this.view.updateProgress(10, 'Fetching logs...');
+    async generateReport(startDate, endDate) {
+        // Close order modal (let view handle if it has close, or force here)
+        this.view.close();  // Add this method to view if missing (close overlay/modal)
 
-        // Real generation (placeholder - expand with headless pagination)
-        setTimeout(() => {
-            this.view.updateProgress(40, 'Cleaning entries...');
-        }, 1000);
-
-        setTimeout(() => {
-            this.view.updateProgress(70, 'Calculating metrics...');
-        }, 2500);
-
-        setTimeout(() => {
-            this.view.updateProgress(90, 'Building report...');
-        }, 4000);
-
-        setTimeout(() => {
-            // Real report HTML (from NeonovaReportView)
-            const reportHTML = new NeonovaReportView().generateReportHTML(/* metrics */);
-            this.view.showReport(reportHTML);
-            if (this.onReportComplete) this.onReportComplete(reportHTML);
-        }, 5500);
+        // Create and start progress controller — this is the hand-off
+        const progressCtrl = new NeonovaProgressController();
+        await progressCtrl.start(
+            this.username,
+            this.friendlyName,
+            startDate,
+            endDate
+        );
     }
 }
