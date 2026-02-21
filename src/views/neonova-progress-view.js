@@ -88,15 +88,16 @@ class NeonovaProgressView extends BaseNeonovaView {
         let statusText = 'Starting fetch...';
     
         if (total !== null && total > 0) {
-            percent = Math.min(99, Math.round((fetchedCount / total) * 100)); // cap at 99% until finish
-            const totalPages = Math.ceil(total / 100);
+            // Main case: we have total from first page
+            percent = Math.min(99, Math.round((fetchedCount / total) * 100));
+            const totalPages = Math.ceil(total / 100);  // assuming 100 hits/page
     
             statusText = `Page ${page} of ${totalPages} — ` +
                          `${fetchedCount.toLocaleString()} of ${total.toLocaleString()} entries ` +
                          `(${percent}%)`;
         } else {
-            // Fallback estimate before total is known
-            percent = Math.min(99, page * 3); // rough guess, adjusts faster than *2
+            // Fallback: before total known — show page and entries only
+            percent = Math.min(99, page * 3);  // rough ramp-up
             statusText = `Fetching page ${page}... (${fetchedCount.toLocaleString()} entries so far)`;
         }
     
