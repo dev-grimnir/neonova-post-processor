@@ -64,8 +64,5 @@ class NeonovaReportOrderController {
             startDate,
             endDate
         );
-
-        // Optionally close order modal after starting progress
-        this.view.close();  // Add close() to view if not present
     }
 }
