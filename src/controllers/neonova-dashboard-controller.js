@@ -1,19 +1,17 @@
-class NeonovaDashboardController extends BaseNeonovaController{
+class NeonovaDashboardController {
     constructor() {
-        super();
         this.customers = this.load();
         this.pollingIntervalMinutes = 5;
         this.pollIntervalMs = 5 * 60 * 1000;
         this.pollInterval = null;  
         this.view = new NeonovaDashboardView(this);
         this.isPollingPaused = false;
-        
     }
 
     startPolling() {
-        if (this.pollInterval) return;                     // ← guard (good)
-        this.poll();                                       // first poll now
-        this.pollInterval = setInterval(() => this.poll(), this.pollIntervalMs);  // ← use variable, not 60000
+        if (this.pollInterval) return;
+        this.poll();
+        this.pollInterval = setInterval(() => this.poll(), this.pollIntervalMs);
     }
 
     stopPolling() {
@@ -35,14 +33,11 @@ class NeonovaDashboardController extends BaseNeonovaController{
     }
 
     togglePolling() {
+        this.isPollingPaused = !this.isPollingPaused;
         if (!this.isPollingPaused) {
-            this.isPollingPaused = true;
-        } else {
-            this.isPollingPaused = false;
             this.poll();
         }
-
-        this.view?.update();                 // refresh button text
+        this.view?.update();  // refresh button text
     }
 
     load() {
@@ -105,7 +100,7 @@ class NeonovaDashboardController extends BaseNeonovaController{
     }
 
     async getStatus(username) {
-        let url = super.getSearchUrl(username)
+        let url = NeonovaHTTPController.getSearchUrl(username);
         const res = await fetch(url, { credentials: 'include', cache: 'no-cache' });
         if (!res.ok) throw new Error('Fetch failed');
 
@@ -136,15 +131,9 @@ class NeonovaDashboardController extends BaseNeonovaController{
         return { status, durationSec };
     }
 
-    /**
-     * Updates the customer's status and duration on the dashboard.
-     * Fetches the most recent log entry, determines current state,
-     * calculates duration in seconds (numeric), and passes it to customer.update.
-     * The view will handle formatting via c.getDurationStr().
-     */
     async updateCustomerStatus(customer) {
         try {
-            const latest = await this.getLatestEntry(customer.radiusUsername);
+            const latest = await NeonovaHTTPController.getLatestEntry(customer.radiusUsername);
             if (!latest) {
                 customer.update('Unknown', 0);
                 return;
@@ -157,20 +146,18 @@ class NeonovaDashboardController extends BaseNeonovaController{
                 const ms = now - latest.dateObj.getTime();
                 
                 if (Number.isFinite(ms) && ms >= 0) {
-                        durationSeconds = Math.floor(ms / 1000);
+                    durationSeconds = Math.floor(ms / 1000);
                 }
             }
 
-            // Guard (should almost never trigger, but safe)
             durationSeconds = Number.isFinite(durationSeconds) && durationSeconds >= 0 ? durationSeconds : 0;
     
             const status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
             customer.update(status, durationSeconds);
-            } catch (err) {
-                customer.update('Error', 0);
-            }
+        } catch (err) {
+            customer.update('Error', 0);
         }
-
+    }
 
     getCurrentMonthStart() {
         const now = new Date();
@@ -178,7 +165,8 @@ class NeonovaDashboardController extends BaseNeonovaController{
     }   
 
     async generateReportData(username, friendlyName, startDate, endDate, onProgress) {
-        const reportCtrl = new NeonovaReportController();
-        return reportCtrl.generateReportData(username, friendlyName, startDate, endDate, onProgress);
+        const progressController = new NeonovaProgressController();
+        await progressController.start(username, startDate, endDate, onProgress);
+        // No return needed if start handles finish internally; adjust if promise required
     }
 }
