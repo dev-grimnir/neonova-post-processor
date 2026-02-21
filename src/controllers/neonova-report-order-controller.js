@@ -29,7 +29,7 @@ class NeonovaReportOrderController {
         let startDate = null;
         const endDate = new Date();
 
-        if (timeframe === '1_DAY') {
+        if (timeframe === '1_DAYS') {
             startDate = new Date();
             startDate.setDate(startDate.getDate() - 1);
         } else if (timeframe === '7_DAYS') {
