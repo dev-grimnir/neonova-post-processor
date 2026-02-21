@@ -212,36 +212,42 @@ class NeonovaReportOrderView extends BaseNeonovaView {
     }
 
     attachListeners() {
-        // Quick preset buttons
+        // Quick preset buttons — dispatch constant
         this.container.querySelectorAll('.quick-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const days = parseInt(btn.dataset.days);
-                let start = new Date();
-                const end = new Date();
-                if (days) start.setDate(start.getDate() - days);
-                this.dispatchGenerateEvent(start.toISOString(), end.toISOString());
+            btn.addEventListener('click', () => {
+                const days = btn.dataset.days;  // "1", "7", "30", "90"
+                const constant = `${days}_DAYS`;  // e.g. "7_DAYS"
+                this.dispatchEvent(new CustomEvent('quickReportRequested', {
+                    detail: { timeframe: constant }
+                }));
             });
         });
-
-        // Generate button
+    
+        // Custom generate button — dispatch raw ISO strings
         const genBtn = this.container.querySelector('#generate-custom');
-        if (genBtn) genBtn.addEventListener('click', (e) => {
+        if (genBtn) genBtn.addEventListener('click', () => {
             const startY = parseInt(this.container.querySelector('#start-year')?.value);
             const startM = parseInt(this.container.querySelector('#start-month')?.value) - 1;
             const startD = parseInt(this.container.querySelector('#start-day')?.value);
             const start = new Date(startY, startM, startD);
-
+    
             const endY = parseInt(this.container.querySelector('#end-year')?.value);
             const endM = parseInt(this.container.querySelector('#end-month')?.value) - 1;
             const endD = parseInt(this.container.querySelector('#end-day')?.value);
             const end = new Date(endY, endM, endD);
             end.setHours(23, 59, 59, 999);
-
+    
             if (start > end) {
                 alert('Start date must be before end date.');
                 return;
             }
-            this.dispatchGenerateEvent(start.toISOString(), end.toISOString());
+    
+            this.dispatchEvent(new CustomEvent('customReportRequested', {
+                detail: {
+                    startIso: start.toISOString(),
+                    endIso: end.toISOString()
+                }
+            }));
         });
     }
 
