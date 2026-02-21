@@ -64,5 +64,6 @@ class NeonovaReportOrderController {
             startDate,
             endDate
         );
+        this.view.close();
     }
 }
