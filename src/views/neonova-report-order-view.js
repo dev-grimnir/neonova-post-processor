@@ -219,6 +219,25 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         em?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
     }
 
+    close() {
+        // Find the overlay (assuming it's the fixed inset:0 div created in showModal)
+        const overlay = document.querySelector('div[style*="position: fixed; inset: 0"]');
+        if (!overlay) return;  // Safety: no overlay found
+    
+        const modal = overlay.querySelector('.neonova-modal');
+        if (!modal) return;
+    
+        // Trigger the same exit animation as in the close handler
+        overlay.style.opacity = '0';
+        modal.style.transform = 'translateX(60px)';
+        modal.style.opacity = '0';
+    
+        // Remove from DOM after animation completes
+        setTimeout(() => {
+            overlay.remove();
+        }, 500);  // Matches your transition duration
+    }
+    
     attachListeners() {
         // Quick preset buttons — dispatch constant
         this.container.querySelectorAll('.quick-btn').forEach(btn => {
