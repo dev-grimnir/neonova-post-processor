@@ -1,4 +1,4 @@
-class NeonovaReportOrderController extends BaseNeonovaController {
+class NeonovaReportOrderController {
     constructor(username, friendlyName, view) {
         super();
         this.username = username;
@@ -19,19 +19,5 @@ class NeonovaReportOrderController extends BaseNeonovaController {
             console.error('Failed to start order view:', err);
             // Show error in view or dashboard
         }
-    }
-
-    async generateReport(startDate, endDate) {
-        // Close order modal (let view handle if it has close, or force here)
-        this.view.close();  // Add this method to view if missing (close overlay/modal)
-
-        // Create and start progress controller — this is the hand-off
-        const progressCtrl = new NeonovaProgressController();
-        await progressCtrl.start(
-            this.username,
-            this.friendlyName,
-            startDate,
-            endDate
-        );
     }
 }
