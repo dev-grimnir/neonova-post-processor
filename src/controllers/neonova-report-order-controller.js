@@ -21,7 +21,6 @@ class NeonovaReportOrderController {
         });
 
         // Now show the view (controller manages view lifecycle)
-        this.view.renderOrderForm();
         this.view.showModal();
     }
 
