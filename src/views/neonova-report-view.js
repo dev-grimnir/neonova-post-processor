@@ -1,15 +1,11 @@
 class NeonovaReportView extends BaseNeonovaView {
     constructor(username, friendlyName, metrics, numEntries, longDisconnects) {
         super(null);
-        console.log('=== NeonovaReportView CLASS LOADED ===');
         this.username = username;
         this.friendlyName = friendlyName;
         this.metrics = metrics;
         this.numEntries = numEntries;
         this.longDisconnects = longDisconnects;
-
-        console.log('ReportView constructor received metrics:', metrics);
-        console.log('metrics.uptimeComponent:', metrics?.uptimeComponent);
     }
 
         generateLongDisconnectsHTML() {
