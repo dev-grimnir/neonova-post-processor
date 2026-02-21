@@ -1,5 +1,5 @@
 class NeonovaReportOrderController {
-    constructor(username, friendlyName, view) {
+    constructor(username, friendlyName) {
         super();
         this.username = username;
         this.friendlyName = friendlyName || username;
