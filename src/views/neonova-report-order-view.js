@@ -54,6 +54,14 @@ class NeonovaReportOrderView extends BaseNeonovaView {
         this.render();
         this.attachListeners();
 
+        // Close with animation
+        const close = () => {
+            overlay.style.opacity = '0';
+            modal.style.transform = 'translateX(60px)';
+            modal.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 500);
+        }
+
         header.querySelector('.close-btn').addEventListener('click', close);
         overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
 
