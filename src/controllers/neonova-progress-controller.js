@@ -5,40 +5,51 @@
  * 
  * Dedicated controller for the progress modal and pagination flow.
  * Separates concerns completely:
- * - Drives BaseNeonovaController for raw data fetching
+ * - Drives NeonovaHTTPController for raw data fetching
  * - Uses NeonovaCollector to sanitize/dedupe the raw entries
  * - Uses NeonovaAnalyzer to generate metrics from the sanitized entries
  * - Manages NeonovaProgressView (pure UI)
  * - Handles progress, cancellation, success, and errors
  */
 class NeonovaProgressController {
-    constructor(userName, friendlyName) {
-        this.userName = userName;
-        this.friendlyName = friendlyName;
+    constructor() {
+        // No parameters needed
     }
 
     /**
-     * Starts the progress modal and begins the full report generation pipeline.
+     * Starts the full report generation pipeline.
      * 
      * @param {string} username 
-     * @param {string} friendlyName 
+     * @param {Date|null} startDate 
+     * @param {Date|null} endDate 
+     * @param {NeonovaProgressView} view 
+     * @param {AbortSignal|null} signal 
      */
-    async start(username, friendlyName) {
-        const progressView = new NeonovaProgressView(username, friendlyName);
-        progressView.showModal();
-
+    async start(username, startDate, endDate, view, signal) {
         let rawEntries = [];
 
         try {
-
+            // Fetch raw entries using static NeonovaHTTPController
+            rawEntries = await NeonovaHTTPController.paginateReportLogs(
+                username,
+                startDate,              // Customizable startDate
+                endDate,                // Customizable endDate
+                view.updateProgress.bind(view), // onProgress
+                signal                  // AbortSignal for cancellation
             );
 
-            // Success — hand final data to view
-            progressView.finish({
-                username,
-                friendlyName,
+            // Sanitize/dedupe using static NeonovaCollector
+            const sanitizedEntries = NeonovaCollector.cleanEntries(rawEntries);
+
+            // Generate metrics using static NeonovaAnalyzer
+            const metrics = NeonovaAnalyzer.computeMetrics(sanitizedEntries);
+
+            // Success — hand final data to view (view handles report creation in new tab)
+            view.finish({
+                username: view.username,
+                friendlyName: view.friendlyName,
                 metrics,
-                entries: sanitizedEntries  // cleaned/deduped entries
+                entries: sanitizedEntries  // cleaned/deduped entries (for length, etc.)
             });
         } catch (err) {
             if (err.name === 'AbortError') {
@@ -47,7 +58,7 @@ class NeonovaProgressController {
             }
 
             console.error('Report generation failed:', err);
-            progressView.showError(err.message || 'Failed to generate report');
+            view.showError(err.message || 'Failed to generate report');
         }
     }
 }
