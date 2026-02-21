@@ -12,7 +12,9 @@
  * - Handles progress, cancellation, success, and errors
  */
 class NeonovaProgressController {
-    constructor() {
+    constructor(userName, friendlyName) {
+        this.userName = userName;
+        this.friendlyName = friendlyName;
     }
 
     /**
