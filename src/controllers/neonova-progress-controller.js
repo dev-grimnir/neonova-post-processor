@@ -32,8 +32,10 @@ class NeonovaProgressController {
                 username,
                 startDate,
                 endDate,
-                progressView.updateProgress.bind(progressView), // progress callback
-                signal || progressView.signal                   // use view's signal if none provided
+                (fetched, page, total) => {  
+                    progressView.updateProgress(fetched, page, total);
+                },
+                signal || progressView.signal                  
             );
 
             // 3. Clean/dedupe
