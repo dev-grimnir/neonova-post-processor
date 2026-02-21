@@ -1,59 +1,58 @@
-// src/controllers/NeonovaProgressController.js
-
-/**
- * NeonovaProgressController
- * 
- * Dedicated controller for the progress modal and pagination flow.
- * Separates concerns completely:
- * - Drives NeonovaHTTPController for raw data fetching
- * - Uses NeonovaCollector to sanitize/dedupe the raw entries
- * - Uses NeonovaAnalyzer to generate metrics from the sanitized entries
- * - Manages NeonovaProgressView (pure UI)
- * - Handles progress, cancellation, success, and errors
- */
 class NeonovaProgressController {
     constructor() {
-        // No parameters needed — all handled in start()
+        // No state needed here
     }
 
     /**
-     * Starts the progress modal and begins the full report generation pipeline.
+     * Orchestrates the entire report progress flow:
+     * 1. Creates and shows progress view
+     * 2. Fetches raw entries
+     * 3. Cleans/dedupes
+     * 4. Computes metrics
+     * 5. Calls view.finish() → opens report in new tab
+     * 6. Closes view on success or error
      * 
      * @param {string} username 
      * @param {string} friendlyName 
+     * @param {Date|null} startDate 
+     * @param {Date|null} endDate 
+     * @param {AbortSignal|null} [signal=null] - Optional, for cancellation
+     * @returns {Promise<void>} Resolves when report is complete or cancelled
      */
-    async start(username, friendlyName) {
+    async start(username, friendlyName, startDate = null, endDate = null, signal = null) {
+        // 1. Create and show the progress view
         const progressView = new NeonovaProgressView(username, friendlyName);
         progressView.showModal();
 
         let rawEntries = [];
 
         try {
-            // Fetch raw entries using static NeonovaHTTPController
+            // 2. Fetch raw log entries
             rawEntries = await NeonovaHTTPController.paginateReportLogs(
                 username,
-                null,                                           // startDate
-                null,                                           // endDate
-                progressView.updateProgress.bind(progressView), // onProgress
-                progressView.signal                             // AbortSignal
+                startDate,
+                endDate,
+                progressView.updateProgress.bind(progressView), // progress callback
+                signal || progressView.signal                   // use view's signal if none provided
             );
 
-            // Sanitize/dedupe using static NeonovaCollector
+            // 3. Clean/dedupe
             const sanitizedEntries = NeonovaCollector.cleanEntries(rawEntries);
 
-            // Generate metrics using static NeonovaAnalyzer
+            // 4. Analyze & compute metrics
             const metrics = NeonovaAnalyzer.computeMetrics(sanitizedEntries);
 
-            // Success — hand final data to view (view handles report creation in new tab)
+            // 5. Success: tell view to finish (opens report tab + closes modal)
             progressView.finish({
                 username,
                 friendlyName,
                 metrics,
-                entries: sanitizedEntries  // cleaned/deduped entries
+                entries: sanitizedEntries
             });
         } catch (err) {
             if (err.name === 'AbortError') {
                 console.log('Report generation cancelled by user');
+                // View already closed itself on abort
                 return;
             }
 
