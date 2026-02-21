@@ -1,109 +1,78 @@
 class NeonovaReportOrderView extends BaseNeonovaView {
     constructor(container, username, friendlyName) {
         super(container);
-        console.log("NeonovaReportOrderView -> start");
         this.username = username;
         this.friendlyName = friendlyName || username;
-        this.onGenerateRequested = null;
     }
 
-        showModal() {
-            const overlay = document.createElement('div');
-            overlay.style.cssText = `
-                position: fixed; inset: 0;
-                background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
-                z-index: 10000; display: flex; align-items: center; justify-content: center;
-                opacity: 0; transition: opacity 400ms ease;
-            `;
-    
-            const modal = document.createElement('div');
-            modal.classList.add('neonova-modal');
-            modal.style.cssText = `
-                background: #18181b; border: 1px solid #27272a; border-radius: 24px;
-                width: 820px; max-width: 92vw; max-height: 92vh;
-                overflow: hidden; box-shadow: 0 25px 70px rgba(0,0,0,0.95);
-                display: flex; flex-direction: column;
-                transform: translateX(60px); opacity: 0; transition: all 500ms cubic-bezier(0.32, 0.72, 0, 1);
-            `;
-    
-            document.body.appendChild(overlay);
-            overlay.appendChild(modal);
-    
-            // Create header (this was missing in the previous snippet)
-            const header = document.createElement('div');
-            header.style.cssText = `
-                padding: 24px 32px; border-bottom: 1px solid #27272a;
-                background: #09090b; flex-shrink: 0;
-                display: flex; align-items: center; justify-content: space-between;
-            `;
-            header.innerHTML = `
-                <div>
-                    <div class="text-emerald-400 text-xs font-mono tracking-widest">GENERATE REPORT</div>
-                    <div class="text-2xl font-semibold text-white mt-1">${this.friendlyName}</div>
-                </div>
-                <button class="close-btn px-6 py-2.5 text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-white rounded-2xl flex items-center gap-2 transition">
-                    <i class="fas fa-times"></i> Close
-                </button>
-            `;
-            modal.appendChild(header);
-    
-            // Content
-            const content = document.createElement('div');
-            content.style.cssText = `flex: 1; overflow-y: auto; padding: 32px 40px; background: #18181b;`;
-            modal.appendChild(content);
-    
-            this.container = content;
-            this.render();
-            this.attachListeners();
-    
-            // Wire up generate
-            this.onGenerateRequested = (startIso, endIso) => {
-                overlay.style.opacity = '0';
-                modal.style.transform = 'translateX(60px)';
-                modal.style.opacity = '0';
-    
-                setTimeout(() => {
-                    overlay.remove();
-    
-                    const progressView = new NeonovaProgressView(this.username, this.friendlyName);
-                    progressView.showModal();
-    
-                    this.controller.generateReportData(
-                        this.username,
-                        this.friendlyName,
-                        new Date(startIso),
-                        new Date(endIso),
-                        (totalRows, currentEntries, currentPage) => {
-                            progressView.updateProgress(totalRows, currentEntries, currentPage);
-                        }
-                    ).then(data => {
-                        console.log("NeonovaReportOrderView.showModal -> calling this.progressView.finish");
-                        progressView.finish(data);
-                    }).catch(err => {
-                        progressView.showError(err.message);
-                    });
-                }, 500);
-            };
-    
-            // Close with animation
-            const close = () => {
-                overlay.style.opacity = '0';
-                modal.style.transform = 'translateX(60px)';
-                modal.style.opacity = '0';
-                setTimeout(() => overlay.remove(), 500);
-            };
-    
-            header.querySelector('.close-btn').addEventListener('click', close);
-            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
-    
-            // Trigger entrance animation
-            requestAnimationFrame(() => {
-                overlay.style.opacity = '1';
-                modal.style.transform = 'translateX(0)';
-                modal.style.opacity = '1';
-            });
-        }
-    
+    showModal() {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
+            z-index: 10000; display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 400ms ease;
+        `;
+
+        const modal = document.createElement('div');
+        modal.classList.add('neonova-modal');
+        modal.style.cssText = `
+            background: #18181b; border: 1px solid #27272a; border-radius: 24px;
+            width: 820px; max-width: 92vw; max-height: 92vh;
+            overflow: hidden; box-shadow: 0 25px 70px rgba(0,0,0,0.95);
+            display: flex; flex-direction: column;
+            transform: translateX(60px); opacity: 0; transition: all 500ms cubic-bezier(0.32, 0.72, 0, 1);
+        `;
+
+        document.body.appendChild(overlay);
+        overlay.appendChild(modal);
+
+        // Create header
+        const header = document.createElement('div');
+        header.style.cssText = `
+            padding: 24px 32px; border-bottom: 1px solid #27272a;
+            background: #09090b; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: space-between;
+        `;
+        header.innerHTML = `
+            <div>
+                <div class="text-emerald-400 text-xs font-mono tracking-widest">GENERATE REPORT</div>
+                <div class="text-2xl font-semibold text-white mt-1">${this.friendlyName}</div>
+            </div>
+            <button class="close-btn px-6 py-2.5 text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-white rounded-2xl flex items-center gap-2 transition">
+                <i class="fas fa-times"></i> Close
+            </button>
+        `;
+        modal.appendChild(header);
+
+        // Content
+        const content = document.createElement('div');
+        content.style.cssText = `flex: 1; overflow-y: auto; padding: 32px 40px; background: #18181b;`;
+        modal.appendChild(content);
+
+        this.container = content;
+        this.render();
+        this.attachListeners();
+
+        // Close with animation
+        const close = () => {
+            overlay.style.opacity = '0';
+            modal.style.transform = 'translateX(60px)';
+            modal.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 500);
+        };
+
+        header.querySelector('.close-btn').addEventListener('click', close);
+        overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+        // Trigger entrance animation
+        requestAnimationFrame(() => {
+            overlay.style.opacity = '1';
+            modal.style.transform = 'translateX(0)';
+            modal.style.opacity = '1';
+        });
+    }
+
     render() {
         if (!this.container) {
             return;
@@ -158,37 +127,27 @@ class NeonovaReportOrderView extends BaseNeonovaView {
             </div>
         `;
 
-            // Populate dropdowns
-            const today = new Date();
-            const currentYear = today.getFullYear();
-            const currentMonth = today.getMonth() + 1;
-            const currentDay = today.getDate();
-    
-            const populateYears = (select, defaultYear) => {
-                if (!select) return;
-                select.add(new Option('TEST YEAR - IGNORE ME', '9999'));
-                select.innerHTML = '';
-            
-                const prevYear = currentYear - 1;
-                const years = [prevYear, currentYear];  // previous first, then current
-            
-                years.forEach(y => {
-                    const opt = new Option(y, y);
-                    if (y === defaultYear) {
-                        opt.selected = true;
-                    }
-                    select.add(opt);
-                });
-                
-                const logSelect = (id) => {
-                    const sel = this.container.querySelector(`#${id}`);
-                    if (sel) {
-                    }
-                };
-                
-                logSelect('start-year');
-                logSelect('end-year');
-            };
+        // Populate dropdowns
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth() + 1;
+        const currentDay = today.getDate();
+
+        const populateYears = (select, defaultYear) => {
+            if (!select) return;
+            select.innerHTML = '';
+
+            const prevYear = currentYear - 1;
+            const years = [prevYear, currentYear];
+
+            years.forEach(y => {
+                const opt = new Option(y, y);
+                if (y === defaultYear) {
+                    opt.selected = true;
+                }
+                select.add(opt);
+            });
+        };
 
         const populateMonths = (select, defaultMonth) => {
             if (!select) return;
@@ -197,11 +156,11 @@ class NeonovaReportOrderView extends BaseNeonovaView {
                 const name = new Date(2000, m-1, 1).toLocaleString('default', { month: 'long' });
                 const opt = new Option(name, m.toString().padStart(2, '0'));
                 select.add(opt);
-                }
-                select.value = defaultMonth.toString().padStart(2, '0');
-            };
+            }
+            select.value = defaultMonth.toString().padStart(2, '0');
+        };
 
-            const getDaysInMonth = (y, m) => new Date(y, m, 0).getDate();
+        const getDaysInMonth = (y, m) => new Date(y, m, 0).getDate();
 
         const populateDays = (select, year, month, defaultDay) => {
             if (!select) return;
@@ -210,48 +169,46 @@ class NeonovaReportOrderView extends BaseNeonovaView {
             for (let d = 1; d <= days; d++) {
                 const opt = new Option(d, d.toString().padStart(2, '0'));
                 select.add(opt);
-                }
-                select.value = Math.min(defaultDay, days).toString().padStart(2, '0');
-            };
+            }
+            select.value = Math.min(defaultDay, days).toString().padStart(2, '0');
+        };
 
-            // Calculate defaults
+        // Calculate defaults
+        const oneYearAgo = new Date(today);
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+        const defaultStartYear = oneYearAgo.getFullYear();
+        const defaultStartMonth = oneYearAgo.getMonth() + 1;
+        let defaultStartDay = oneYearAgo.getDate();  // Will be clamped below if needed
 
-            const oneYearAgo = new Date(today);
-            oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-            const defaultStartYear = oneYearAgo.getFullYear();
-            const defaultStartMonth = oneYearAgo.getMonth() + 1;
-            let defaultStartDay = oneYearAgo.getDate();  // Will be clamped below if needed
+        // Start date = exactly one year ago (clamped)
+        const sy = this.container.querySelector('#start-year');
+        const sm = this.container.querySelector('#start-month');
+        const sd = this.container.querySelector('#start-day');
+        if (sy) populateYears(sy, defaultStartYear);
+        if (sm) populateMonths(sm, defaultStartMonth);
+        if (sd) populateDays(sd, defaultStartYear, defaultStartMonth, defaultStartDay);
 
-            // Start date = exactly one year ago (clamped)
-            const sy = this.container.querySelector('#start-year');
-            const sm = this.container.querySelector('#start-month');
-            const sd = this.container.querySelector('#start-day');
-            if (sy) populateYears(sy, defaultStartYear);
-            if (sm) populateMonths(sm, defaultStartMonth);
-            if (sd) populateDays(sd, defaultStartYear, defaultStartMonth, defaultStartDay);
+        // End date = today
+        const ey = this.container.querySelector('#end-year');
+        const em = this.container.querySelector('#end-month');
+        const ed = this.container.querySelector('#end-day');
+        if (ey) populateYears(ey, currentYear);
+        if (em) populateMonths(em, currentMonth);
+        if (ed) populateDays(ed, currentYear, currentMonth, currentDay);
 
-            // End date = today
-            const ey = this.container.querySelector('#end-year');
-            const em = this.container.querySelector('#end-month');
-            const ed = this.container.querySelector('#end-day');
-            if (ey) populateYears(ey, currentYear);
-            if (em) populateMonths(em, currentMonth);
-            if (ed) populateDays(ed, currentYear, currentMonth, currentDay);
-    
-            // Listeners (unchanged)
-            const updateDays = (dayId, yearId, monthId) => {
-                const y = this.container.querySelector(`#${yearId}`);
-                const m = this.container.querySelector(`#${monthId}`);
-                const d = this.container.querySelector(`#${dayId}`);
-                if (!y || !m || !d) return;
-                populateDays(d, parseInt(y.value), parseInt(m.value), parseInt(d.value) || 1);
-            };
-    
-            sy?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
-            sm?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
-            ey?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
-            em?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
+        // Listeners (unchanged)
+        const updateDays = (dayId, yearId, monthId) => {
+            const y = this.container.querySelector(`#${yearId}`);
+            const m = this.container.querySelector(`#${monthId}`);
+            const d = this.container.querySelector(`#${dayId}`);
+            if (!y || !m || !d) return;
+            populateDays(d, parseInt(y.value), parseInt(m.value), parseInt(d.value) || 1);
+        };
 
+        sy?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
+        sm?.addEventListener('change', () => updateDays('start-day', 'start-year', 'start-month'));
+        ey?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
+        em?.addEventListener('change', () => updateDays('end-day', 'end-year', 'end-month'));
     }
 
     attachListeners() {
@@ -262,7 +219,7 @@ class NeonovaReportOrderView extends BaseNeonovaView {
                 let start = new Date();
                 const end = new Date();
                 if (days) start.setDate(start.getDate() - days);
-                if (this.onGenerateRequested) this.onGenerateRequested(start.toISOString(), end.toISOString());
+                this.dispatchGenerateEvent(start.toISOString(), end.toISOString());
             });
         });
 
@@ -284,8 +241,13 @@ class NeonovaReportOrderView extends BaseNeonovaView {
                 alert('Start date must be before end date.');
                 return;
             }
-            if (this.onGenerateRequested) this.onGenerateRequested(start.toISOString(), end.toISOString());
+            this.dispatchGenerateEvent(start.toISOString(), end.toISOString());
         });
     }
-    
+
+    dispatchGenerateEvent(startIso, endIso) {
+        this.dispatchEvent(new CustomEvent('generateRequested', {
+            detail: { startIso, endIso }
+        }));
+    }
 }
