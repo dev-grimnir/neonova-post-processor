@@ -164,9 +164,4 @@ class NeonovaDashboardController {
         return new Date(now.getFullYear(), now.getMonth(), 1);
     }   
 
-    async generateReportData(username, friendlyName, startDate, endDate, onProgress) {
-        const progressController = new NeonovaProgressController();
-        await progressController.start(username, startDate, endDate, onProgress);
-        // No return needed if start handles finish internally; adjust if promise required
-    }
 }
