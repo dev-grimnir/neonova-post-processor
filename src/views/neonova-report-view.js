@@ -72,19 +72,8 @@ class NeonovaReportView extends BaseNeonovaView {
     }
 
     generateReportHTML() {
-        console.log('=== generateReportHTML() STARTED - v5 Feb 13 ===');
-        console.log('this.metrics:', this.metrics);
-        console.log('rawMeanScore:', this.metrics.rawMeanScore);
-        console.log('rawMedianScore:', this.metrics.rawMedianScore);
-    
         const csvContent = this.generateCsvContent();
-        console.log('=== after generateCsvContent() ===');
-    
         const longDisconnSection = this.generateLongDisconnSection();
-        console.log('=== after generateLongDisconnSection() ===');
-    
-        console.log('=== building template string ===');
-    
         return `
             <!DOCTYPE html>
             <html lang="en" class="dark">
