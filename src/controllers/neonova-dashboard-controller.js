@@ -134,27 +134,27 @@ class NeonovaDashboardController {
     async updateCustomerStatus(customer) {
         try {
             const latest = await NeonovaHTTPController.getLatestEntry(customer.radiusUsername);
+            console.log('[updateCustomerStatus] for', customer.radiusUsername, 'latest:', latest);
             if (!latest) {
                 customer.update('Unknown', 0);
                 return;
             }
     
             let durationSeconds = 0;
-
             if (latest.dateObj && latest.dateObj.getTime) {
-                const now = Date.now();
-                const ms = now - latest.dateObj.getTime();
-                
+                const ms = Date.now() - latest.dateObj.getTime();
                 if (Number.isFinite(ms) && ms >= 0) {
                     durationSeconds = Math.floor(ms / 1000);
                 }
             }
-
-            durationSeconds = Number.isFinite(durationSeconds) && durationSeconds >= 0 ? durationSeconds : 0;
     
+            // Flip the status check: latest 'Start' = Connected, 'Stop' = Not Connected
             const status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
+            console.log('[updateCustomerStatus] Final:', { status, durationSeconds, timestamp: latest.timestamp });
+    
             customer.update(status, durationSeconds);
         } catch (err) {
+            console.error('[updateCustomerStatus] error:', err);
             customer.update('Error', 0);
         }
     }
