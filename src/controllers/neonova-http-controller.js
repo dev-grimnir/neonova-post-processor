@@ -324,80 +324,41 @@ class NeonovaHTTPController {
 
     static async getLatestEntry(username) {
         try {
-            // Helper to fetch a single page with given start (blank end for "up to now")
-            const fetchRecentPage = async (startDate = null) => {
-                const params = new URLSearchParams({
-                    acctsearch: '2',
-                    sd: 'fairpoint.net',
-                    iuserid: username,
-                    ip: '',
-                    session: '',
-                    nasip: '',
-                    statusview: 'both',
-                    shour: '00',
-                    smin: '00',
-                    emonth: '',
-                    eday: '',
-                    eyear: '',
-                    ehour: '',
-                    emin: '',
-                    hits: '100',
-                    order: 'date',
-                    location: '0',
-                    direction: '0',
-                    dump: ''
-                });
-    
-                if (startDate) {
-                    params.append('syear', startDate.getFullYear().toString());
-                    params.append('smonth', (startDate.getMonth() + 1).toString().padStart(2, '0'));
-                    params.append('sday', startDate.getDate().toString().padStart(2, '0'));
-                }
-    
-                const url = `https://admin.neonova.net/rat/index.php?${params.toString()}`;
-                console.log('[getLatestEntry] Fetching recent page:', url);
-    
-                const html = await this.#fetchPageHtml(url);
-                if (!html) return [];
-    
-                const doc = new DOMParser().parseFromString(html, 'text/html');
-                const pageEntries = this.#parsePageRows(doc);
-                console.log('[getLatestEntry] Parsed', pageEntries.length, 'entries');
-    
-                pageEntries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
-    
-                return pageEntries;
-            };
-    
             const now = new Date();
-            
-            // Try last 7 days first (covers longer offline)
-            let start = new Date(now.getTime() - (7 * 24 * 3600 * 1000));
-            let pageEntries = await fetchRecentPage(start);
+            const startDate = new Date(now.getTime() - (30 * 24 * 3600 * 1000));  // 30 days ago
+            const endDate = now;
     
-            if (pageEntries.length === 0) {
-                // Fall back to full month if no recent
-                start = new Date(now.getFullYear(), now.getMonth(), 1);
-                pageEntries = await fetchRecentPage(start);
-                console.log('[getLatestEntry] Fell back to full month — parsed', pageEntries.length);
-            }
+            console.log('[getLatestEntry] Fetching 30-day range for latest:', {
+                start: startDate.toISOString(),
+                end: endDate.toISOString()
+            });
     
-            if (pageEntries.length === 0) {
-                console.log('[getLatestEntry] No entries found even in full month — returning null');
+            const entries = await this.paginateReportLogs(
+                username,
+                startDate,
+                endDate
+            );
+    
+            console.log('[getLatestEntry] Fetched', entries.length, 'entries over 30 days');
+    
+            if (entries.length === 0) {
+                console.log('[getLatestEntry] No entries in 30 days — returning null');
                 return null;
             }
     
-            const newest = pageEntries[0];
-            console.log('[getLatestEntry] Newest:', {
+            // Entries already sorted newest-first by paginateReportLogs
+            const newest = entries[0];
+            console.log('[getLatestEntry] Newest entry:', {
                 timestamp: newest.timestamp,
                 status: newest.status,
                 dateObj: newest.dateObj?.toISOString()
             });
     
-            if (pageEntries.length > 1) {
+            // Second for debug
+            if (entries.length > 1) {
                 console.log('[getLatestEntry] Second newest:', {
-                    timestamp: pageEntries[1].timestamp,
-                    status: pageEntries[1].status
+                    timestamp: entries[1].timestamp,
+                    status: entries[1].status
                 });
             }
     
