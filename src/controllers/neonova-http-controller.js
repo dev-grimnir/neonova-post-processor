@@ -324,75 +324,76 @@ class NeonovaHTTPController {
 
     static async getLatestEntry(username) {
         try {
-            // Build params for MOST RECENT page only
-            const params = new URLSearchParams({
-                acctsearch: '2',
-                sd: 'fairpoint.net',
-                iuserid: username,
-                ip: '',
-                session: '',
-                nasip: '',
-                statusview: 'both',
-                // No start date — let site default to oldest, but we only take first page
-                shour: '00',
-                smin: '00',
-                // Blank end = up to now
-                emonth: '',
-                eday: '',
-                eyear: '',
-                ehour: '',
-                emin: '',
-                hits: '100',  // Enough for recent activity
-                order: 'date',  // Hopefully descending
-                location: '0',
-                direction: '0',
-                dump: ''
-            });
+            // Helper to fetch a single page with given start (blank end for "up to now")
+            const fetchRecentPage = async (startDate = null) => {
+                const params = new URLSearchParams({
+                    acctsearch: '2',
+                    sd: 'fairpoint.net',
+                    iuserid: username,
+                    ip: '',
+                    session: '',
+                    nasip: '',
+                    statusview: 'both',
+                    shour: '00',
+                    smin: '00',
+                    emonth: '',
+                    eday: '',
+                    eyear: '',
+                    ehour: '',
+                    emin: '',
+                    hits: '100',
+                    order: 'date',
+                    location: '0',
+                    direction: '0',
+                    dump: ''
+                });
     
-            const url = `https://admin.neonova.net/rat/index.php?${params}`;
-            console.log('[getLatestEntry] Fetching recent page only:', url);
-    
-            const res = await fetch(url, {
-                credentials: 'include',
-                cache: 'no-cache',
-                headers: {
-                    'Referer': url,
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.5',
-                    'Sec-Fetch-Dest': 'document',
-                    'Sec-Fetch-Mode': 'navigate',
-                    'Sec-Fetch-Site': 'same-origin',
-                    'Upgrade-Insecure-Requests': '1'
+                if (startDate) {
+                    params.append('syear', startDate.getFullYear().toString());
+                    params.append('smonth', (startDate.getMonth() + 1).toString().padStart(2, '0'));
+                    params.append('sday', startDate.getDate().toString().padStart(2, '0'));
                 }
-            });
     
-            if (!res.ok) {
-                console.warn('[getLatestEntry] HTTP error:', res.status);
-                return null;
-            }
+                const url = `https://admin.neonova.net/rat/index.php?${params.toString()}`;
+                console.log('[getLatestEntry] Fetching recent page:', url);
     
-            const html = await res.text();
-            const doc = new DOMParser().parseFromString(html, 'text/html');
+                const html = await this.#fetchPageHtml(url);
+                if (!html) return [];
     
-            const pageEntries = this.#parsePageRows(doc);
-            console.log('[getLatestEntry] Parsed', pageEntries.length, 'entries from recent page');
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+                const pageEntries = this.#parsePageRows(doc);
+                console.log('[getLatestEntry] Parsed', pageEntries.length, 'entries');
+    
+                pageEntries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+    
+                return pageEntries;
+            };
+    
+            const now = new Date();
+            
+            // Try last 7 days first (covers longer offline)
+            let start = new Date(now.getTime() - (7 * 24 * 3600 * 1000));
+            let pageEntries = await fetchRecentPage(start);
     
             if (pageEntries.length === 0) {
-                console.log('[getLatestEntry] No entries on recent page');
+                // Fall back to full month if no recent
+                start = new Date(now.getFullYear(), now.getMonth(), 1);
+                pageEntries = await fetchRecentPage(start);
+                console.log('[getLatestEntry] Fell back to full month — parsed', pageEntries.length);
+            }
+    
+            if (pageEntries.length === 0) {
+                console.log('[getLatestEntry] No entries found even in full month — returning null');
                 return null;
             }
     
-            // Sort this single page newest-first
-            pageEntries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
-    
             const newest = pageEntries[0];
-            console.log('[getLatestEntry] Newest from recent page:', {
+            console.log('[getLatestEntry] Newest:', {
                 timestamp: newest.timestamp,
                 status: newest.status,
                 dateObj: newest.dateObj?.toISOString()
             });
     
-            // Optional: log second for sanity
             if (pageEntries.length > 1) {
                 console.log('[getLatestEntry] Second newest:', {
                     timestamp: pageEntries[1].timestamp,
