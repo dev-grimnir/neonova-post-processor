@@ -138,6 +138,9 @@ class NeonovaHTTPController {
             const status = cells[4].textContent.trim();
             const sessionTime = cells[6].textContent.trim();
 
+            const dateObj = new Date(timestampStr + ' EST');
+            dateObj.setTime(dateObj.getTime() + (dateObj.getTimezoneOffset() * 60000) + (5 * 3600000));
+
             const dateObj = new Date(timestampStr);
             if (isNaN(dateObj.getTime())) return;
 
