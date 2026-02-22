@@ -94,13 +94,10 @@ class NeonovaHTTPController {
      * Returns a number or null if the header is missing/not parsable.
      */
     static #extractTotalEntries(doc) {
-        console.log('[extractTotalEntries] START');
     
         // Scope search to likely header areas (first few tables or top 2000 chars)
         const bodyText = doc.body.textContent || '';
         const headerText = bodyText.substring(0, 5000);  // Limit to top of page
-    
-        console.log('[extractTotalEntries] Header snippet (first 500 chars):', headerText.substring(0, 500));
     
         // Tight regexes - match known patterns from your sample
         const patterns = [
@@ -118,13 +115,11 @@ class NeonovaHTTPController {
                 const cleaned = match[1].replace(/,/g, '');
                 const total = parseInt(cleaned, 10);
                 if (!isNaN(total) && total > 0) {
-                    console.log('[extractTotalEntries] SUCCESS - matched pattern:', regex.source, '→ total:', total);
                     return total;
                 }
             }
         }
     
-        console.warn('[extractTotalEntries] No match found in header text');
         return null;
     }
 
