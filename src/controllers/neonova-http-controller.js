@@ -235,6 +235,8 @@ class NeonovaHTTPController {
      *   • Backward-compatible: old onProgress handlers ignoring the 3rd arg still work
      */
     static async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null, signal = null) {
+        console.log('[paginateReportLogs] START', { username, startDate, endDate, hasProgressCallback: !!onProgress, hasSignal: !!signal });
+        
         // Legacy argument handling
         if (typeof startDate === 'function') {
             onProgress = startDate;
@@ -257,9 +259,12 @@ class NeonovaHTTPController {
         let page = 1;
         let total = null;
 
+        console.log('[paginateReportLogs] Initial setup', { hitsPerPage, defaultStart: sDate.toISOString(), defaultEnd: eDate.toISOString() });
+
         while (true) {
             const params = this.#buildPaginationParams(username, sDate, eDate, hitsPerPage, offset);
             const url = this.#buildPageUrl(params);
+            console.log(`[paginateReportLogs] Fetching page ${page} (offset ${offset})`, url);
 
             let html;
             try {
@@ -284,18 +289,22 @@ class NeonovaHTTPController {
             // Extract total only from the first page
             if (page === 1 && total === null) {
                 total = this.#extractTotalEntries(doc);
+                console.log('[paginateReportLogs] Total extracted from page 1:', total);
             }
 
             const pageEntries = this.#parsePageRows(doc);
+            console.log(`[paginateReportLogs] Page ${page} parsed ${pageEntries.length} entries (total so far: ${entries.length + pageEntries.length})`);
             entries.push(...pageEntries);
 
             // onProgress: (fetchedCount, page, total|null)
             if (typeof onProgress === 'function') {
+                console.log('[paginateReportLogs] Calling onProgress', { fetched: entries.length, page, total });
                 onProgress(entries.length, page, total);
             }
 
             // Termination: incomplete page OR we have reached/exceeded the authoritative total
             if (pageEntries.length < hitsPerPage || (total !== null && entries.length >= total)) {
+                console.log('[paginateReportLogs] Incomplete page detected - stopping (last page had', pageEntries.length, 'entries)');
                 break;
             }
 
@@ -303,7 +312,9 @@ class NeonovaHTTPController {
             page++;
         }
 
+        console.log('[paginateReportLogs] END - sorting entries, final count before sort:', entries.length);
         entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+        console.log('[paginateReportLogs] Final sorted count:', entries.length);
         return entries;
     }
 
