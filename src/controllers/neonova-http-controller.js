@@ -94,22 +94,37 @@ class NeonovaHTTPController {
      * Returns a number or null if the header is missing/not parsable.
      */
     static #extractTotalEntries(doc) {
-        const text = doc.body.textContent || '';
+        console.log('[extractTotalEntries] START');
     
-        // Direct match for the format in your log
-        const match = text.match(/Entry:\s*\d+-\d+\s*of\s*(\d+)/i) ||
-                      text.match(/of\s*(\d+)/i) ||  // broad fallback for "of 860"
-                      text.match(/Displaying.*?of\s*(\d+)/i) ||
-                      text.match(/Total.*?(\d+)/i);
+        // Scope search to likely header areas (first few tables or top 2000 chars)
+        const bodyText = doc.body.textContent || '';
+        const headerText = bodyText.substring(0, 5000);  // Limit to top of page
     
-        if (match && match[1]) {
-            const total = parseInt(match[1], 10);
-            if (!isNaN(total) && total > 0) {
-                return total;
+        console.log('[extractTotalEntries] Header snippet (first 500 chars):', headerText.substring(0, 500));
+    
+        // Tight regexes - match known patterns from your sample
+        const patterns = [
+            /Entry:\s*\d+-\d+\s*of\s*([\d,]+)/i,              // "Entry: 1-100 of 484"
+            /of\s*([\d,]+)/i,                                 // "of 484"
+            /Results\s*of\s*([\d,]+)/i,                       // "Search Results of 484"
+            /Displaying.*?of\s*([\d,]+)/i,                    // fallback
+            /Total.*?([\d,]+)/i                               // broad fallback
+        ];
+    
+        for (const regex of patterns) {
+            const match = headerText.match(regex);
+            if (match && match[1]) {
+                // Clean commas and parse
+                const cleaned = match[1].replace(/,/g, '');
+                const total = parseInt(cleaned, 10);
+                if (!isNaN(total) && total > 0) {
+                    console.log('[extractTotalEntries] SUCCESS - matched pattern:', regex.source, '→ total:', total);
+                    return total;
+                }
             }
         }
     
-        console.warn('[NeonovaHTTPController] Could not parse reported total — snippet:', text.substring(0, 300) + '...');
+        console.warn('[extractTotalEntries] No match found in header text');
         return null;
     }
 
