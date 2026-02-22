@@ -322,22 +322,79 @@ class NeonovaHTTPController {
 
     static async getLatestEntry(username) {
         try {
-            const entries = await this.paginateReportLogs(username);
-            console.log('[getLatestEntry] Fetched', entries.length, 'entries for', username);
-            if (entries.length === 0) return null;
+            // Build params for MOST RECENT page only
+            const params = new URLSearchParams({
+                acctsearch: '2',
+                sd: 'fairpoint.net',
+                iuserid: username,
+                ip: '',
+                session: '',
+                nasip: '',
+                statusview: 'both',
+                // No start date — let site default to oldest, but we only take first page
+                shour: '00',
+                smin: '00',
+                // Blank end = up to now
+                emonth: '',
+                eday: '',
+                eyear: '',
+                ehour: '',
+                emin: '',
+                hits: '100',  // Enough for recent activity
+                order: 'date',  // Hopefully descending
+                location: '0',
+                direction: '0',
+                dump: ''
+            });
     
-            const newest = entries[0];
-            console.log('[getLatestEntry] Claimed newest entry:', {
+            const url = `https://admin.neonova.net/rat/index.php?${params}`;
+            console.log('[getLatestEntry] Fetching recent page only:', url);
+    
+            const res = await fetch(url, {
+                credentials: 'include',
+                cache: 'no-cache',
+                headers: {
+                    'Referer': url,
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.5',
+                    'Sec-Fetch-Dest': 'document',
+                    'Sec-Fetch-Mode': 'navigate',
+                    'Sec-Fetch-Site': 'same-origin',
+                    'Upgrade-Insecure-Requests': '1'
+                }
+            });
+    
+            if (!res.ok) {
+                console.warn('[getLatestEntry] HTTP error:', res.status);
+                return null;
+            }
+    
+            const html = await res.text();
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+    
+            const pageEntries = this.#parsePageRows(doc);
+            console.log('[getLatestEntry] Parsed', pageEntries.length, 'entries from recent page');
+    
+            if (pageEntries.length === 0) {
+                console.log('[getLatestEntry] No entries on recent page');
+                return null;
+            }
+    
+            // Sort this single page newest-first
+            pageEntries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+    
+            const newest = pageEntries[0];
+            console.log('[getLatestEntry] Newest from recent page:', {
                 timestamp: newest.timestamp,
                 status: newest.status,
                 dateObj: newest.dateObj?.toISOString()
             });
     
-            // Log second newest for comparison
-            if (entries.length > 1) {
+            // Optional: log second for sanity
+            if (pageEntries.length > 1) {
                 console.log('[getLatestEntry] Second newest:', {
-                    timestamp: entries[1].timestamp,
-                    status: entries[1].status
+                    timestamp: pageEntries[1].timestamp,
+                    status: pageEntries[1].status
                 });
             }
     
@@ -346,5 +403,5 @@ class NeonovaHTTPController {
             console.error('[getLatestEntry] failed:', err);
             return null;
         }
-}
+    }
 }
