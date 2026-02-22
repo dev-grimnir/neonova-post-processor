@@ -323,10 +323,28 @@ class NeonovaHTTPController {
     static async getLatestEntry(username) {
         try {
             const entries = await this.paginateReportLogs(username);
-            return entries.length > 0 ? entries[0] : null;
+            console.log('[getLatestEntry] Fetched', entries.length, 'entries for', username);
+            if (entries.length === 0) return null;
+    
+            const newest = entries[0];
+            console.log('[getLatestEntry] Claimed newest entry:', {
+                timestamp: newest.timestamp,
+                status: newest.status,
+                dateObj: newest.dateObj?.toISOString()
+            });
+    
+            // Log second newest for comparison
+            if (entries.length > 1) {
+                console.log('[getLatestEntry] Second newest:', {
+                    timestamp: entries[1].timestamp,
+                    status: entries[1].status
+                });
+            }
+    
+            return newest;
         } catch (err) {
-            console.error('getLatestEntry failed:', err);
+            console.error('[getLatestEntry] failed:', err);
             return null;
         }
-    }
+}
 }
