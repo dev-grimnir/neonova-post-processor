@@ -94,19 +94,53 @@ class NeonovaHTTPController {
      * Returns a number or null if the header is missing/not parsable.
      */
     static #extractTotalEntries(doc) {
-        const grayTr = doc.querySelector('tr[bgcolor="gray"]');
-        if (!grayTr) return null;
-
+        // Try exact bgcolor attribute
+        let grayTr = doc.querySelector('tr[bgcolor="gray"]');
+    
+        // Fallback: any tr with gray background (style or attribute)
+        if (!grayTr) {
+            grayTr = Array.from(doc.querySelectorAll('tr')).find(tr => {
+                const bg = tr.getAttribute('bgcolor');
+                const styleBg = tr.style.backgroundColor || tr.style.background;
+                return (bg && bg.toLowerCase() === 'gray') || 
+                       (styleBg && (styleBg.includes('gray') || styleBg.includes('#808080')));
+            });
+        }
+    
+        if (!grayTr) {
+            console.warn('[extractTotalEntries] No gray header row found');
+            return null;
+        }
+    
         const tds = Array.from(grayTr.querySelectorAll('td'));
-        if (tds.length < 5) return null;
-
-        const ofIndex = tds.findIndex(td => td.textContent.trim().toLowerCase().includes('of'));
-        if (ofIndex === -1 || ofIndex + 1 >= tds.length) return null;
-
-        const totalText = tds[ofIndex + 1].textContent.trim();
-        const num = parseInt(totalText.replace(/[^0-9]/g, ''), 10); // strip any non-digits just in case
-
-        return isNaN(num) ? null : num;
+        if (tds.length < 5) {
+            console.warn('[extractTotalEntries] Gray row has too few cells', tds.length);
+            return null;
+        }
+    
+        // Find cell containing "of" (case insensitive, trim whitespace)
+        const ofIndex = tds.findIndex(td => {
+            const text = td.textContent.trim().toLowerCase();
+            return text === 'of' || text.includes('of');
+        });
+    
+        if (ofIndex === -1 || ofIndex + 1 >= tds.length) {
+            console.warn('[extractTotalEntries] No "of" cell found or no next cell');
+            return null;
+        }
+    
+        // Extract text from the next cell, clean aggressively
+        let totalText = tds[ofIndex + 1].textContent.trim();
+        totalText = totalText.replace(/[^0-9]/g, '');  // remove all non-digits
+    
+        const num = parseInt(totalText, 10);
+        if (isNaN(num) || num <= 0) {
+            console.warn('[extractTotalEntries] Failed to parse number from:', totalText);
+            return null;
+        }
+    
+        console.log('[extractTotalEntries] Successfully parsed total:', num);
+        return num;
     }
 
     static #parsePageRows(doc) {
