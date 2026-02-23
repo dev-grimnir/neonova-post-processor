@@ -350,16 +350,15 @@ class NeonovaHTTPController {
             page++;
         }
 
-        // NO SORT — site returns results in its natural order (usually newest-first on the last page)
-        // Sorting was causing the newest entries to disappear in some cases
         console.log(`[paginateReportLogs] === END === No sort applied. Total entries: ${entries.length}`);
-        console.log('[paginateReportLogs] Last parsed page had', pageEntries.length, 'entries');
+        console.log('[paginateReportLogs] Last parsed page had', pageEntries.length, 'entries');  // ← This line is the culprit — remove or comment it out
+        // Comment or remove the above line for now
+        // console.log('[paginateReportLogs] === END === No sort applied. Total entries: ${entries.length}');
 
         // Log the very last entry we received (should be the newest)
         if (entries.length > 0) {
-            console.log("############### REVISED ###############");
             console.log('[paginateReportLogs] Last entry in result set (should be newest):', 
-                entries[entries.length-1].timestamp, entries[entries.length-1].status);
+                entries[entries.length - 1].timestamp, entries[entries.length - 1].status);
         }
 
         return entries;
