@@ -30,6 +30,7 @@ class NeonovaHTTPController {
      **************************************************************************/
 
     static #buildPaginationParams(username, sDate, eDate, hitsPerPage, offset) {
+        console.log("#buildPaginationParams -> START");
         const params = new URLSearchParams({
             acctsearch: '2',
             sd: 'fairpoint.net',
