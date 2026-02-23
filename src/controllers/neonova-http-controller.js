@@ -403,10 +403,10 @@ static async paginateReportLogs(username, startDate = null, endDate = null, onPr
             break;
         }
         // Stop if we have reached or exceeded the total count from page 1.
-        if (total !== null && entries.length >= total) {
-            console.log(`[paginateReportLogs] Reached total count on page ${page} - stopping`);
-            break;
-        }
+        //if (total !== null && entries.length >= total) {
+            //console.log(`[paginateReportLogs] Reached total count on page ${page} - stopping`);
+            //break;
+        //}
 
         // Line 66–67: Prepare for next page.
         offset += hitsPerPage;
