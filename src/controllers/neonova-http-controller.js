@@ -30,7 +30,7 @@ class NeonovaHTTPController {
      **************************************************************************/
 
     static #buildPaginationParams(username, sDate, eDate, hitsPerPage, offset) {
-        return new URLSearchParams({
+        const params = new URLSearchParams({
             acctsearch: '2',
             sd: 'fairpoint.net',
             iuserid: username,
@@ -43,17 +43,36 @@ class NeonovaHTTPController {
             sday: sDate.getDate().toString().padStart(2, '0'),
             shour: '00',
             smin: '00',
-            eyear: eDate.getFullYear().toString(),
-            emonth: (eDate.getMonth() + 1).toString().padStart(2, '0'),
-            eday: eDate.getDate().toString().padStart(2, '0'),
-            ehour: '23',
-            emin: '59',
             order: 'date',
             hits: hitsPerPage.toString(),
             location: offset.toString(),
             direction: '0',
             dump: ''
         });
+    
+        // Critical change: if endDate is null or today, use blank end fields (server's "up to now")
+        const now = new Date();
+        const isToday = eDate.getFullYear() === now.getFullYear() &&
+                        eDate.getMonth() === now.getMonth() &&
+                        eDate.getDate() === now.getDate();
+    
+        if (!eDate || isToday) {
+            // Blank end = include everything up to the present moment
+            params.append('eyear', '');
+            params.append('emonth', '');
+            params.append('eday', '');
+            params.append('ehour', '');
+            params.append('emin', '');
+        } else {
+            // Explicit end date (for custom reports)
+            params.append('eyear', eDate.getFullYear().toString());
+            params.append('emonth', (eDate.getMonth() + 1).toString().padStart(2, '0'));
+            params.append('eday', eDate.getDate().toString().padStart(2, '0'));
+            params.append('ehour', '23');
+            params.append('emin', '59');
+        }
+    
+        return params;
     }
 
     static #buildPageUrl(params) {
