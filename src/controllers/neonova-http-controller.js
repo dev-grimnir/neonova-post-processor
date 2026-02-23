@@ -270,99 +270,163 @@ class NeonovaHTTPController {
      *   • Returns the entries array directly
      *   • Backward-compatible: old onProgress handlers ignoring the 3rd arg still work
      */
-    static async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null, signal = null) {
-        console.log('[paginateReportLogs] === START ===', { username, startDate: startDate?.toISOString(), endDate: endDate?.toISOString() });
-        // Legacy argument handling
-        if (typeof startDate === 'function') {
-            onProgress = startDate;
-            startDate = null;
-            endDate = null;
-            signal = null;
-        } else if (typeof endDate === 'function') {
-            onProgress = endDate;
-            endDate = null;
-            signal = null;
+/**
+ * paginateReportLogs — now with:
+ *   • Total count scraped from first page and passed to onProgress as 3rd arg
+ *   • AbortSignal support for cancellation (pass as final argument)
+ *   • Returns the entries array directly
+ *   • Backward-compatible: old onProgress handlers ignoring the 3rd arg still work
+ */
+static async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null, signal = null) {
+    // Line 1: Log the start of the function with all input parameters.
+    // Purpose: Debugging — shows exactly what dates, username, and callbacks were passed in.
+    // If this log doesn't appear → the function never ran (caller error or crash before here).
+    console.log('[paginateReportLogs] === START ===', { username, startDate: startDate?.toISOString(), endDate: endDate?.toISOString() });
+
+    // Lines 4–11: Legacy argument handling (backward compatibility for old callers).
+    // Purpose: Allows old code that called paginateReportLogs(username, onProgress) to still work.
+    // How it works: If the second argument is a function, assume it's onProgress and shift parameters.
+    // If startDate is a function → treat it as onProgress, set startDate/endDate/signal to defaults.
+    // If endDate is a function → same thing.
+    // This block is purely for compatibility — new callers should pass named params properly.
+    if (typeof startDate === 'function') {
+        onProgress = startDate;
+        startDate = null;
+        endDate = null;
+        signal = null;
+    } else if (typeof endDate === 'function') {
+        onProgress = endDate;
+        endDate = null;
+        signal = null;
+    }
+
+    // Line 13: Get current time once (used for default start/end dates).
+    // Purpose: Ensures consistent "now" reference throughout the function.
+    const now = new Date();
+
+    // Lines 14–15: Set default start date to beginning of current month if not provided.
+    // Purpose: If caller didn't give startDate, default to first day of month at 00:00.
+    // Why month start? Historical choice — most reports cover current billing cycle.
+    const sDate = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // Line 16: Set default end date to right now if not provided.
+    // Purpose: If no endDate, include everything up to current moment.
+    const eDate = endDate ? new Date(endDate) : new Date(now);
+
+    // Line 18: Fixed page size — always request 100 entries per page.
+    // Purpose: Consistent pagination. 100 is a balance between speed and server load.
+    const hitsPerPage = 100;
+
+    // Line 19: Array to hold all parsed log entries from all pages.
+    // Purpose: Final output — accumulates every valid entry across pagination.
+    const entries = [];
+
+    // Line 20: Starting offset for pagination (0 = first page).
+    // Purpose: Increments by hitsPerPage each loop to fetch next chunk.
+    let offset = 0;
+
+    // Line 21: Page counter (starts at 1) — used for logging and progress callback.
+    let page = 1;
+
+    // Line 22: Total entry count (scraped from first page header) — used to know when to stop.
+    // Starts as null → set after first page.
+    let total = null;
+
+    // Line 24: Log the final date range being used (after defaults applied).
+    // Purpose: Debug — confirms what dates the server is actually being queried for.
+    console.log('[paginateReportLogs] Using date range:', { sDate: sDate.toISOString(), eDate: eDate.toISOString() });
+
+    // Line 26: Main pagination loop — keeps fetching until no more pages or total reached.
+    while (true) {
+        // Line 27: Build URL parameters for this page.
+        // Calls private helper #buildPaginationParams with current offset.
+        const params = this.#buildPaginationParams(username, sDate, eDate, hitsPerPage, offset);
+
+        // Line 28: Construct full URL by appending params to baseSearchUrl.
+        const url = this.#buildPageUrl(params);
+
+        // Line 29: Log the exact URL being fetched — critical for debugging server response.
+        console.log(`[paginateReportLogs] Fetching page ${page} (offset ${offset}) → ${url}`);
+
+        // Line 30–37: Try to fetch the page HTML.
+        // Uses private #fetchPageHtml (which does fetch with credentials/no-cache).
+        // Catches AbortError separately (user cancelled) → returns partial results.
+        let html;
+        try {
+            html = await this.#fetchPageHtml(url, signal);
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                // If aborted (e.g., user cancelled report), sort what we have and return early.
+                entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+                return entries;
+            }
+            // Any other fetch error (network, timeout) → log and break loop.
+            console.warn('Unexpected error fetching page:', err);
+            break;
         }
 
-        const now = new Date();
-        const sDate = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
-        const eDate = endDate ? new Date(endDate) : new Date(now);
+        // Line 39–41: If fetch returned null (HTTP error), stop loop.
+        if (html === null) {
+            console.log('[paginateReportLogs] HTTP error on page', page, '- stopping');
+            break; // HTTP error
+        }
 
-        const hitsPerPage = 100;
-        const entries = [];
-        let offset = 0;
-        let page = 1;
-        let total = null;
+        // Line 43: Parse the HTML string into DOM document for querying.
+        const doc = new DOMParser().parseFromString(html, 'text/html');
 
-        console.log('[paginateReportLogs] Using date range:', { sDate: sDate.toISOString(), eDate: eDate.toISOString() });
+        // Lines 45–48: Extract total entry count ONLY from page 1.
+        // Uses private #extractTotalEntries — if it fails, total stays null.
+        if (page === 1 && total === null) {
+            total = this.#extractTotalEntries(doc);
+            console.log('[paginateReportLogs] Total extracted from page 1:', total);
+        }
 
-        while (true) {
-            const params = this.#buildPaginationParams(username, sDate, eDate, hitsPerPage, offset);
-            const url = this.#buildPageUrl(params);
-            console.log(`[paginateReportLogs] Fetching page ${page} (offset ${offset}) → ${url}`);
-            let html;
-            try {
-                html = await this.#fetchPageHtml(url, signal);
-            } catch (err) {
-                if (err.name === 'AbortError') {
-                    // Return whatever was collected so far
-                    entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
-                    return entries;
-                }
-                console.warn('Unexpected error fetching page:', err);
-                break;
-            }
+        // Line 50: Parse the rows from this page into LogEntry objects.
+        // Uses private #parsePageRows — returns array of entries for this page only.
+        const pageEntries = this.#parsePageRows(doc);
 
-            if (html === null) {
-                console.log('[paginateReportLogs] HTTP error on page', page, '- stopping');
-                break; // HTTP error
-            }
+        // Line 51: Log how many entries this page had (debug).
+        console.log(`[paginateReportLogs] Page ${page} parsed ${pageEntries.length} entries`);
 
-            const doc = new DOMParser().parseFromString(html, 'text/html');
+        // Line 52: Append this page's entries to the master list.
+        entries.push(...pageEntries);
 
-            // Extract total only from the first page
-            if (page === 1 && total === null) {
-                console.log('[paginateReportLogs] Total extracted from page 1:', total);
-                total = this.#extractTotalEntries(doc);
-                
-            }
+        // Lines 54–56: Call progress callback if provided.
+        // Passes: total fetched so far, current page number, total count (or null).
+        if (typeof onProgress === 'function') {
+            onProgress(entries.length, page, total);
+        }
 
-            const pageEntries = this.#parsePageRows(doc);
-            console.log(`[paginateReportLogs] Page ${page} parsed ${pageEntries.length} entries`);
-            entries.push(...pageEntries);
-
-            // onProgress: (fetchedCount, page, total|null)
-            if (typeof onProgress === 'function') {
-                onProgress(entries.length, page, total);
-            }
-
-            // Termination: incomplete page OR we have reached/exceeded the authoritative total
+        // Lines 58–64: Termination conditions.
+        // Stop if this page had fewer than hitsPerPage → last page.
         if (pageEntries.length < hitsPerPage) {
             console.log(`[paginateReportLogs] Incomplete page detected on page ${page} (${pageEntries.length} entries) - stopping`);
             break;
         }
+        // Stop if we have reached or exceeded the total count from page 1.
         if (total !== null && entries.length >= total) {
             console.log(`[paginateReportLogs] Reached total count on page ${page} - stopping`);
             break;
         }
 
-            offset += hitsPerPage;
-            page++;
-        }
-
-        //console.log(`[paginateReportLogs] === END === No sort applied. Total entries: ${entries.length}`);
-        //console.log('[paginateReportLogs] Last parsed page had', pageEntries.length, 'entries');  // ← This line is the culprit — remove or comment it out
-        // Comment or remove the above line for now
-        // console.log('[paginateReportLogs] === END === No sort applied. Total entries: ${entries.length}');
-
-        // Log the very last entry we received (should be the newest)
-        if (entries.length > 0) {
-            console.log('[paginateReportLogs] Last entry in result set (should be newest):', 
-                entries[entries.length - 1].timestamp, entries[entries.length - 1].status);
-        }
-
-        return entries;
+        // Line 66–67: Prepare for next page.
+        offset += hitsPerPage;
+        page++;
     }
+
+    // Line 70: Log final count before any potential sort (we removed sort).
+    console.log(`[paginateReportLogs] === END === No sort applied. Total entries: ${entries.length}`);
+
+    // Line 71: Log the very last entry in the array (should be the newest if server returns newest-first).
+    if (entries.length > 0) {
+        console.log('[paginateReportLogs] Last entry in result set (should be newest):', 
+            entries[entries.length - 1].timestamp, entries[entries.length - 1].status);
+    }
+
+    // Line 75: Return the raw, unsorted entries array.
+    // Caller (e.g. getLatestEntry) can take entries[entries.length - 1] as newest.
+    return entries;
+}
 
     static async getLatestEntry(username) {
     try {
