@@ -350,8 +350,8 @@ class NeonovaHTTPController {
             page++;
         }
 
-        console.log(`[paginateReportLogs] === END === No sort applied. Total entries: ${entries.length}`);
-        console.log('[paginateReportLogs] Last parsed page had', pageEntries.length, 'entries');  // ← This line is the culprit — remove or comment it out
+        //console.log(`[paginateReportLogs] === END === No sort applied. Total entries: ${entries.length}`);
+        //console.log('[paginateReportLogs] Last parsed page had', pageEntries.length, 'entries');  // ← This line is the culprit — remove or comment it out
         // Comment or remove the above line for now
         // console.log('[paginateReportLogs] === END === No sort applied. Total entries: ${entries.length}');
 
