@@ -334,7 +334,8 @@ class NeonovaHTTPController {
         
         entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
 
-        console.log('[paginateReportLogs] === END === Sorted newest first. Newest entry:', 
+        console.log('[paginateReportLogs] === END === Sorted newest first.');
+        console.log('Newest entry:', entries[0] ? `${entries[0].timestamp} (${entries[0].status})` : 'NONE');
 
         if (entries.length > 1) {
             console.log('Second newest:', entries[1].timestamp, entries[1].status);
