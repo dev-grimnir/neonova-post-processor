@@ -145,23 +145,29 @@ class NeonovaHTTPController {
     static #parsePageRows(doc) {
         const table = doc.querySelector('table[width="500"]') || doc.querySelector('table[cellspacing="2"][cellpadding="2"]');
         if (!table) return [];
-
+    
         const rows = Array.from(table.querySelectorAll('tr'));
         const entries = [];
-
+    
         rows.forEach(row => {
             const cells = row.querySelectorAll('td');
             if (cells.length < 7) return;
-
+    
             const timestampStr = cells[0].textContent.trim();
             const status = cells[4].textContent.trim();
             const sessionTime = cells[6].textContent.trim();
-
-            // Parse as local time — browser will interpret "2026-02-23 11:23:37" as your system's local time (EST)
+    
+            // Parse as local time: browser assumes the string is in your timezone (EST)
             const dateObj = new Date(timestampStr.replace(' ', 'T'));
-
-            if (isNaN(dateObj.getTime())) return;
-
+    
+            if (isNaN(dateObj.getTime())) {
+                console.warn('[#parsePageRows] Invalid date parse:', timestampStr);
+                return;
+            }
+    
+            // Log for verification
+            console.log(`[#parsePageRows] "${timestampStr}" → ${dateObj.toLocaleString('en-US')} (local time)`);
+    
             entries.push({
                 timestamp: timestampStr,
                 status,
@@ -169,7 +175,7 @@ class NeonovaHTTPController {
                 dateObj
             });
         });
-
+    
         return entries;
     }
 
