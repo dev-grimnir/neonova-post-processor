@@ -114,32 +114,31 @@ class NeonovaHTTPController {
      * Returns a number or null if the header is missing/not parsable.
      */
     static #extractTotalEntries(doc) {
-    
-        // Scope search to likely header areas (first few tables or top 2000 chars)
         const bodyText = doc.body.textContent || '';
-        const headerText = bodyText.substring(0, 5000);  // Limit to top of page
+        const headerText = bodyText.substring(0, 10000);  // Wider search — header can be lower
     
-        // Tight regexes - match known patterns from your sample
+        // More precise patterns based on your manual table
         const patterns = [
-            /Entry:\s*\d+-\d+\s*of\s*([\d,]+)/i,              // "Entry: 1-100 of 484"
-            /of\s*([\d,]+)/i,                                 // "of 484"
-            /Results\s*of\s*([\d,]+)/i,                       // "Search Results of 484"
-            /Displaying.*?of\s*([\d,]+)/i,                    // fallback
-            /Total.*?([\d,]+)/i                               // broad fallback
+            /Entry:\s*\d+-\d+\s*of\s*([\d,]+)/i,               // "Entry: 1-100 of 1775"
+            /of\s*([\d,]+)\s*(?![^\s]*\d)/i,                  // "of 1775" not followed by more numbers
+            /Results.*?of\s*([\d,]+)/i,
+            /Displaying.*?of\s*([\d,]+)/i,
+            /Total.*?([\d,]+)/i
         ];
     
         for (const regex of patterns) {
             const match = headerText.match(regex);
             if (match && match[1]) {
-                // Clean commas and parse
                 const cleaned = match[1].replace(/,/g, '');
                 const total = parseInt(cleaned, 10);
                 if (!isNaN(total) && total > 0) {
+                    console.log('[#extractTotalEntries] SUCCESS - matched:', regex.source, '→ total:', total);
                     return total;
                 }
             }
         }
     
+        console.warn('[#extractTotalEntries] No total found in header text. Snippet:', headerText.substring(0, 500));
         return null;
     }
 
