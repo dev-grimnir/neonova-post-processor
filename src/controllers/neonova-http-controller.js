@@ -165,9 +165,6 @@ class NeonovaHTTPController {
                 return;
             }
     
-            // Log for verification
-            console.log(`[#parsePageRows] "${timestampStr}" → ${dateObj.toLocaleString('en-US')} (local time)`);
-    
             entries.push({
                 timestamp: timestampStr,
                 status,
