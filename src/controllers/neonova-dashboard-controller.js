@@ -140,19 +140,35 @@ class NeonovaDashboardController {
                 return;
             }
     
-            let durationSeconds = 0;
-            if (latest.dateObj && latest.dateObj.getTime) {
-                const ms = Date.now() - latest.dateObj.getTime();
-                if (Number.isFinite(ms) && ms >= 0) {
-                    durationSeconds = Math.floor(ms / 1000);
-                }
+            // Force parse timestamp as EST
+            const timestampStr = latest.timestamp;
+            const dateObjEST = new Date(timestampStr + ' EST');
+            if (isNaN(dateObjEST.getTime())) {
+                console.warn('[updateCustomerStatus] Invalid dateObj from timestamp:', timestampStr);
+                customer.update('Error', 0);
+                return;
             }
     
-            // Flip the status check: latest 'Start' = Connected, 'Stop' = Not Connected
+            const nowMs = Date.now();
+            const eventMs = dateObjEST.getTime();
+            let durationSeconds = Math.floor((nowMs - eventMs) / 1000);
+    
+            if (durationSeconds < 0) {
+                console.warn('[updateCustomerStatus] Negative duration — future event?', durationSeconds);
+                durationSeconds = 0;
+            }
+    
             const status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
-            console.log('[updateCustomerStatus] Final:', { status, durationSeconds, timestamp: latest.timestamp });
+    
+            console.log('[updateCustomerStatus] Final:', {
+                status,
+                durationSeconds,
+                timestamp: timestampStr,
+                parsedDateObj: dateObjEST.toISOString()
+            });
     
             customer.update(status, durationSeconds);
+            customer.lastEventTime = dateObjEST.getTime();  // Store as ms for formatting
         } catch (err) {
             console.error('[updateCustomerStatus] error:', err);
             customer.update('Error', 0);
