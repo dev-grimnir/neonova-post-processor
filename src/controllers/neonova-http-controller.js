@@ -357,6 +357,7 @@ class NeonovaHTTPController {
 
         // Log the very last entry we received (should be the newest)
         if (entries.length > 0) {
+            console.log("############### REVISED ###############");
             console.log('[paginateReportLogs] Last entry in result set (should be newest):', 
                 entries[entries.length-1].timestamp, entries[entries.length-1].status);
         }
