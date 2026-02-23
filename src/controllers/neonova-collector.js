@@ -68,37 +68,49 @@ class NeonovaCollector {
      * This is a pure function — no side effects, no reliance on instance/state.
      * 
      * @param {Array} entries - Raw entries from pagination
-     * @returns {Array} Cleaned and deduped entries (sorted oldest → newest)
+     * @returns {Object} { cleanedEntries: Array (sorted oldest → newest), totalProcessed: number, ignored: number }
      */
     static cleanEntries(entries) {
-        if (!entries || entries.length === 0) {
-            return [];
+        let totalProcessed = entries.length;
+        let ignored = 0;
+
+        if (!entries || totalProcessed === 0) {
+            return { cleanedEntries: [], totalProcessed: 0, ignored: 0 };
         }
 
-        // Map to standardized format (use getTime() for numeric date)
+        // Map to standardized format and filter invalids
         let allEntries = entries.map(entry => {
             const date = entry.dateObj.getTime();  // Unix ms (numeric, unique)
             if (isNaN(date)) {
+                ignored++;
                 return null;
             }
             return { date, status: entry.status, dateObj: entry.dateObj };
         }).filter(entry => entry !== null);  // Remove invalids
+        ignored += totalProcessed - allEntries.length;  // Add invalids to ignored count
 
         // Sort ascending by date (oldest to newest)
         allEntries.sort((a, b) => a.date - b.date);
 
-        // De-dupe: Keep unique by date + status
-        const seen = new Set();
+        // De-dupe: Ignore timestamps entirely. Keep only the first occurrence of consecutive same statuses.
         const cleaned = [];
-        allEntries.forEach(entry => {
-            const key = `${entry.date}_${entry.status}`;
-            if (!seen.has(key)) {
-                seen.add(key);
-                cleaned.push(entry);
-            }
-        });
+        if (allEntries.length > 0) {
+            let prevStatus = null;
+            allEntries.forEach(entry => {
+                if (entry.status !== prevStatus) {
+                    cleaned.push(entry);
+                    prevStatus = entry.status;
+                } else {
+                    ignored++;  // Ignored consecutive duplicate status
+                }
+            });
+        }
 
-        return cleaned;
+        return {
+            cleanedEntries: cleaned,
+            totalProcessed,  // Original input count
+            ignored          // Invalids + consecutive dups
+        };
     }
 
     static getPages() {
