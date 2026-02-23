@@ -157,8 +157,8 @@ class NeonovaHTTPController {
             const status = cells[4].textContent.trim();
             const sessionTime = cells[6].textContent.trim();
 
-            const dateObj = new Date(timestampStr + ' EST');
-            dateObj.setTime(dateObj.getTime() + (dateObj.getTimezoneOffset() * 60000) + (5 * 3600000));
+            // Parse as local time — browser will interpret "2026-02-23 11:23:37" as your system's local time (EST)
+            const dateObj = new Date(timestampStr.replace(' ', 'T'));
 
             if (isNaN(dateObj.getTime())) return;
 
