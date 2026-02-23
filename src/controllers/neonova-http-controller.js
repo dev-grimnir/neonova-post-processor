@@ -365,54 +365,51 @@ class NeonovaHTTPController {
         return entries;
     }
 
-    
     static async getLatestEntry(username) {
-        try {
-            const now = new Date();
-            const startDate = new Date(now.getTime() - (30 * 24 * 3600 * 1000)); // 30 days ago
-            const endDate = now;
-    
-            console.log('[getLatestEntry] Fetching 30-day range for latest:', {
-                start: startDate.toISOString(),
-                end: endDate.toISOString()
-            });
-    
-            const entries = await this.paginateReportLogs(
-                username,
-                startDate,
-                endDate
-            );
-    
-            console.log('[getLatestEntry] Fetched', entries.length, 'entries over 30 days');
-    
-            if (entries.length === 0) {
-                console.log('[getLatestEntry] No entries — returning null');
-                return null;
-            }
-    
-            // FORCE re-sort by dateObj (newest first) — this guarantees the absolute newest, even if paginateReportLogs sort was unstable
-            entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
-    
-            const newest = entries[0];
-            console.log('[getLatestEntry] *** FINAL NEWEST ENTRY ***', {
-                timestamp: newest.timestamp,
-                status: newest.status,
-                dateObj: newest.dateObj.toISOString(),
-                dateObjMs: newest.dateObj.getTime()
-            });
-    
-            if (entries.length > 1) {
-                console.log('[getLatestEntry] Second newest (for comparison):', {
-                    timestamp: entries[1].timestamp,
-                    status: entries[1].status,
-                    dateObj: entries[1].dateObj.toISOString()
-                });
-            }
-    
-            return newest;
-        } catch (err) {
-            console.error('[getLatestEntry] failed:', err);
+    try {
+        const now = new Date();
+        const startDate = new Date(now.getTime() - (30 * 24 * 3600 * 1000));
+        const endDate = now;
+
+        console.log('[getLatestEntry] Fetching 30-day range for latest:', {
+            start: startDate.toISOString(),
+            end: endDate.toISOString()
+        });
+
+        const entries = await this.paginateReportLogs(
+            username,
+            startDate,
+            endDate
+        );
+
+        console.log('[getLatestEntry] Fetched', entries.length, 'entries over 30 days');
+
+        if (entries.length === 0) {
+            console.log('[getLatestEntry] No entries — returning null');
             return null;
         }
+
+        // NO SORT — trust the server's natural order (last entry should be newest)
+        const newest = entries[entries.length - 1];
+        console.log('[getLatestEntry] *** FINAL NEWEST ENTRY (from last in array) ***', {
+            timestamp: newest.timestamp,
+            status: newest.status,
+            dateObj: newest.dateObj.toISOString(),
+            dateObjMs: newest.dateObj.getTime()
+        });
+
+        if (entries.length > 1) {
+            console.log('[getLatestEntry] Second last (for comparison):', {
+                timestamp: entries[entries.length - 2].timestamp,
+                status: entries[entries.length - 2].status,
+                dateObj: entries[entries.length - 2].dateObj.toISOString()
+            });
+        }
+
+        return newest;
+    } catch (err) {
+        console.error('[getLatestEntry] failed:', err);
+        return null;
     }
+}
 }
