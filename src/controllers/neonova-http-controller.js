@@ -350,19 +350,20 @@ class NeonovaHTTPController {
             page++;
         }
 
-        console.log(`[paginateReportLogs] Final raw entries before sort: ${entries.length}`);
-        
-        entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+        // NO SORT — site returns results in its natural order (usually newest-first on the last page)
+        // Sorting was causing the newest entries to disappear in some cases
+        console.log(`[paginateReportLogs] === END === No sort applied. Total entries: ${entries.length}`);
+        console.log('[paginateReportLogs] Last parsed page had', pageEntries.length, 'entries');
 
-        console.log('[paginateReportLogs] === END === Sorted newest first.');
-        console.log('Newest entry:', entries[0] ? `${entries[0].timestamp} (${entries[0].status})` : 'NONE');
-
-        if (entries.length > 1) {
-            console.log('Second newest:', entries[1].timestamp, entries[1].status);
+        // Log the very last entry we received (should be the newest)
+        if (entries.length > 0) {
+            console.log('[paginateReportLogs] Last entry in result set (should be newest):', 
+                entries[entries.length-1].timestamp, entries[entries.length-1].status);
         }
-                    
+
         return entries;
     }
+
     
     static async getLatestEntry(username) {
         try {
