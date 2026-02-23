@@ -134,27 +134,26 @@ class NeonovaDashboardController {
     async updateCustomerStatus(customer) {
         try {
             const latest = await NeonovaHTTPController.getLatestEntry(customer.radiusUsername);
-            console.log('[updateCustomerStatus] for', customer.radiusUsername, 'latest:', latest);
             if (!latest) {
                 customer.update('Unknown', 0);
                 return;
             }
     
-            // Force parse timestamp as EST
-            const timestampStr = latest.timestamp;
-            const dateObjEST = new Date(timestampStr + ' EST');
-            if (isNaN(dateObjEST.getTime())) {
-                console.warn('[updateCustomerStatus] Invalid dateObj from timestamp:', timestampStr);
+            // Use raw timestamp string, parse without forcing timezone — let browser handle local offset
+            const eventDate = new Date(latest.timestamp);  // Browser parses as local time
+    
+            if (isNaN(eventDate.getTime())) {
+                console.warn('[updateCustomerStatus] Invalid parsed date:', latest.timestamp);
                 customer.update('Error', 0);
                 return;
             }
     
             const nowMs = Date.now();
-            const eventMs = dateObjEST.getTime();
+            const eventMs = eventDate.getTime();
             let durationSeconds = Math.floor((nowMs - eventMs) / 1000);
     
             if (durationSeconds < 0) {
-                console.warn('[updateCustomerStatus] Negative duration — future event?', durationSeconds);
+                console.warn('[updateCustomerStatus] Negative duration (future event?):', durationSeconds, 'timestamp:', latest.timestamp);
                 durationSeconds = 0;
             }
     
@@ -163,12 +162,13 @@ class NeonovaDashboardController {
             console.log('[updateCustomerStatus] Final:', {
                 status,
                 durationSeconds,
-                timestamp: timestampStr,
-                parsedDateObj: dateObjEST.toISOString()
+                rawTimestamp: latest.timestamp,
+                parsedEventTime: eventDate.toLocaleString(),
+                now: new Date(nowMs).toLocaleString()
             });
     
             customer.update(status, durationSeconds);
-            customer.lastEventTime = dateObjEST.getTime();  // Store as ms for formatting
+            customer.lastEventTime = eventMs;  // Store raw ms for formatting
         } catch (err) {
             console.error('[updateCustomerStatus] error:', err);
             customer.update('Error', 0);
