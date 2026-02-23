@@ -321,11 +321,11 @@ class NeonovaHTTPController {
         entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
         return entries;
     }
-
+    
     static async getLatestEntry(username) {
         try {
             const now = new Date();
-            const startDate = new Date(now.getTime() - (30 * 24 * 3600 * 1000));  // 30 days ago
+            const startDate = new Date(now.getTime() - (30 * 24 * 3600 * 1000)); // 30 days ago
             const endDate = now;
     
             console.log('[getLatestEntry] Fetching 30-day range for latest:', {
@@ -342,23 +342,26 @@ class NeonovaHTTPController {
             console.log('[getLatestEntry] Fetched', entries.length, 'entries over 30 days');
     
             if (entries.length === 0) {
-                console.log('[getLatestEntry] No entries in 30 days — returning null');
+                console.log('[getLatestEntry] No entries — returning null');
                 return null;
             }
     
-            // Entries already sorted newest-first by paginateReportLogs
+            // FORCE re-sort by dateObj (newest first) — this guarantees the absolute newest, even if paginateReportLogs sort was unstable
+            entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+    
             const newest = entries[0];
-            console.log('[getLatestEntry] Newest entry:', {
+            console.log('[getLatestEntry] *** FINAL NEWEST ENTRY ***', {
                 timestamp: newest.timestamp,
                 status: newest.status,
-                dateObj: newest.dateObj?.toISOString()
+                dateObj: newest.dateObj.toISOString(),
+                dateObjMs: newest.dateObj.getTime()
             });
     
-            // Second for debug
             if (entries.length > 1) {
-                console.log('[getLatestEntry] Second newest:', {
+                console.log('[getLatestEntry] Second newest (for comparison):', {
                     timestamp: entries[1].timestamp,
-                    status: entries[1].status
+                    status: entries[1].status,
+                    dateObj: entries[1].dateObj.toISOString()
                 });
             }
     
