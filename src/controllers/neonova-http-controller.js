@@ -251,6 +251,7 @@ class NeonovaHTTPController {
      *   • Backward-compatible: old onProgress handlers ignoring the 3rd arg still work
      */
     static async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null, signal = null) {
+        console.log('[paginateReportLogs] === START ===', { username, startDate: startDate?.toISOString(), endDate: endDate?.toISOString() });
         // Legacy argument handling
         if (typeof startDate === 'function') {
             onProgress = startDate;
@@ -273,9 +274,12 @@ class NeonovaHTTPController {
         let page = 1;
         let total = null;
 
+        console.log('[paginateReportLogs] Using date range:', { sDate: sDate.toISOString(), eDate: eDate.toISOString() });
+
         while (true) {
             const params = this.#buildPaginationParams(username, sDate, eDate, hitsPerPage, offset);
             const url = this.#buildPageUrl(params);
+            console.log(`[paginateReportLogs] Fetching page ${page} (offset ${offset}) → ${url}`);
             let html;
             try {
                 html = await this.#fetchPageHtml(url, signal);
@@ -290,6 +294,7 @@ class NeonovaHTTPController {
             }
 
             if (html === null) {
+                console.log('[paginateReportLogs] HTTP error on page', page, '- stopping');
                 break; // HTTP error
             }
 
@@ -297,11 +302,13 @@ class NeonovaHTTPController {
 
             // Extract total only from the first page
             if (page === 1 && total === null) {
+                console.log('[paginateReportLogs] Total extracted from page 1:', total);
                 total = this.#extractTotalEntries(doc);
                 
             }
 
             const pageEntries = this.#parsePageRows(doc);
+            console.log(`[paginateReportLogs] Page ${page} parsed ${pageEntries.length} entries`);
             entries.push(...pageEntries);
 
             // onProgress: (fetchedCount, page, total|null)
@@ -310,15 +317,29 @@ class NeonovaHTTPController {
             }
 
             // Termination: incomplete page OR we have reached/exceeded the authoritative total
-            if (pageEntries.length < hitsPerPage || (total !== null && entries.length >= total)) {
-                break;
-            }
+        if (pageEntries.length < hitsPerPage) {
+            console.log(`[paginateReportLogs] Incomplete page detected on page ${page} (${pageEntries.length} entries) - stopping`);
+            break;
+        }
+        if (total !== null && entries.length >= total) {
+            console.log(`[paginateReportLogs] Reached total count on page ${page} - stopping`);
+            break;
+        }
 
             offset += hitsPerPage;
             page++;
         }
 
+        console.log(`[paginateReportLogs] Final raw entries before sort: ${entries.length}`);
+        
         entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+
+        console.log('[paginateReportLogs] === END === Sorted newest first. Newest entry:', 
+
+        if (entries.length > 1) {
+            console.log('Second newest:', entries[1].timestamp, entries[1].status);
+        }
+                    
         return entries;
     }
     
