@@ -14,7 +14,7 @@ class Customer {
     }
 
 getDurationStr() {
-    const seconds = this.durationSeconds || 0;
+    const seconds = this.durationSec || 0;
 
     const days = Math.floor(seconds / (24 * 3600));
     const hours = Math.floor((seconds % (24 * 3600)) / 3600);
