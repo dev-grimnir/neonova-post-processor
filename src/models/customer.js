@@ -8,16 +8,16 @@ class Customer {
     }
 
     getDurationStr() {
-        const seconds = this.durationSec || 0;
-        let durationStr = '';
-        
-        if (seconds < 60) {
+      const seconds = this.durationSec || 0;
+      let durationStr = '';
+    
+      if (seconds < 60) {
         durationStr = '<1min';
-        } else {
+      } else {
         const days = Math.floor(seconds / 86400);
         const hours = Math.floor((seconds % 86400) / 3600);
         const minutes = Math.floor((seconds % 3600) / 60);
-        
+    
         if (days > 0) {
           durationStr += `${days}d `;
         }
@@ -25,14 +25,17 @@ class Customer {
           durationStr += `${hours}h `;
         }
         durationStr += `${minutes}m`;
+      }
+    
+      let timeStr = '';
+      if (this.lastEventTime) {
+        const eventDate = new Date(this.lastEventTime);
+        if (!isNaN(eventDate.getTime())) {  // Check for valid Date
+          timeStr = ` (${eventDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })})`;
         }
-        
-        // Append the timestamp if available (unchanged from original)
-        const timeStr = this.lastEventTime
-        ? ` (${this.lastEventTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })})`
-        : '';
-        
-        return `${durationStr}${timeStr}`;
+      }
+    
+      return `${durationStr}${timeStr}`;
     }
 
     update(status, durationSec) {
