@@ -34,10 +34,14 @@ class NeonovaDashboardController {
 
     togglePolling() {
         this.isPollingPaused = !this.isPollingPaused;
-        if (!this.isPollingPaused) {
-            this.poll();
+        if (this.pollInterval) {
+            clearInterval(this.pollInterval);
         }
-        this.view?.update();  // refresh button text
+        if (!this.isPollingPaused) {
+            this.poll();  // Immediate update on resume
+            this.pollInterval = setInterval(() => this.poll(), this.pollIntervalMs);
+        }
+        this.view?.render();  // Refresh UI to show pause/resume state
     }
 
     load() {
