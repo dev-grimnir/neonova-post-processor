@@ -5,6 +5,7 @@ class Customer {
         this.status = 'Unknown';               // 'Connected' / 'Not Connected' / 'Error' / 'Unknown'
         this.durationSec = 0;                  // seconds in current status
         this.lastUpdate = new Date().toLocaleString();
+        this.lastEventTime = null
     }
 
     getDurationStr() {
