@@ -30,7 +30,6 @@ class NeonovaHTTPController {
      **************************************************************************/
 
     static #buildPaginationParams(username, sDate, eDate, hitsPerPage, offset) {
-        console.log("#buildPaginationParams -> START");
         const params = new URLSearchParams({
             acctsearch: '2',
             sd: 'fairpoint.net',
@@ -132,7 +131,6 @@ class NeonovaHTTPController {
                 const cleaned = match[1].replace(/,/g, '');
                 const total = parseInt(cleaned, 10);
                 if (!isNaN(total) && total > 0) {
-                    console.log('[#extractTotalEntries] SUCCESS - matched:', regex.source, '→ total:', total);
                     return total;
                 }
             }
@@ -283,8 +281,6 @@ static async paginateReportLogs(username, startDate = null, endDate = null, onPr
     // Line 1: Log the start of the function with all input parameters.
     // Purpose: Debugging — shows exactly what dates, username, and callbacks were passed in.
     // If this log doesn't appear → the function never ran (caller error or crash before here).
-    console.log('[paginateReportLogs] === START ===', { username, startDate: startDate?.toISOString(), endDate: endDate?.toISOString() });
-
     // Lines 4–11: Legacy argument handling (backward compatibility for old callers).
     // Purpose: Allows old code that called paginateReportLogs(username, onProgress) to still work.
     // How it works: If the second argument is a function, assume it's onProgress and shift parameters.
@@ -334,10 +330,6 @@ static async paginateReportLogs(username, startDate = null, endDate = null, onPr
     // Starts as null → set after first page.
     let total = null;
 
-    // Line 24: Log the final date range being used (after defaults applied).
-    // Purpose: Debug — confirms what dates the server is actually being queried for.
-    console.log('[paginateReportLogs] Using date range:', { sDate: sDate.toISOString(), eDate: eDate.toISOString() });
-
     // Line 26: Main pagination loop — keeps fetching until no more pages or total reached.
     while (true) {
         // Line 27: Build URL parameters for this page.
@@ -346,9 +338,6 @@ static async paginateReportLogs(username, startDate = null, endDate = null, onPr
 
         // Line 28: Construct full URL by appending params to baseSearchUrl.
         const url = this.#buildPageUrl(params);
-
-        // Line 29: Log the exact URL being fetched — critical for debugging server response.
-        console.log(`[paginateReportLogs] Fetching page ${page} (offset ${offset}) → ${url}`);
 
         // Line 30–37: Try to fetch the page HTML.
         // Uses private #fetchPageHtml (which does fetch with credentials/no-cache).
@@ -369,7 +358,7 @@ static async paginateReportLogs(username, startDate = null, endDate = null, onPr
 
         // Line 39–41: If fetch returned null (HTTP error), stop loop.
         if (html === null) {
-            console.log('[paginateReportLogs] HTTP error on page', page, '- stopping');
+            console.warn('[paginateReportLogs] HTTP error on page', page, '- stopping');
             break; // HTTP error
         }
 
@@ -380,15 +369,11 @@ static async paginateReportLogs(username, startDate = null, endDate = null, onPr
         // Uses private #extractTotalEntries — if it fails, total stays null.
         if (page === 1 && total === null) {
             total = this.#extractTotalEntries(doc);
-            console.log('[paginateReportLogs] Total extracted from page 1:', total);
         }
 
         // Line 50: Parse the rows from this page into LogEntry objects.
         // Uses private #parsePageRows — returns array of entries for this page only.
         const pageEntries = this.#parsePageRows(doc);
-
-        // Line 51: Log how many entries this page had (debug).
-        console.log(`[paginateReportLogs] Page ${page} parsed ${pageEntries.length} entries`);
 
         // Line 52: Append this page's entries to the master list.
         entries.push(...pageEntries);
@@ -402,26 +387,16 @@ static async paginateReportLogs(username, startDate = null, endDate = null, onPr
         // Lines 58–64: Termination conditions.
         // Stop if this page had fewer than hitsPerPage → last page.
         if (pageEntries.length < hitsPerPage) {
-            console.log(`[paginateReportLogs] Incomplete page detected on page ${page} (${pageEntries.length} entries) - stopping`);
             break;
         }
-        // Stop if we have reached or exceeded the total count from page 1.
-        //if (total !== null && entries.length >= total) {
-            //console.log(`[paginateReportLogs] Reached total count on page ${page} - stopping`);
-            //break;
-        //}
 
         // Line 66–67: Prepare for next page.
         offset += hitsPerPage;
         page++;
     }
 
-    // Line 70: Log final count before any potential sort (we removed sort).
-    console.log(`[paginateReportLogs] === END === No sort applied. Total entries: ${entries.length}`);
-
     // Line 71: Log the very last entry in the array (should be the newest if server returns newest-first).
     if (entries.length > 0) {
-        console.log('[paginateReportLogs] Last entry in result set (should be newest):', 
             entries[entries.length - 1].timestamp, entries[entries.length - 1].status);
     }
 
@@ -448,31 +423,18 @@ static async paginateReportLogs(username, startDate = null, endDate = null, onPr
                 startDate = new Date(sinceDate.getTime() - bufferHours * 3600 * 1000);
             }
     
-            console.log('[getLatestEntry] Fetching range for latest:', {
-                start: startDate.toISOString(),
-                end: now.toISOString()
-            });
-    
             const entries = await this.paginateReportLogs(
                 username,
                 startDate,
                 now
             );
     
-            console.log('[getLatestEntry] Fetched', entries.length, 'entries');
-    
             if (entries.length === 0) {
-                console.log('[getLatestEntry] No entries — returning null');
                 return null;
             }
     
             // Trust server's order: last entry is newest
             const newest = entries[entries.length - 1];
-            console.log('[getLatestEntry] Newest entry:', {
-                timestamp: newest.timestamp,
-                status: newest.status,
-                dateObj: newest.dateObj.toISOString()
-            });
     
             return newest;
         } catch (err) {
