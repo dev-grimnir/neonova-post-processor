@@ -428,53 +428,57 @@ static async paginateReportLogs(username, startDate = null, endDate = null, onPr
     // Line 75: Return the raw, unsorted entries array.
     // Caller (e.g. getLatestEntry) can take entries[entries.length - 1] as newest.
     return entries;
-}
+    }
 
-    static async getLatestEntry(username) {
-    try {
-        const now = new Date();
-        const startDate = new Date(now.getTime() - (30 * 24 * 3600 * 1000));
-        const endDate = now;
-
-        console.log('[getLatestEntry] Fetching 30-day range for latest:', {
-            start: startDate.toISOString(),
-            end: endDate.toISOString()
-        });
-
-        const entries = await this.paginateReportLogs(
-            username,
-            startDate,
-            endDate
-        );
-
-        console.log('[getLatestEntry] Fetched', entries.length, 'entries over 30 days');
-
-        if (entries.length === 0) {
-            console.log('[getLatestEntry] No entries — returning null');
+    static async getLatestEntry(username, sinceDate = null) {
+        try {
+            const now = new Date();
+            let startDate = new Date(now.getTime() - (30 * 24 * 3600 * 1000));  // Default: 30 days
+    
+            if (sinceDate instanceof Date && !isNaN(sinceDate.getTime())) {
+                const elapsedHours = (now.getTime() - sinceDate.getTime()) / (3600 * 1000);
+                let bufferHours;
+                if (elapsedHours < 1) {
+                    bufferHours = 0.1667;  // ~10 min
+                } else if (elapsedHours < 24) {
+                    bufferHours = 1;
+                } else {
+                    bufferHours = 24;
+                }
+                startDate = new Date(sinceDate.getTime() - bufferHours * 3600 * 1000);
+            }
+    
+            console.log('[getLatestEntry] Fetching range for latest:', {
+                start: startDate.toISOString(),
+                end: now.toISOString()
+            });
+    
+            const entries = await this.paginateReportLogs(
+                username,
+                startDate,
+                now
+            );
+    
+            console.log('[getLatestEntry] Fetched', entries.length, 'entries');
+    
+            if (entries.length === 0) {
+                console.log('[getLatestEntry] No entries — returning null');
+                return null;
+            }
+    
+            // Trust server's order: last entry is newest
+            const newest = entries[entries.length - 1];
+            console.log('[getLatestEntry] Newest entry:', {
+                timestamp: newest.timestamp,
+                status: newest.status,
+                dateObj: newest.dateObj.toISOString()
+            });
+    
+            return newest;
+        } catch (err) {
+            console.error('[getLatestEntry] failed:', err);
             return null;
         }
-
-        // NO SORT — trust the server's natural order (last entry should be newest)
-        const newest = entries[entries.length - 1];
-        console.log('[getLatestEntry] *** FINAL NEWEST ENTRY (from last in array) ***', {
-            timestamp: newest.timestamp,
-            status: newest.status,
-            dateObj: newest.dateObj.toISOString(),
-            dateObjMs: newest.dateObj.getTime()
-        });
-
-        if (entries.length > 1) {
-            console.log('[getLatestEntry] Second last (for comparison):', {
-                timestamp: entries[entries.length - 2].timestamp,
-                status: entries[entries.length - 2].status,
-                dateObj: entries[entries.length - 2].dateObj.toISOString()
-            });
-        }
-
-        return newest;
-    } catch (err) {
-        console.error('[getLatestEntry] failed:', err);
-        return null;
     }
-}
+
 }
