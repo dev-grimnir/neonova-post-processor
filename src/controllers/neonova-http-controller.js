@@ -148,8 +148,8 @@ class NeonovaHTTPController {
     
         const rows = Array.from(table.querySelectorAll('tr'));
         const entries = [];
-    
-        rows.forEach(row => {
+
+        Array.from(table.rows).slice(1).forEach(row => {
             const cells = row.querySelectorAll('td');
             if (cells.length < 7) return;
     
