@@ -137,42 +137,57 @@ class NeonovaDashboardController {
 
     async updateCustomerStatus(customer) {
         try {
-            const latest = await NeonovaHTTPController.getLatestEntry(customer.radiusUsername);
+            // Compute sinceDate: prefer lastEventTime (event ms), fallback to lastUpdate
+            let sinceDate = null;
+            if (customer.lastEventTime !== null) {
+                sinceDate = new Date(customer.lastEventTime);
+            } else if (customer.lastUpdate) {
+                const lastUpdateDate = new Date(customer.lastUpdate);
+                if (!isNaN(lastUpdateDate.getTime())) {
+                    sinceDate = lastUpdateDate;
+                }
+            }
+    
+            const latest = await NeonovaHTTPController.getLatestEntry(customer.radiusUsername, sinceDate);
             if (!latest) {
-                customer.update('Unknown', 0);
+                // No new events: increment duration client-side using lastEventTime
+                if (customer.lastEventTime !== null) {
+                    const eventDate = new Date(customer.lastEventTime);
+                    if (!isNaN(eventDate.getTime())) {
+                        const durationSeconds = Math.floor((Date.now() - eventDate.getTime()) / 1000);
+                        if (durationSeconds >= 0) {
+                            customer.update(customer.status, durationSeconds);
+                        }
+                    }
+                }
                 return;
             }
     
-            // Use raw timestamp string, parse without forcing timezone — let browser handle local offset
-            const eventDate = new Date(latest.timestamp);  // Browser parses as local time
-    
-            if (isNaN(eventDate.getTime())) {
-                console.warn('[updateCustomerStatus] Invalid parsed date:', latest.timestamp);
-                customer.update('Error', 0);
-                return;
-            }
-    
-            const nowMs = Date.now();
+            const eventDate = latest.dateObj;  // Already a Date object
             const eventMs = eventDate.getTime();
-            let durationSeconds = Math.floor((nowMs - eventMs) / 1000);
-    
-            if (durationSeconds < 0) {
-                console.warn('[updateCustomerStatus] Negative duration (future event?):', durationSeconds, 'timestamp:', latest.timestamp);
-                durationSeconds = 0;
-            }
+            let durationSeconds = Math.floor((Date.now() - eventMs) / 1000);
+            if (durationSeconds < 0) durationSeconds = 0;
     
             const status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
     
-            console.log('[updateCustomerStatus] Final:', {
-                status,
-                durationSeconds,
-                rawTimestamp: latest.timestamp,
-                parsedEventTime: eventDate.toLocaleString(),
-                now: new Date(nowMs).toLocaleString()
-            });
+            // Check if truly new (timestamp > existing lastEventTime)
+            const isNew = customer.lastEventTime === null || eventMs > customer.lastEventTime;
     
-            customer.update(status, durationSeconds);
-            customer.lastEventTime = eventMs;  // Store raw ms for formatting
+            if (isNew) {
+                customer.update(status, durationSeconds);
+                customer.lastEventTime = eventMs;
+                console.log('[updateCustomerStatus] Updated with new event:', { status, durationSeconds, timestamp: latest.timestamp });
+            } else {
+                // No change: increment using existing lastEventTime
+                if (customer.lastEventTime !== null) {
+                    const existingEventDate = new Date(customer.lastEventTime);
+                    durationSeconds = Math.floor((Date.now() - existingEventDate.getTime()) / 1000);
+                    if (durationSeconds >= 0) {
+                        customer.update(customer.status, durationSeconds);
+                    }
+                }
+                console.log('[updateCustomerStatus] No new event; incremented duration');
+            }
         } catch (err) {
             console.error('[updateCustomerStatus] error:', err);
             customer.update('Error', 0);
