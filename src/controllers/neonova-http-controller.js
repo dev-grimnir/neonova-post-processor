@@ -397,7 +397,7 @@ static async paginateReportLogs(username, startDate = null, endDate = null, onPr
 
     // Line 71: Log the very last entry in the array (should be the newest if server returns newest-first).
     if (entries.length > 0) {
-            entries[entries.length - 1].timestamp, entries[entries.length - 1].status);
+        entries[entries.length - 1].timestamp, entries[entries.length - 1].status;
     }
 
     // Line 75: Return the raw, unsorted entries array.
