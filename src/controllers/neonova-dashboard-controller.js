@@ -6,6 +6,7 @@ class NeonovaDashboardController {
         this.pollInterval = null;  
         this.view = new NeonovaDashboardView(this);
         this.isPollingPaused = false;
+        this.startPolling();
     }
 
     startPolling() {
