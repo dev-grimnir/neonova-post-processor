@@ -192,16 +192,16 @@ class NeonovaDashboardView extends BaseNeonovaView{
                                 <input type="range" id="polling-interval-slider" min="1" max="60" value="${this.controller.pollingIntervalMinutes}" class="w-56 accent-emerald-500">
                                 <span id="interval-value" class="font-mono text-emerald-400 w-12">${this.controller.pollingIntervalMinutes} min</span>
                             </div>
-                            <button id="poll-toggle-btn" class="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition">
+                            <button id="poll-toggle-btn" class="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition">
                                 ${this.controller.isPollingPaused 
                                     ? '<i class="fas fa-play"></i> Resume Polling' 
                                     : '<i class="fas fa-pause"></i> Pause Polling'}
                             </button>
                         </div>
                         <div class="flex items-center gap-5 text-sm">
-                          <button class="refresh-btn px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition">
-                            <i class="fas fa-sync-alt"></i> Refresh Now
-                          </button>
+                            <button class="refresh-btn px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition">
+                                <i class="fas fa-sync-alt"></i> Refresh Now
+                            </button>
                             <div class="text-zinc-500 text-xs">
                                 Last update: <span class="font-mono text-zinc-400">${new Date().toLocaleTimeString()}</span>
                             </div>
