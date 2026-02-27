@@ -197,7 +197,7 @@ class NeonovaReportView extends BaseNeonovaView {
                     console.log('Rolling chart raw data received in report:', {
                         rollingLabels: ${JSON.stringify(this.metrics?.rollingLabels ?? [])},
                         rolling7Day: ${JSON.stringify(this.metrics?.rolling7Day ?? [])},
-                        labelsType: typeof ${JSON.stringify(this.metrics?.rollingLabels ?? [])},
+                        labelsLength: (${JSON.stringify(this.metrics?.rollingLabels ?? [])} || []).length,
                         dataLength: (${JSON.stringify(this.metrics?.rolling7Day ?? [])} || []).length
                     });
     
