@@ -8,6 +8,11 @@ class NeonovaAnalyzer {
      * @returns {Object} The computed metrics object
      */
     static computeMetrics(cleanedEntries) {
+        if (!Array.isArray(cleanedEntries)) {
+            console.error('[Report Error] cleanedEntries is not an array →', typeof cleanedEntries, cleanedEntries);
+            cleanedEntries = [];
+        }
+        
         if (!cleanedEntries || cleanedEntries.length === 0) {
             return {}; // or default metrics object
         }
