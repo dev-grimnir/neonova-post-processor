@@ -109,108 +109,107 @@ class NeonovaDashboardView extends BaseNeonovaView{
         this.controller.customers.forEach(c => {
             const isConnected = c.status === 'Connected';
             const durationText = c.getDurationStr();
-                        rows += `
-                            <tr class="hover:bg-zinc-800 transition group">
-                                <td class="friendly-name px-8 py-5 font-medium text-zinc-100" data-username="${c.radiusUsername}" data-editable="false">
-                                    ${c.friendlyName || c.radiusUsername}
-                                </td>
-                                <td class="px-8 py-5 font-mono text-zinc-400">${c.radiusUsername}</td>
-                                <td class="px-8 py-5">
-                                    <span class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-2xl text-xs font-semibold ${isConnected ? 'bg-emerald-500' : 'bg-red-500'} text-white">
-                                        <span class="w-2 h-2 rounded-full bg-current"></span>
-                                        ${c.status}
-                                    </span>
-                                </td>
-                                <td class="px-8 py-5 font-mono ${isConnected ? 'text-emerald-400' : 'text-red-400'}">
-                                    ${durationText}
-                                </td>
-                                <td class="px-8 py-5 text-right">
-                                    <button class="remove-btn text-zinc-400 hover:text-red-400 px-3 py-1 text-sm" data-username="${c.radiusUsername}">Remove</button>
-                                    <button class="report-btn ml-3 bg-emerald-600 hover:bg-emerald-500 px-5 py-2 rounded-2xl text-xs font-medium text-white" data-username="${c.radiusUsername}">Report</button>
-                                </td>
-                            </tr>
-                        `;
-            });
+            rows += `
+                <tr class="hover:bg-zinc-800 transition group">
+                    <td class="friendly-name px-6 py-4 font-medium text-zinc-100" data-username="${c.radiusUsername}" data-editable="false">
+                        ${c.friendlyName || c.radiusUsername}
+                    </td>
+                    <td class="px-6 py-4 font-mono text-zinc-400">${c.radiusUsername}</td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-2xl text-xs font-semibold ${isConnected ? 'bg-emerald-500' : 'bg-red-500'} text-white">
+                            <span class="w-2 h-2 rounded-full bg-current"></span>
+                            ${c.status}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 font-mono ${isConnected ? 'text-emerald-400' : 'text-red-400'}">
+                        ${durationText}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <button class="remove-btn text-zinc-400 hover:text-red-400 px-3 py-1 text-sm" data-username="${c.radiusUsername}">Remove</button>
+                        <button class="report-btn ml-3 bg-emerald-600 hover:bg-emerald-500 px-5 py-2 rounded-2xl text-xs font-medium text-white" data-username="${c.radiusUsername}">Report</button>
+                    </td>
+                </tr>
+            `;
+        });
 
-                            this.panel.innerHTML = `
-                                <div class="flex flex-col h-full">
-                                
-                                    <!-- HEADER -->
-                                    <div class="flex items-center justify-between px-8 py-5 border-b border-zinc-800 bg-zinc-900 shrink-0">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-8 h-8 bg-emerald-500 rounded-2xl flex items-center justify-center text-black font-bold text-xl">N</div>
-                                            <h1 class="text-2xl font-semibold" style="text-shadow: 0 0 15px #22ff88;">Neonova</h1>
-                                            <span class="text-emerald-400 text-sm font-mono tracking-widest">DASHBOARD</span>
-                                        </div>
-                                        <button class="minimize-btn px-6 py-2.5 text-sm font-medium bg-emerald-500 hover:bg-emerald-600 text-black rounded-2xl flex items-center gap-2 transition">
-                                            <i class="fas fa-minus"></i> Minimize
-                                        </button>
-                                    </div>
-                                
-                                    <!-- FIXED ADD BAR (never scrolls) -->
-                                    <div class="shrink-0 px-8 pt-8 pb-6 bg-zinc-900 border-b border-zinc-700">
-                                        <div class="bg-zinc-900 border border-zinc-700 rounded-2xl p-6">
-                                            <div class="grid grid-cols-12 gap-4">
-                                                <div class="col-span-5">
-                                                    <input id="radiusId" type="text" placeholder="RADIUS Username" 
-                                                           class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-5 py-4 focus:outline-none focus:border-emerald-500">
-                                                </div>
-                                                <div class="col-span-5">
-                                                    <input id="friendlyName" type="text" placeholder="Friendly Name (optional)" 
-                                                           class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-5 py-4 focus:outline-none focus:border-emerald-500">
-                                                </div>
-                                                <div class="col-span-2">
-                                                    <button class="add-btn w-full h-full bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl transition">ADD</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                
-                                    <!-- SCROLLABLE TABLE ONLY -->
-                                    <div class="flex-1 overflow-y-auto px-8 pb-8 neonova-scroll">
-                                        <div class="bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden">
-                                            <table class="w-full">
-                                                <thead class="sticky top-0 bg-zinc-900 z-10">
-                                                    <tr class="border-b border-zinc-800 text-xs uppercase tracking-widest text-zinc-500">
-                                                        <th class="px-8 py-5 text-left">Friendly Name</th>
-                                                        <th class="px-8 py-5 text-left">RADIUS Username</th>
-                                                        <th class="px-8 py-5 text-left">Status</th>
-                                                        <th class="px-8 py-5 text-left">Duration</th>
-                                                        <th class="px-8 py-5 text-right">Action</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>${rows}</tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                
-                                    <!-- BOTTOM BAR -->
-                                    <div class="bg-zinc-900 border border-zinc-700 rounded-3xl px-8 py-5 mx-8 mb-8 shrink-0">
-                                        <div class="flex items-center justify-between">
-                                            <div class="flex items-center gap-8">
-                                                <div class="flex items-center gap-4">
-                                                    <span class="text-xs uppercase tracking-widest text-zinc-500">Polling</span>
-                                                    <input type="range" id="polling-interval-slider" min="1" max="60" value="${this.controller.pollingIntervalMinutes}" class="w-64 accent-emerald-500">
-                                                    <span id="interval-value" class="font-mono text-emerald-400 w-12">${this.controller.pollingIntervalMinutes} min</span>
-                                                </div>
-                                                <button id="poll-toggle-btn" class="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition">
-                                                    ${this.controller.isPollingPaused 
-                                                        ? '<i class="fas fa-play"></i> Resume Polling' 
-                                                        : '<i class="fas fa-pause"></i> Pause Polling'}
-                                                </button>
-                                            </div>
-                                            <div class="flex items-center gap-6 text-sm">
-                                                <button class="refresh-btn flex items-center gap-2 text-emerald-400 hover:text-emerald-300">
-                                                    <i class="fas fa-sync-alt"></i> Refresh Now
-                                                </button>
-                                                <div class="text-zinc-500 text-xs">
-                                                    Last update: <span class="font-mono text-zinc-400">${new Date().toLocaleTimeString()}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
+        this.panel.innerHTML = `
+            <div class="flex flex-col h-full">
+                <!-- HEADER -->
+                <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-800 bg-zinc-900 shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-emerald-500 rounded-2xl flex items-center justify-center text-black font-bold text-xl">N</div>
+                        <h1 class="text-2xl font-semibold" style="text-shadow: 0 0 15px #22ff88;">Neonova</h1>
+                        <span class="text-emerald-400 text-sm font-mono tracking-widest">DASHBOARD</span>
+                    </div>
+                    <button class="minimize-btn px-5 py-2 text-sm font-medium bg-emerald-500 hover:bg-emerald-600 text-black rounded-2xl flex items-center gap-2 transition">
+                        <i class="fas fa-minus"></i> Minimize
+                    </button>
+                </div>
+
+                <!-- FIXED ADD BAR (never scrolls) -->
+                <div class="shrink-0 px-6 pt-6 pb-4 bg-zinc-900 border-b border-zinc-700">
+                    <div class="bg-zinc-900 border border-zinc-700 rounded-2xl p-4">
+                        <div class="grid grid-cols-12 gap-3">
+                            <div class="col-span-5">
+                                <input id="radiusId" type="text" placeholder="RADIUS Username" 
+                                       class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3 focus:outline-none focus:border-emerald-500">
+                            </div>
+                            <div class="col-span-5">
+                                <input id="friendlyName" type="text" placeholder="Friendly Name (optional)" 
+                                       class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3 focus:outline-none focus:border-emerald-500">
+                            </div>
+                            <div class="col-span-2">
+                                <button class="add-btn w-full h-full bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl transition">ADD</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SCROLLABLE TABLE ONLY -->
+                <div class="flex-1 overflow-y-auto px-6 pb-6 neonova-scroll">
+                    <div class="bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden">
+                        <table class="w-full">
+                            <thead class="sticky top-0 bg-zinc-900 z-10">
+                                <tr class="border-b border-zinc-800 text-xs uppercase tracking-widest text-zinc-500">
+                                    <th class="px-6 py-4 text-left">Friendly Name</th>
+                                    <th class="px-6 py-4 text-left">RADIUS Username</th>
+                                    <th class="px-6 py-4 text-left">Status</th>
+                                    <th class="px-6 py-4 text-left">Duration</th>
+                                    <th class="px-6 py-4 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- BOTTOM BAR -->
+                <div class="bg-zinc-900 border border-zinc-700 rounded-3xl px-6 py-4 mx-6 mb-6 shrink-0">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-6">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs uppercase tracking-widest text-zinc-500">Polling</span>
+                                <input type="range" id="polling-interval-slider" min="1" max="60" value="${this.controller.pollingIntervalMinutes}" class="w-56 accent-emerald-500">
+                                <span id="interval-value" class="font-mono text-emerald-400 w-12">${this.controller.pollingIntervalMinutes} min</span>
+                            </div>
+                            <button id="poll-toggle-btn" class="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition">
+                                ${this.controller.isPollingPaused 
+                                    ? '<i class="fas fa-play"></i> Resume Polling' 
+                                    : '<i class="fas fa-pause"></i> Pause Polling'}
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-5 text-sm">
+                            <button class="refresh-btn px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition">
+                                <i class="fas fa-sync-alt"></i> Refresh Now
+                            </button>
+                            <div class="text-zinc-500 text-xs">
+                                Last update: <span class="font-mono text-zinc-400">${new Date().toLocaleTimeString()}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
 
         // === RESTORE SCROLL POSITION AFTER REBUILD ===
         const newScrollContainer = this.panel.querySelector('.flex-1.overflow-y-auto');
@@ -218,7 +217,7 @@ class NeonovaDashboardView extends BaseNeonovaView{
             newScrollContainer.scrollTop = savedScrollTop;
         }
 
-                // === ALL LISTENERS ATTACHED DIRECTLY AFTER RENDER (no global listener) ===
+        // === ALL LISTENERS ATTACHED DIRECTLY AFTER RENDER (no global listener) ===
         
         // Remove buttons
         this.panel.querySelectorAll('.remove-btn').forEach(btn => {
