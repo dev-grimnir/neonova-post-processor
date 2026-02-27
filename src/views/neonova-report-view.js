@@ -215,10 +215,42 @@ class NeonovaReportView extends BaseNeonovaView {
                     new Chart(document.getElementById('rollingChart'), {
                         type: 'line',
                         data: {
-                            labels: ${JSON.stringify(this.metrics.rollingLabels || [])},
-                            datasets: [{ label: '7-Day Rolling Disconnects', data: ${JSON.stringify(this.metrics.rolling7Day || [])}, borderColor: accentHex, borderWidth: 3, tension: 0.3, fill: false }]
+                            labels: ${JSON.stringify(this.metrics?.rollingLabels ?? [])},
+                            datasets: [{
+                                label: '7-Day Rolling Disconnects',
+                                data: ${JSON.stringify(this.metrics?.rolling7Day ?? [])},
+                                borderColor: accentHex,
+                                backgroundColor: accentHex + '33',  // light fill for visibility if needed
+                                borderWidth: 3,
+                                tension: 0.1,                       // less curve = clearer on sparse data
+                                fill: false,
+                                pointRadius: 3,                     // visible points even on low values
+                                pointBackgroundColor: accentHex
+                            }]
                         },
-                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    suggestedMax: Math.max(10, ...(${JSON.stringify(this.metrics?.rolling7Day ?? [])})) * 1.1 || 10  // dynamic max
+                                },
+                                x: {
+                                    ticks: {
+                                        maxRotation: 45,
+                                        minRotation: 45
+                                    }
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'top',
+                                    labels: { color: '#e5e7eb' }
+                                }
+                            }
+                        }
                     });
     
                     const csvContent = \`${csvContent.replace(/`/g, '\\`').replace(/\n/g, '\\n')}\`;
