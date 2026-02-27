@@ -8,9 +8,9 @@ class NeonovaAnalyzer {
      * @returns {Object} The computed metrics object
      */
     static computeMetrics(cleanedEntries) {
-        if (!Array.isArray(input) && input?.cleanedEntries) {
-            cleanedEntries = input.cleanedEntries;
-            console.log(`[Report] Extracted ${cleanedEntries.length} cleaned entries from stats object`);
+        if (!Array.isArray(cleanedEntries) && cleanedEntries?.cleanedEntries) {
+            console.log(`[Report] Extracted ${cleanedEntries.cleanedEntries.length} cleaned entries from stats object`);
+            cleanedEntries = cleanedEntries.cleanedEntries;
         }
         
         if (!cleanedEntries || cleanedEntries.length === 0) {
