@@ -193,6 +193,13 @@ class NeonovaReportView extends BaseNeonovaView {
     
                 <script>
                     const accentHex = '${this.theme.accentColor}';
+
+                    console.log('Rolling chart raw data received in report:', {
+                        rollingLabels: ${JSON.stringify(this.metrics?.rollingLabels ?? [])},
+                        rolling7Day: ${JSON.stringify(this.metrics?.rolling7Day ?? [])},
+                        labelsType: typeof ${JSON.stringify(this.metrics?.rollingLabels ?? [])},
+                        dataLength: (${JSON.stringify(this.metrics?.rolling7Day ?? [])} || []).length
+                    });
     
                     new Chart(document.getElementById('hourlyChart'), {
                         type: 'bar',
