@@ -226,12 +226,13 @@ class NeonovaReportView extends BaseNeonovaView {
                                 label: '7-Day Rolling Disconnects',
                                 data: ${JSON.stringify(this.metrics?.rolling7Day ?? [])},
                                 borderColor: accentHex,
-                                backgroundColor: accentHex + '33',  // light fill for visibility if needed
                                 borderWidth: 3,
-                                tension: 0.1,                       // less curve = clearer on sparse data
+                                tension: 0.1,
                                 fill: false,
-                                pointRadius: 3,                     // visible points even on low values
-                                pointBackgroundColor: accentHex
+                                pointRadius: 4,                     // make points visible
+                                pointBackgroundColor: accentHex,
+                                pointBorderColor: '#fff',
+                                pointHoverRadius: 6
                             }]
                         },
                         options: {
@@ -240,7 +241,7 @@ class NeonovaReportView extends BaseNeonovaView {
                             scales: {
                                 y: {
                                     beginAtZero: true,
-                                    suggestedMax: Math.max(10, ...(${JSON.stringify(this.metrics?.rolling7Day ?? [])})) * 1.1 || 10  // dynamic max
+                                    suggestedMax: 50                    // hardcode a reasonable max for now (adjust later if needed)
                                 },
                                 x: {
                                     ticks: {
