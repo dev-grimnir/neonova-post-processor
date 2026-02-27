@@ -199,7 +199,7 @@ class NeonovaDashboardView extends BaseNeonovaView{
                             </button>
                         </div>
                         <div class="flex items-center gap-5 text-sm">
-                            <button class="refresh-btn px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition">
+                            <button class="refresh-btn px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition text-base">
                                 <i class="fas fa-sync-alt"></i> Refresh Now
                             </button>
                             <div class="text-zinc-500 text-xs">
