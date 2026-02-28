@@ -49,7 +49,9 @@ class NeonovaAnalyzer {
             reconnectMetrics,
             stabilityScore,
             counters,
-            entriesLength: normalized.entries.length
+            entriesLength: normalized.entries.length,
+            totalResultsCounted: normalized.totalProcessed || 0,
+            ignoredAsDuplicates: normalized.ignored || 0  
         });
     }
 
