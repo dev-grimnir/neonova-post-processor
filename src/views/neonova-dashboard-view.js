@@ -146,27 +146,6 @@ class NeonovaDashboardView extends BaseNeonovaView{
                     </button>
                 </div>
 
-                /*
-                <!-- FIXED ADD BAR (never scrolls) -->
-                <div class="shrink-0 px-6 pt-6 pb-4 bg-zinc-900 border-b border-zinc-700">
-                    <div class="bg-zinc-900 border border-zinc-700 rounded-2xl p-4">
-                        <div class="grid grid-cols-12 gap-3">
-                            <div class="col-span-5">
-                                <input id="radiusId" type="text" placeholder="RADIUS Username" 
-                                       class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3 focus:outline-none focus:border-emerald-500">
-                            </div>
-                            <div class="col-span-5">
-                                <input id="friendlyName" type="text" placeholder="Friendly Name (optional)" 
-                                       class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3 focus:outline-none focus:border-emerald-500">
-                            </div>
-                            <div class="col-span-2">
-                                <button class="add-btn w-full h-full bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl transition">ADD</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                */
-
                 <!-- SCROLLABLE TABLE ONLY -->
                 <div class="flex-1 overflow-y-auto px-6 pb-6 neonova-scroll">
                     <div class="bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden">
