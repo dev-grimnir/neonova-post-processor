@@ -239,23 +239,6 @@ class NeonovaDashboardView extends BaseNeonovaView{
             });
         });
 
-        // Add button
-        const addBtn = this.panel.querySelector('.add-btn');
-        if (addBtn) addBtn.addEventListener('click', () => {
-            const idInput = this.panel.querySelector('#radiusId');
-            const nameInput = this.panel.querySelector('#friendlyName');
-            if (!idInput) return;
-            setTimeout(() => {
-                const cleanedId = idInput.value.trim().replace(/\s+/g, '');
-                if (cleanedId) {
-                    this.controller.add(cleanedId, nameInput ? nameInput.value.trim() : '');
-                    idInput.value = '';
-                    if (nameInput) nameInput.value = '';
-                    idInput.focus();
-                }
-            }, 100);
-        });
-
         // Refresh button
         const refreshBtn = this.panel.querySelector('.refresh-btn');
         if (refreshBtn) refreshBtn.addEventListener('click', () => this.controller.poll());
