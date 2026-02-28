@@ -146,6 +146,7 @@ class NeonovaDashboardView extends BaseNeonovaView{
                     </button>
                 </div>
 
+                /*
                 <!-- FIXED ADD BAR (never scrolls) -->
                 <div class="shrink-0 px-6 pt-6 pb-4 bg-zinc-900 border-b border-zinc-700">
                     <div class="bg-zinc-900 border border-zinc-700 rounded-2xl p-4">
@@ -164,6 +165,7 @@ class NeonovaDashboardView extends BaseNeonovaView{
                         </div>
                     </div>
                 </div>
+                */
 
                 <!-- SCROLLABLE TABLE ONLY -->
                 <div class="flex-1 overflow-y-auto px-6 pb-6 neonova-scroll">
@@ -201,6 +203,10 @@ class NeonovaDashboardView extends BaseNeonovaView{
                         <div class="flex items-center gap-5 text-sm">
                             <button class="refresh-btn px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition text-base">
                                 <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                            <button id="add-customer-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-2xl font-medium text-sm flex items-center gap-2 transition-all">
+                                <span class="text-lg leading-none">+</span>
+                                Add Customer
                             </button>
                             <div class="text-zinc-500 text-xs">
                                 Last update: <span class="font-mono text-zinc-400">${new Date().toLocaleTimeString()}</span>
@@ -242,6 +248,15 @@ class NeonovaDashboardView extends BaseNeonovaView{
         // Refresh button
         const refreshBtn = this.panel.querySelector('.refresh-btn');
         if (refreshBtn) refreshBtn.addEventListener('click', () => this.controller.poll());
+
+        const addCustomerBtn = this.panel.querySelector('#add-customer-btn');
+        if (addCustomerBtn) {
+            addCustomerBtn.addEventListener('click', () => {
+                // Direct instantiation — dashboard controller knows nothing about the modal
+                const addController = new NeonovaAddCustomerController(this.controller);
+                addController.show();
+            });
+        }
 
         // Minimize button
         const minimizeBtn = this.panel.querySelector('.minimize-btn');
