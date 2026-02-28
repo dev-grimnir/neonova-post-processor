@@ -241,7 +241,6 @@ class NeonovaReportView extends BaseNeonovaView {
                             scales: {
                                 y: {
                                     beginAtZero: true,
-                                    suggestedMax: 50                    // hardcode a reasonable max for now (adjust later if needed)
                                 },
                                 x: {
                                     ticks: {
