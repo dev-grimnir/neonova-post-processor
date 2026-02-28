@@ -222,6 +222,7 @@ class NeonovaAnalyzer {
         metrics.rawMedianScore = rawMedianScore.toFixed(1);
         metrics.medianStabilityScore = Math.round(rawMedianScore);
 
+        const rolling = this.computeRolling7Day(disconnectDates, firstDate, lastDate);
         console.log('=== ANALYZER ROLLING DEBUG ===');
         console.log('raw rolling object from computeRolling7Day:', rolling);
         console.log('rolling7Day type:', typeof rolling.rolling7Day, '— isArray?', Array.isArray(rolling.rolling7Day));
@@ -264,7 +265,6 @@ class NeonovaAnalyzer {
                 : 'N/A',
             sessionBins: this.computeSessionBins(sessionSeconds),
             reconnectBins: this.computeReconnectBins(reconnectSeconds),
-            const rolling = this.computeRolling7Day(disconnectDates, firstDate, lastDate);
             rolling7Day: rolling.rolling7Day || [],
             rollingLabels: rolling.rollingLabels || [], 
             longDisconnects: longDisconnects,
