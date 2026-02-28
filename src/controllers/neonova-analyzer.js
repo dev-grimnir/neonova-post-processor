@@ -62,12 +62,24 @@ class NeonovaAnalyzer {
      * @returns {{entries: Array}} normalized object
      */
     static #normalizeInput(input) {
-        let entries = input;
-        if (!Array.isArray(input) && input?.cleanedEntries) {
-            console.log(`[Report] Extracted ${input.cleanedEntries.length} cleaned entries from stats object`);
-            entries = input.cleanedEntries;
+        if (!input) {
+            return { entries: [], totalProcessed: 0, ignored: 0 };
         }
-        return { entries: Array.isArray(entries) ? entries : [] };
+
+        if (Array.isArray(input)) {
+            return { entries: input, totalProcessed: input.length, ignored: 0 };
+        }
+
+        if (input.cleanedEntries !== undefined) {
+            console.log(`[Report] Extracted ${input.cleanedEntries.length} cleaned entries from stats object`);
+            return {
+                entries: input.cleanedEntries,
+                totalProcessed: input.totalProcessed || input.cleanedEntries.length,
+                ignored: input.ignored || 0
+            };
+        }
+
+        return { entries: [], totalProcessed: 0, ignored: 0 };
     }
 
     /**
