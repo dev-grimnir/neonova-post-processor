@@ -482,6 +482,40 @@ class NeonovaAnalyzer {
         return bins;
     }
 
-    // computeRolling7Day stays exactly as it was (already has [Rolling Debug] logs)
-    // ... (your existing computeRolling7Day method here — no changes needed)
+static #computeRolling7Day(disconnectDates, firstDate, lastDate) {
+        if (disconnectDates === undefined || disconnectDates === null) {
+            disconnectDates = [];
+        }
+    
+        disconnectDates.sort((a, b) => a - b);
+
+        console.log('[Rolling Debug] Input:', {
+            disconnectCount: disconnectDates.length,
+            firstDate: firstDate?.toISOString(),
+            lastDate: lastDate?.toISOString()
+        });
+    
+        const rolling7Day = [];
+        const rollingLabels = [];
+        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    
+        let currentDate = new Date(firstDate || Date.now());
+        currentDate.setHours(0,0,0,0);
+    
+        while (currentDate <= (lastDate || new Date())) {
+            const windowStart = new Date(currentDate - sevenDaysMs);
+            const count = disconnectDates.filter(d => d >= windowStart && d <= currentDate).length;
+            rolling7Day.push(count);
+            rollingLabels.push(currentDate.toLocaleDateString());
+            currentDate = new Date(currentDate.getTime() + 24*60*60*1000);
+        }
+
+        console.log('[Rolling Debug] Output sample:', {
+                labelsCount: rollingLabels.length,
+                dataSample: rolling7Day.slice(0, 5),  // first 5 values
+                labelsSample: rollingLabels.slice(0, 5)
+            });
+        
+        return { rolling7Day, rollingLabels };
+    }
 }
