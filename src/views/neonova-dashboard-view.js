@@ -183,7 +183,7 @@ class NeonovaDashboardView extends BaseNeonovaView{
                             <button class="refresh-btn px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition text-base">
                                 <i class="fas fa-sync-alt"></i> Refresh
                             </button>
-                            <button id="add-customer-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-2xl font-medium text-sm flex items-center gap-2 transition-all">
+                            <button id="add-customer-btn" class="refresh-btn bg-zinc-800 hover:bg-zinc-700 text-white px-5 py-2 rounded-2xl font-medium text-sm flex items-center gap-2 transition-all">
                                 <span class="text-lg leading-none">+</span>
                                 Add Customer
                             </button>
