@@ -1,6 +1,5 @@
 class NeonovaReportController {
     constructor() {
-        super();
         this.progressView = new NeonovaProgressView();
         this.collector = new NeonovaCollector();
         this.reportView = null  
