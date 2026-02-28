@@ -257,8 +257,9 @@ class NeonovaAnalyzer {
                 : 'N/A',
             sessionBins: this.computeSessionBins(sessionSeconds),
             reconnectBins: this.computeReconnectBins(reconnectSeconds),
-            rolling7Day: this.computeRolling7Day(disconnectDates, firstDate, lastDate),
-            rollingLabels: this.computeRolling7Day(disconnectDates, firstDate, lastDate).rollingLabels || [],  
+            const rolling = this.computeRolling7Day(disconnectDates, firstDate, lastDate);  // compute once
+            rolling7Day: rolling.rolling7Day || [],
+            rollingLabels: rolling.rollingLabels || [], 
             longDisconnects: longDisconnects,
             disconnects: disconnects,
             hourlyDisconnects: hourlyDisconnects,
