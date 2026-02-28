@@ -405,7 +405,11 @@ class NeonovaAnalyzer {
         const { peakMetrics, timeSinceLast, dailyAverages, uptimeMetrics, sessionMetrics, reconnectMetrics, stabilityScore, counters, entriesLength } = parts;
 
         // Rolling 7-day — compute ONCE and destructure (prevents the old object-vs-array bug)
-        const rolling = this.computeRolling7Day(counters.disconnectDates, uptimeMetrics.firstDate, uptimeMetrics.lastDate);
+        const rolling = NeonovaAnalyzer.computeRolling7Day(
+            counters.disconnectDates, 
+            uptimeMetrics.firstDate, 
+            uptimeMetrics.lastDate
+        );
 
         return {
             peakHourStr: peakMetrics.peakHourStr,
@@ -439,8 +443,8 @@ class NeonovaAnalyzer {
             monitoringPeriod: uptimeMetrics.firstDate && uptimeMetrics.lastDate 
                 ? `${uptimeMetrics.firstDate.toLocaleString()} to ${uptimeMetrics.lastDate.toLocaleString()}` 
                 : 'N/A',
-            sessionBins: this.computeSessionBins(counters.sessionSeconds),
-            reconnectBins: this.computeReconnectBins(counters.reconnectSeconds),
+            sessionBins: NeonovaAnalyzer.computeSessionBins(counters.sessionSeconds),
+            reconnectBins: NeonovaAnalyzer.computeReconnectBins(counters.reconnectSeconds),
             rolling7Day: rolling.rolling7Day || [],
             rollingLabels: rolling.rollingLabels || [],
             longDisconnects: counters.longDisconnects,
@@ -482,11 +486,18 @@ class NeonovaAnalyzer {
         return bins;
     }
 
-static #computeRolling7Day(disconnectDates, firstDate, lastDate) {
+    /**
+     * Computes a rolling 7-day disconnect count for the given date range.
+     * @param {Array<Date>} disconnectDates - Sorted array of disconnect dates
+     * @param {Date} firstDate - Start of the monitoring period
+     * @param {Date} lastDate - End of the monitoring period
+     * @returns {Object} Object containing rolling7Day (array of counts) and rollingLabels (array of date strings)
+     */
+    static computeRolling7Day(disconnectDates, firstDate, lastDate) {
         if (disconnectDates === undefined || disconnectDates === null) {
             disconnectDates = [];
         }
-    
+
         disconnectDates.sort((a, b) => a - b);
 
         console.log('[Rolling Debug] Input:', {
@@ -494,14 +505,14 @@ static #computeRolling7Day(disconnectDates, firstDate, lastDate) {
             firstDate: firstDate?.toISOString(),
             lastDate: lastDate?.toISOString()
         });
-    
+
         const rolling7Day = [];
         const rollingLabels = [];
         const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-    
+
         let currentDate = new Date(firstDate || Date.now());
         currentDate.setHours(0,0,0,0);
-    
+
         while (currentDate <= (lastDate || new Date())) {
             const windowStart = new Date(currentDate - sevenDaysMs);
             const count = disconnectDates.filter(d => d >= windowStart && d <= currentDate).length;
