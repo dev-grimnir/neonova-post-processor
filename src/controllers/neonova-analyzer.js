@@ -416,7 +416,17 @@ class NeonovaAnalyzer {
      * @returns {Object} final metrics object (identical to original)
      */
     static #assembleReturnObject(parts) {
-        const { peakMetrics, timeSinceLast, dailyAverages, uptimeMetrics, sessionMetrics, reconnectMetrics, stabilityScore, counters, entriesLength } = parts;
+        const { peakMetrics, 
+                timeSinceLast, 
+                dailyAverages, 
+                uptimeMetrics, 
+                sessionMetrics, 
+                reconnectMetrics, 
+                stabilityScore, 
+                counters, 
+                entriesLength,
+                totalResultsCounted,  
+                ignoredAsDuplicates} = parts;
 
         // Rolling 7-day — compute ONCE and destructure (prevents the old object-vs-array bug)
         const rolling = NeonovaAnalyzer.computeRolling7Day(
