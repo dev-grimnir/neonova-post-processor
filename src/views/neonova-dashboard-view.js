@@ -164,7 +164,7 @@ class NeonovaDashboardView extends BaseNeonovaView{
                     </div>
                 </div>
 
-                <!-- BOTTOM BAR -->
+                <!-- BOTTOM CONTROLS - ALL BUTTONS NOW IDENTICAL -->
                 <div class="bg-zinc-900 border border-zinc-700 rounded-3xl px-6 py-4 mx-6 mb-6 shrink-0">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-6">
@@ -173,27 +173,30 @@ class NeonovaDashboardView extends BaseNeonovaView{
                                 <input type="range" id="polling-interval-slider" min="1" max="60" value="${this.controller.pollingIntervalMinutes}" class="w-56 accent-emerald-500">
                                 <span id="interval-value" class="font-mono text-emerald-400 w-12">${this.controller.pollingIntervalMinutes} min</span>
                             </div>
-                            <button id="poll-toggle-btn" class="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition">
+                            <button id="poll-toggle-btn" 
+                                    class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-2xl text-sm transition-all flex items-center gap-2">
                                 ${this.controller.isPollingPaused 
                                     ? '<i class="fas fa-play"></i> Resume Polling' 
                                     : '<i class="fas fa-pause"></i> Pause Polling'}
                             </button>
                         </div>
-                        <div class="flex items-center gap-5 text-sm">
-                            <button class="refresh-btn px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition text-base">
+                        
+                        <div class="flex items-center gap-4">
+                            <button class="refresh-btn px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-2xl text-sm transition-all flex items-center gap-2">
                                 <i class="fas fa-sync-alt"></i> Refresh
                             </button>
                             <button id="add-customer-btn" 
-                                    class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-2xl font-medium flex items-center gap-2 text-sm transition-all">
-                                <span class="text-lg leading-none">+</span>
+                                    class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-2xl text-sm transition-all">
                                 Add Customer
                             </button>
-                            <div class="text-zinc-500 text-xs">
-                                Last update: <span class="font-mono text-zinc-400">${new Date().toLocaleTimeString()}</span>
-                            </div>
+                        </div>
+                
+                        <div class="text-zinc-500 text-xs">
+                            Last update: <span class="font-mono text-zinc-400">${new Date().toLocaleTimeString()}</span>
                         </div>
                     </div>
                 </div>
+                
             </div>
         `;
 
