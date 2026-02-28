@@ -257,7 +257,15 @@ class NeonovaAnalyzer {
                 : 'N/A',
             sessionBins: this.computeSessionBins(sessionSeconds),
             reconnectBins: this.computeReconnectBins(reconnectSeconds),
-            const rolling = this.computeRolling7Day(disconnectDates, firstDate, lastDate);  // compute once
+            const rolling = this.computeRolling7Day(disconnectDates, firstDate, lastDate);
+
+            console.log('=== ANALYZER ROLLING DEBUG ===');
+            console.log('raw rolling object from computeRolling7Day:', rolling);
+            console.log('rolling7Day type:', typeof rolling.rolling7Day, '— isArray?', Array.isArray(rolling.rolling7Day));
+            console.log('rolling7Day length:', rolling.rolling7Day?.length);
+            console.log('rolling7Day sample (first 10):', rolling.rolling7Day?.slice(0,10));
+            console.log('rollingLabels sample:', rolling.rollingLabels?.slice(0,5));
+        
             rolling7Day: rolling.rolling7Day || [],
             rollingLabels: rolling.rollingLabels || [], 
             longDisconnects: longDisconnects,
