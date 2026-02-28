@@ -103,8 +103,12 @@ class NeonovaAddCustomerView extends BaseNeonovaView {
 
     hide() {
         if (!this.modal) return;
+
         const overlay = this.modal.querySelector('#add-customer-modal');
+        const box = this.modal.querySelector('.transform');
+
         if (overlay) overlay.classList.remove('opacity-100');
+        if (box) box.classList.add('-translate-y-12');   // ← reverse slide up
 
         setTimeout(() => {
             if (this.modal && this.modal.parentNode) {
