@@ -478,8 +478,8 @@ class NeonovaAnalyzer {
             dailyDisconnects: dailyAverages.sortedDailyDisconnects,
             dailyLabels: dailyAverages.sortedKeys,
             hourlyCount: counters.hourlyCount,
-            totalResultsCounted: normalized.totalProcessed || 0,
-            ignoredAsDuplicates: normalized.ignored || 0
+            totalResultsCounted: totalResultsCounted || 0,
+            ignoredAsDuplicates: ignoredAsDuplicates || 0
         };
     }
 
