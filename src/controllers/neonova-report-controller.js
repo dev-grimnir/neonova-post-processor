@@ -1,4 +1,4 @@
-class NeonovaReportController extends BaseNeonovaController {
+class NeonovaReportController {
     constructor() {
         super();
         this.progressView = new NeonovaProgressView();
