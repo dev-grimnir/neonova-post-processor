@@ -21,7 +21,7 @@ Here's a real generated report from a 30-day monitoring period (interactive vers
 </p>
 
 Or view the raw HTML directly:  
-[View raw sample report](https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/screenshots/example-radius-report.html)
+[View raw sample report](https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/refs/heads/dev/screenshots/example_radius_report.html)
 
 ## ✨ Current Features
 
