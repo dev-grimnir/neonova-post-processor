@@ -6,7 +6,7 @@ A powerful Tampermonkey userscript suite for NeoNova admins (`admin.neonova.net`
 
 Built for field techs and small ISPs who need better visibility into modem flaps, uptime, and reconnect behavior.
 
-![Dashboard Screenshot](https://github.com/dev-grimnir/neonova-post-processor/dev/screenshots/dashboard-ss.png)
+![Dashboard Screenshot](https://github.com/dev-grimnir/neonova-post-processor/screenshots/dashboard-ss.png)
 *(Live dashboard with polling controls, status table, and Add Customer modal)*
 
 ## ✨ Current Features
