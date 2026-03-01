@@ -12,7 +12,7 @@ Tampermonkey userscript that scrapes NeoNova admin logs (admin.neonova.net), pro
 
 Designed for DSL/field techs and small ISP admins dealing with frequent modem flaps and wanting better visibility into subscriber reliability.
 
-![Dashboard Screenshot](https://github.com/dev-grimnir/neonova-post-processor/screenshots/dashboard-ss.png)
+![Dashboard Screenshot](https://github.com/dev-grimnir/neonova-post-processor/blob/dev/screenshots/dashboard-ss.png)
 
 ## Features
 - Handles logs that start with Stop events
