@@ -138,54 +138,65 @@ class NeonovaDashboardController {
 
     async updateCustomerStatus(customer) {
         try {
-            // Compute sinceDate: prefer lastEventTime (event ms), fallback to lastUpdate
+            // Compute the "normal" sinceDate (last known event or last poll)
             let sinceDate = null;
             if (customer.lastEventTime !== null) {
                 sinceDate = new Date(customer.lastEventTime);
             } else if (customer.lastUpdate) {
                 const lastUpdateDate = new Date(customer.lastUpdate);
-                if (!isNaN(lastUpdateDate.getTime())) {
-                    sinceDate = lastUpdateDate;
-                }
+                if (!isNaN(lastUpdateDate.getTime())) sinceDate = lastUpdateDate;
             }
-    
-            const latest = await NeonovaHTTPController.getLatestEntry(customer.radiusUsername, sinceDate);
+
+            // === PROGRESSIVE LOOKBACK FOR NEW CUSTOMERS ===
+            const lookbackPeriods = [
+                sinceDate,                    // Normal narrow poll
+                new Date(Date.now() - 24 * 60 * 60 * 1000),   // Last 24 hours
+                new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Last 7 days
+                new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days (full bootstrap)
+            ];
+
+            let latest = null;
+            for (const trySince of lookbackPeriods) {
+                latest = await NeonovaHTTPController.getLatestEntry(customer.radiusUsername, trySince);
+                if (latest) break;   // Found something — stop widening
+            }
+
+            // No logs at all (even after 30 days) → safe default
             if (!latest) {
-                // No new events: increment duration client-side using lastEventTime
-                if (customer.lastEventTime !== null) {
+                if (customer.status === undefined || customer.status === null) {
+                    customer.update('Unknown', 0);
+                    console.log(`[updateCustomerStatus] New customer initialized: ${customer.radiusUsername} → Unknown`);
+                } else if (customer.lastEventTime !== null) {
+                    // Existing customer with no new events — increment duration
                     const eventDate = new Date(customer.lastEventTime);
                     if (!isNaN(eventDate.getTime())) {
                         const durationSeconds = Math.floor((Date.now() - eventDate.getTime()) / 1000);
-                        if (durationSeconds >= 0) {
-                            customer.update(customer.status, durationSeconds);
-                        }
+                        if (durationSeconds >= 0) customer.update(customer.status, durationSeconds);
                     }
                 }
                 return;
             }
-    
-            const eventDate = latest.dateObj;  // Already a Date object
+
+            // We have a real event (from any lookback)
+            const eventDate = latest.dateObj;
             const eventMs = eventDate.getTime();
             let durationSeconds = Math.floor((Date.now() - eventMs) / 1000);
             if (durationSeconds < 0) durationSeconds = 0;
-    
+
             const status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
-    
-            // Check if truly new (timestamp > existing lastEventTime)
+
             const isNew = customer.lastEventTime === null || eventMs > customer.lastEventTime;
-    
+
             if (isNew) {
                 customer.update(status, durationSeconds);
                 customer.lastEventTime = eventMs;
-                console.log('[updateCustomerStatus] Updated with new event:', { status, durationSeconds, timestamp: latest.timestamp });
+                console.log(`[updateCustomerStatus] Updated with new event:`, { status, durationSeconds, timestamp: latest.timestamp });
             } else {
-                // No change: increment using existing lastEventTime
+                // No change — just keep incrementing duration
                 if (customer.lastEventTime !== null) {
                     const existingEventDate = new Date(customer.lastEventTime);
                     durationSeconds = Math.floor((Date.now() - existingEventDate.getTime()) / 1000);
-                    if (durationSeconds >= 0) {
-                        customer.update(customer.status, durationSeconds);
-                    }
+                    if (durationSeconds >= 0) customer.update(customer.status, durationSeconds);
                 }
                 console.log('[updateCustomerStatus] No new event; incremented duration');
             }
