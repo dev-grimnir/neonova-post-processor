@@ -146,25 +146,6 @@ class NeonovaDashboardView extends BaseNeonovaView{
                     </button>
                 </div>
 
-                <!-- FIXED ADD BAR (never scrolls) -->
-                <div class="shrink-0 px-6 pt-6 pb-4 bg-zinc-900 border-b border-zinc-700">
-                    <div class="bg-zinc-900 border border-zinc-700 rounded-2xl p-4">
-                        <div class="grid grid-cols-12 gap-3">
-                            <div class="col-span-5">
-                                <input id="radiusId" type="text" placeholder="RADIUS Username" 
-                                       class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3 focus:outline-none focus:border-emerald-500">
-                            </div>
-                            <div class="col-span-5">
-                                <input id="friendlyName" type="text" placeholder="Friendly Name (optional)" 
-                                       class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3 focus:outline-none focus:border-emerald-500">
-                            </div>
-                            <div class="col-span-2">
-                                <button class="add-btn w-full h-full bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl transition">ADD</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- SCROLLABLE TABLE ONLY -->
                 <div class="flex-1 overflow-y-auto px-6 pb-6 neonova-scroll">
                     <div class="bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden">
@@ -183,7 +164,7 @@ class NeonovaDashboardView extends BaseNeonovaView{
                     </div>
                 </div>
 
-                <!-- BOTTOM BAR -->
+                <!-- BOTTOM CONTROLS - ALL BUTTONS NOW IDENTICAL -->
                 <div class="bg-zinc-900 border border-zinc-700 rounded-3xl px-6 py-4 mx-6 mb-6 shrink-0">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-6">
@@ -192,22 +173,30 @@ class NeonovaDashboardView extends BaseNeonovaView{
                                 <input type="range" id="polling-interval-slider" min="1" max="60" value="${this.controller.pollingIntervalMinutes}" class="w-56 accent-emerald-500">
                                 <span id="interval-value" class="font-mono text-emerald-400 w-12">${this.controller.pollingIntervalMinutes} min</span>
                             </div>
-                            <button id="poll-toggle-btn" class="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition">
+                            <button id="poll-toggle-btn" 
+                                    class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-2xl text-sm transition-all flex items-center gap-2">
                                 ${this.controller.isPollingPaused 
                                     ? '<i class="fas fa-play"></i> Resume Polling' 
                                     : '<i class="fas fa-pause"></i> Pause Polling'}
                             </button>
                         </div>
-                        <div class="flex items-center gap-5 text-sm">
-                            <button class="refresh-btn px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-2xl flex items-center gap-2 transition text-base">
+                        
+                        <div class="flex items-center gap-4">
+                            <button class="refresh-btn px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-2xl text-sm transition-all flex items-center gap-2">
                                 <i class="fas fa-sync-alt"></i> Refresh
                             </button>
-                            <div class="text-zinc-500 text-xs">
-                                Last update: <span class="font-mono text-zinc-400">${new Date().toLocaleTimeString()}</span>
-                            </div>
+                            <button id="add-customer-btn" 
+                                    class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-2xl text-sm transition-all">
+                                Add Customer
+                            </button>
+                        </div>
+                
+                        <div class="text-zinc-500 text-xs">
+                            Last update: <span class="font-mono text-zinc-400">${new Date().toLocaleTimeString()}</span>
                         </div>
                     </div>
                 </div>
+                
             </div>
         `;
 
@@ -239,26 +228,18 @@ class NeonovaDashboardView extends BaseNeonovaView{
             });
         });
 
-        // Add button
-        const addBtn = this.panel.querySelector('.add-btn');
-        if (addBtn) addBtn.addEventListener('click', () => {
-            const idInput = this.panel.querySelector('#radiusId');
-            const nameInput = this.panel.querySelector('#friendlyName');
-            if (!idInput) return;
-            setTimeout(() => {
-                const cleanedId = idInput.value.trim().replace(/\s+/g, '');
-                if (cleanedId) {
-                    this.controller.add(cleanedId, nameInput ? nameInput.value.trim() : '');
-                    idInput.value = '';
-                    if (nameInput) nameInput.value = '';
-                    idInput.focus();
-                }
-            }, 100);
-        });
-
         // Refresh button
         const refreshBtn = this.panel.querySelector('.refresh-btn');
         if (refreshBtn) refreshBtn.addEventListener('click', () => this.controller.poll());
+
+        const addCustomerBtn = this.panel.querySelector('#add-customer-btn');
+        if (addCustomerBtn) {
+            addCustomerBtn.addEventListener('click', () => {
+                // Direct instantiation — dashboard controller knows nothing about the modal
+                const addController = new NeonovaAddCustomerController(this.controller);
+                addController.show();
+            });
+        }
 
         // Minimize button
         const minimizeBtn = this.panel.querySelector('.minimize-btn');

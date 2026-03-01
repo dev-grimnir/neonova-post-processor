@@ -99,7 +99,7 @@ class NeonovaReportView extends BaseNeonovaView {
                 <div class="max-w-6xl mx-auto px-8 py-12">
                     <h1 class="text-5xl font-bold text-white text-center tracking-tight">RADIUS Connection Report</h1>
                     <p class="text-${this.accent}-400 text-center text-2xl mt-2 mb-3">${this.friendlyName || this.username}</p>
-                    <p class="text-center text-zinc-400 mb-16">Monitoring period: ${this.metrics.monitoringPeriod || 'N/A'} (${Number(this.metrics.daysSpanned || 0).toFixed(1)} days)</p>
+                    <p class="text-center text-zinc-400 mb-16">Monitoring period: ${this.metrics.monitoringPeriod || 'N/A'} (${Number(this.metrics.daysSpanned || 0).toFixed(1)} days, ${this.metrics.totalResultsCounted || 0} total results counted, ${this.metrics.ignoredAsDuplicates || 0} ignored as duplicates)</p>
     
                     <!-- Stability Scores -->
                     <div class="grid grid-cols-2 gap-8 mb-16">
@@ -241,7 +241,6 @@ class NeonovaReportView extends BaseNeonovaView {
                             scales: {
                                 y: {
                                     beginAtZero: true,
-                                    suggestedMax: 50                    // hardcode a reasonable max for now (adjust later if needed)
                                 },
                                 x: {
                                     ticks: {

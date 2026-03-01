@@ -49,7 +49,9 @@ class NeonovaAnalyzer {
             reconnectMetrics,
             stabilityScore,
             counters,
-            entriesLength: normalized.entries.length
+            entriesLength: normalized.entries.length,
+            totalResultsCounted: normalized.totalProcessed || 0,
+            ignoredAsDuplicates: normalized.ignored || 0  
         });
     }
 
@@ -62,12 +64,24 @@ class NeonovaAnalyzer {
      * @returns {{entries: Array}} normalized object
      */
     static #normalizeInput(input) {
-        let entries = input;
-        if (!Array.isArray(input) && input?.cleanedEntries) {
-            console.log(`[Report] Extracted ${input.cleanedEntries.length} cleaned entries from stats object`);
-            entries = input.cleanedEntries;
+        if (!input) {
+            return { entries: [], totalProcessed: 0, ignored: 0 };
         }
-        return { entries: Array.isArray(entries) ? entries : [] };
+
+        if (Array.isArray(input)) {
+            return { entries: input, totalProcessed: input.length, ignored: 0 };
+        }
+
+        if (input.cleanedEntries !== undefined) {
+            console.log(`[Report] Extracted ${input.cleanedEntries.length} cleaned entries from stats object`);
+            return {
+                entries: input.cleanedEntries,
+                totalProcessed: input.totalProcessed || input.cleanedEntries.length,
+                ignored: input.ignored || 0
+            };
+        }
+
+        return { entries: [], totalProcessed: 0, ignored: 0 };
     }
 
     /**
@@ -402,7 +416,17 @@ class NeonovaAnalyzer {
      * @returns {Object} final metrics object (identical to original)
      */
     static #assembleReturnObject(parts) {
-        const { peakMetrics, timeSinceLast, dailyAverages, uptimeMetrics, sessionMetrics, reconnectMetrics, stabilityScore, counters, entriesLength } = parts;
+        const { peakMetrics, 
+                timeSinceLast, 
+                dailyAverages, 
+                uptimeMetrics, 
+                sessionMetrics, 
+                reconnectMetrics, 
+                stabilityScore, 
+                counters, 
+                entriesLength,
+                totalResultsCounted,  
+                ignoredAsDuplicates} = parts;
 
         // Rolling 7-day — compute ONCE and destructure (prevents the old object-vs-array bug)
         const rolling = NeonovaAnalyzer.computeRolling7Day(
@@ -453,7 +477,9 @@ class NeonovaAnalyzer {
             cleanedEntriesLength: entriesLength,
             dailyDisconnects: dailyAverages.sortedDailyDisconnects,
             dailyLabels: dailyAverages.sortedKeys,
-            hourlyCount: counters.hourlyCount
+            hourlyCount: counters.hourlyCount,
+            totalResultsCounted: totalResultsCounted || 0,
+            ignoredAsDuplicates: ignoredAsDuplicates || 0
         };
     }
 
