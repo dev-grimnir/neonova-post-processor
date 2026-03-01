@@ -14,7 +14,7 @@ Built for field techs and small ISPs who need better visibility into modem flaps
 Here's a real generated report from an 11 month (max length) monitoring period (interactive version with live charts, tooltips, and export buttons):
 
 <p align="center">
-  <a href="<a href="https://dev-grimnir.github.io/neonova-post-processor/screenshots/example_radius_report.html" target="_blank">
+  <a href="https://dev-grimnir.github.io/neonova-post-processor/screenshots/example_radius_report.html" target="_blank">
     <br>
     <strong>Open Interactive Sample Report →</strong>
   </a>
