@@ -38,8 +38,7 @@ class NeonovaReportOrderController {
         } else if (timeframe === '3_DAYS') {
             startDate = new Date();
             startDate.setDate(startDate.getDate() - 3);
-        }   
-        else if (timeframe === '7_DAYS') {
+        } else if (timeframe === '7_DAYS') {
             startDate = new Date();
             startDate.setDate(startDate.getDate() - 7);
         } else if (timeframe === '30_DAYS') {
