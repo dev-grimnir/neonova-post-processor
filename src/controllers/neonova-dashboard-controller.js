@@ -48,8 +48,6 @@ class NeonovaDashboardController {
         this.view?.render();  // Refresh UI to show pause/resume state
     }
 
-        }
-
     async add(radiusUsername, friendlyName) {
         if (!radiusUsername?.trim()) {
             return;
