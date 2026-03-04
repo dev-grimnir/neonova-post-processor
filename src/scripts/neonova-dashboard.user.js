@@ -31,13 +31,15 @@
 (function() {
     'use strict';
 
-    // Only run in the MAIN content frame (same as report script)
+    // Only run in the MAIN content frame
     if (window.name !== 'MAIN') {
         return;
     }
 
-    const dashboardController = new NeonovaDashboardController();
-    dashboardController.initAsync();
-
+    (async () => {
+        const dashboardController = new NeonovaDashboardController();
+        await dashboardController.initAsync();   
+        console.log('✅ Neonova Dashboard with encryption loaded');
+    })();
 })();
 
