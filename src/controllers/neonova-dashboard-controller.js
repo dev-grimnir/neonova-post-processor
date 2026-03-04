@@ -70,18 +70,27 @@ class NeonovaDashboardController {
     }
 
     async initAsync() {
+        if (this._initialized) {
+            console.log("initAsync already ran — skipping duplicate call");
+            return;
+        }
+        this._initialized = true;
+    
+        console.log("=== initAsync starting ===");
+    
         let rememberedKey = await loadRememberedMasterKey();
         if (rememberedKey) {
             masterKey = { key: rememberedKey, salt: null };
-            console.log("🔑 Using remembered encryption key");
+            console.log("🔑 Remembered key LOADED successfully");
         } else {
             this.passphraseController = new NeonovaPassphraseController(this);
-            await this.passphraseController.show();   // blocks until user submits or cancels
+            await this.passphraseController.show();   // only one modal
         }
     
         this.customers = await this.load();
         this.startPolling();
         if (this.view) this.view.render();
+        console.log("✅ Neonova Dashboard with encryption loaded");
     }
 
     async load() {
