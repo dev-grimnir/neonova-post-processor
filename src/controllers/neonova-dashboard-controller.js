@@ -3,6 +3,7 @@ class NeonovaDashboardController {
         this.masterPassphrase = null;   
         this.customers = [];   
         this._initialized = false;
+        this.passphraseController = null;
         this.initAsync();               
         this.pollingIntervalMinutes = 5;
         this.pollIntervalMs = 5 * 60 * 1000;
@@ -69,34 +70,19 @@ class NeonovaDashboardController {
     }
 
     async initAsync() {
-    console.log('=== initAsync called ===');
-    if (this._initialized) {
-        console.log('initAsync already ran — skipping duplicate call');
-        return;
-    }
-    this._initialized = true;
-
-    let rememberedKey = await loadRememberedMasterKey();
-    if (rememberedKey) {
-        masterKey = { key: rememberedKey, salt: null };
-        console.log('🔑 Remembered key LOADED successfully');
-    } else {
-        const passphrase = prompt("Enter encryption passphrase for customer list:\n(Leave blank to disable)", "");
-        if (!passphrase?.trim()) {
-            console.warn("🔓 Encryption disabled – plaintext mode");
+        let rememberedKey = await loadRememberedMasterKey();
+        if (rememberedKey) {
+            masterKey = { key: rememberedKey, salt: null };
+            console.log("🔑 Using remembered encryption key");
         } else {
-            const { key, salt } = await deriveKey(passphrase);
-            masterKey = { key, salt };
-            await saveRememberedMasterKey(key);
-            console.log('🔑 New key created and SAVED to localStorage');
+            this.passphraseController = new NeonovaPassphraseController(this);
+            await this.passphraseController.show();   // blocks until user submits or cancels
         }
+    
+        this.customers = await this.load();
+        this.startPolling();
+        if (this.view) this.view.render();
     }
-
-    this.customers = await this.load();
-    this.startPolling();
-    if (this.view) this.view.render();
-    console.log('initAsync finished — customers length:', this.customers.length);
-}
 
     async load() {
         const data = localStorage.getItem('novaDashboardCustomers');
