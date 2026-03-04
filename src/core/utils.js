@@ -21,3 +21,23 @@ function getSessionBonus(metricMin) {
     const metricHours = parseFloat(metricMin) / 60 || 0;
     return 25 * Math.tanh(metricHours / 6);
 }
+
+// === ENCRYPTION UTILITIES (pure Web Crypto – zero extra deps) ===
+let masterKey = null;   // lives in RAM only, cleared on unload
+
+async function deriveKey(passphrase) {
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+        "raw", enc.encode(passphrase), { name: "PBKDF2" }, false, ["deriveBits", "deriveKey"]
+    );
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    return {
+        key: await crypto.subtle.deriveKey(
+            { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+            keyMaterial,
+            { name: "AES-GCM", length: 256 },
+            false,
+            ["encrypt", "decrypt"]
+        ),
+        salt
+    };
