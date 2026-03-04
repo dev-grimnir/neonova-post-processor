@@ -3,7 +3,6 @@ class NeonovaDashboardController {
         this.masterPassphrase = null;   
         this.customers = [];   
         this._initialized = false;
-        this.passphraseController = null;
         this.initAsync();               
         this.pollingIntervalMinutes = 5;
         this.pollIntervalMs = 5 * 60 * 1000;
