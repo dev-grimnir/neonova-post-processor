@@ -49,85 +49,73 @@ class NeonovaDashboardController {
     }
 
     async initAsync() {
-    // Try remembered key first (no prompt)
-    let rememberedKey = await loadRememberedMasterKey();
-    if (rememberedKey) {
-        masterKey = { key: rememberedKey, salt: null };
-        console.log("🔑 Using remembered encryption key");
-    } else {
-        const passphrase = prompt("Enter encryption passphrase for customer list:\n(Leave blank to disable)", "");
-        if (!passphrase?.trim()) {
-            console.warn("🔓 Encryption disabled – plaintext mode");
-            this.masterPassphrase = null;
+        // Try remembered key first (no prompt after first use)
+        let rememberedKey = await loadRememberedMasterKey();
+        if (rememberedKey) {
+            masterKey = { key: rememberedKey, salt: null };
+            console.log("🔑 Using remembered encryption key");
         } else {
-            const { key, salt } = await deriveKey(passphrase);
-            masterKey = { key, salt };
-            await saveRememberedMasterKey(key);   // ← saved ONCE forever
-            console.log("🔑 Encryption key remembered on this device");
+            const passphrase = prompt("Enter encryption passphrase for customer list:\n(Leave blank to disable)", "");
+            if (!passphrase?.trim()) {
+                console.warn("🔓 Encryption disabled – plaintext mode");
+            } else {
+                const { key, salt } = await deriveKey(passphrase);
+                masterKey = { key, salt };
+                await saveRememberedMasterKey(key);
+                console.log("🔑 Encryption key remembered on this device");
+            }
+        }
+    
+        this.customers = await this.load();
+        this.startPolling();
+        if (this.view) this.view.render();
+    }
+    
+    async load() {
+        const data = localStorage.getItem('novaDashboardCustomers');
+        if (!data) return [];
+    
+        if (!masterKey) {
+            // plaintext fallback
+            try { 
+                return JSON.parse(data).map(c => Object.assign(new Customer('', ''), c)); 
+            } catch { 
+                return []; 
+            }
+        }
+    
+        try {
+            const jsonStr = await decryptData(data);
+            return JSON.parse(jsonStr).map(c => Object.assign(new Customer('', ''), c));
+        } catch (e) {
+            console.error("Decryption failed", e);
+            alert("Decryption failed. Clearing everything.");
+            localStorage.removeItem('novaDashboardCustomers');
+            localStorage.removeItem('novaDashboardMasterKey');
+            return [];
         }
     }
-
-    this.customers = await this.load();
-    this.startPolling();
-    if (this.view) this.view.render();
-}
-
-async load() {
-    const data = localStorage.getItem('novaDashboardCustomers');
-    if (!data) return [];
-
-    if (!masterKey) {
-        // plaintext fallback
-        try { return JSON.parse(data).map(c => Object.assign(new Customer('', ''), c)); }
-        catch { return []; }
-    }
-
-    try {
-        const jsonStr = await decryptData(data);
-        return JSON.parse(jsonStr).map(c => Object.assign(new Customer('', ''), c));
-    } catch (e) {
-        console.error("Decryption failed");
-        alert("Decryption failed. Clearing everything.");
-        localStorage.removeItem('novaDashboardCustomers');
-        localStorage.removeItem('novaDashboardMasterKey');
-        return [];
-    }
-}
-
+    
     async save() {
         if (!this.customers.length) {
             localStorage.removeItem('novaDashboardCustomers');
             return;
         }
-        const jsonStr = JSON.stringify(this.customers); // uses Customer.toJSON() automatically
-        if (!this.masterPassphrase) {
+        const jsonStr = JSON.stringify(this.customers);
+    
+        if (!masterKey) {
+            // plaintext fallback
             localStorage.setItem('novaDashboardCustomers', jsonStr);
             return;
         }
+    
         try {
-            const encrypted = await encryptData(jsonStr, this.masterPassphrase);
+            const encrypted = await encryptData(jsonStr);
             localStorage.setItem('novaDashboardCustomers', encrypted);
         } catch (e) {
             console.error("Encryption failed", e);
         }
     }
-
-    /*
-    load() {
-        const data = localStorage.getItem('novaDashboardCustomers');
-        if (!data) return [];
-        try {
-            return JSON.parse(data).map(c => Object.assign(new Customer('', ''), c));
-        } catch {
-            return [];
-        }
-    }
-    
-
-    save() {
-        localStorage.setItem('novaDashboardCustomers', JSON.stringify(this.customers));
-    }
-    */
 
     async add(radiusUsername, friendlyName) {
         if (!radiusUsername?.trim()) {
