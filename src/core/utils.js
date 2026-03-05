@@ -48,6 +48,7 @@ async function encryptData(plainText) {
     const enc = new TextEncoder();
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, masterKey.key, enc.encode(plainText));
+    var salt = masterKey.salt || new Uint8Array(16);
     const combined = new Uint8Array(28 + encrypted.byteLength);
     combined.set(masterKey.salt, 0);
     combined.set(iv, 16);
