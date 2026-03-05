@@ -120,17 +120,17 @@ class NeonovaDashboardController {
     }
     
     async save() {
-        console.log('save called — length:', this.customers ? this.customers.length : 'undefined');
+        console.log('save called — length:', this.customers?.length ?? 'undefined');
     
         if (!this.customers) {
-            console.log('save: undefined — SKIPPING (protecting data)');
+            console.log('save: customers undefined — SKIPPING');
             return;
         }
     
-        // Now always save, even if empty array — this persists intentional removes/clears
         const jsonStr = JSON.stringify(this.customers);
+        console.log('save: json length', jsonStr.length);
     
-        if (!masterKey) {
+        if (!masterKey?.key) {
             localStorage.setItem('novaDashboardCustomers', jsonStr);
             console.log('save: plaintext saved');
             return;
@@ -138,10 +138,13 @@ class NeonovaDashboardController {
     
         try {
             const encrypted = await encryptData(jsonStr);
+            if (!encrypted) throw new Error('encryptData returned null/empty');
             localStorage.setItem('novaDashboardCustomers', encrypted);
-            console.log('save: ENCRYPTED and saved successfully');
+            console.log('save: ENCRYPTED and saved OK, length:', encrypted.length);
         } catch (e) {
-            console.error("Encryption failed", e);
+            console.error("Encryption failed — NOT saving to avoid corruption", e);
+            // Optionally alert user or show toast: "Save failed — encryption error. Data not persisted."
+            // Do NOT clear anything here
         }
     }
 
