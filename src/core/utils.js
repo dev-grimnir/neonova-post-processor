@@ -44,29 +44,30 @@ async function deriveKey(passphrase) {
 }
 
 async function encryptData(plainText) {
-    if (!masterKey) throw new Error("No master key");
+    if (!masterKey?.key) throw new Error("No master key");
+
     const enc = new TextEncoder();
     const iv = crypto.getRandomValues(new Uint8Array(12));
-    const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, masterKey.key, enc.encode(plainText));
 
-    const encryptedBuffer = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv },
-    derivedKey,
-    new TextEncoder().encode(plainText)
+    // Use the imported raw key directly
+    const encrypted = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv },
+        masterKey.key,
+        enc.encode(plainText)
     );
-    console.log('[encrypt] encryptedBuffer byteLength:', encryptedBuffer.byteLength);
-    
-    if (!encryptedBuffer || encryptedBuffer.byteLength === 0) {
-        throw new Error('subtle.encrypt returned invalid/empty buffer');
-    }
-    
-    var salt = masterKey.salt || new Uint8Array(16);
-    const combined = new Uint8Array(28 + encrypted.byteLength);
-    combined.set(masterKey.salt, 0);
-    combined.set(iv, 16);
-    combined.set(new Uint8Array(encrypted), 28);
+
+    const encryptedBytes = new Uint8Array(encrypted);
+
+    // Format: iv (12 bytes) + ciphertext + tag (appended by subtle.encrypt)
+    const combined = new Uint8Array(iv.length + encryptedBytes.length);
+    combined.set(iv, 0);
+    combined.set(encryptedBytes, iv.length);
+
+    // Base64 for storage (classic btoa/binary string method)
     let binary = '';
-    for (let i = 0; i < combined.byteLength; i++) binary += String.fromCharCode(combined[i]);
+    for (let i = 0; i < combined.byteLength; i++) {
+        binary += String.fromCharCode(combined[i]);
+    }
     return btoa(binary);
 }
 
