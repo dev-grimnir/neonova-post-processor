@@ -10,7 +10,6 @@ class NeonovaDashboardController {
         this.pollInterval = null;  
         this.view = new NeonovaDashboardView(this);
         this.isPollingPaused = false;
-        this.startPolling();
     }
 
     startPolling() {
@@ -147,6 +146,14 @@ class NeonovaDashboardController {
     }
 
     async poll() {
+        if (!this._initialized) {
+            return;
+        }
+
+        if (!this.customers?.length) {
+            return;
+        }
+
         if (this.isPollingPaused) {
             return;
         }
