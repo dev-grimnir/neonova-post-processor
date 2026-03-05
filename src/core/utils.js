@@ -72,13 +72,33 @@ async function encryptData(plainText) {
 }
 
 async function decryptData(encryptedB64) {
-    if (!masterKey) throw new Error("No master key");
-    const combined = Uint8Array.from(atob(encryptedB64), c => c.charCodeAt(0));
-    const salt = combined.slice(0, 16);
-    const iv = combined.slice(16, 28);
-    const ciphertext = combined.slice(28);
-    const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, masterKey.key, ciphertext);
-    return new TextDecoder().decode(decrypted);
+    if (!masterKey?.key) throw new Error("No master key");
+
+    let combined;
+    try {
+        combined = Uint8Array.from(atob(encryptedB64), c => c.charCodeAt(0));
+    } catch (e) {
+        throw new Error("Invalid base64 encoding: " + e.message);
+    }
+
+    if (combined.length < 28) {  // 12 iv + at least 16 for tag + some data
+        throw new Error("Stored data too short for AES-GCM");
+    }
+
+    const iv = combined.slice(0, 12);
+    const ciphertext = combined.slice(12);
+
+    try {
+        const decrypted = await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv },
+            masterKey.key,
+            ciphertext
+        );
+        return new TextDecoder().decode(decrypted);
+    } catch (e) {
+        console.error("subtle.decrypt failed:", e.name, e.message);
+        throw e;  // Let caller handle (e.g., alert and clear)
+    }
 }
 
 // === REMEMBERED KEY (persistent, zero prompts after first use) ===
