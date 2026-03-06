@@ -82,29 +82,24 @@ class NeonovaDashboardController {
      */
     async initAsync() {
         if (this._initialized) {
-            console.log("[NeonovaDashboardController.initAsync] already ran — skipping duplicate call");
             return;
         }
         this._initialized = true;
-    
-        console.log("[NeonovaDashboardController.initAsync] === initAsync starting ===");
     
         // Delegate ALL key setup to the static crypto controller
         await NeonovaCryptoController.initMasterKey();
     
         // If this is the very first time (no remembered key), show passphrase modal exactly once
         if (!NeonovaCryptoController.hasMasterKey) {
-            console.log("[NeonovaDashboardController.initAsync] no remembered key — showing passphrase modal");
             this.passphraseController = new NeonovaPassphraseController(this);
             await this.passphraseController.show();   // only one modal
         } else {
-            console.log("[NeonovaDashboardController.initAsync] remembered key present — skipping passphrase prompt");
+            
         }
     
         this.customers = await this.load();
         this.startPolling();
         if (this.view) this.view.render();
-        console.log("[NeonovaDashboardController.initAsync] ✅ Neonova Dashboard with encryption loaded");
     }
 
     /**
@@ -116,17 +111,14 @@ class NeonovaDashboardController {
     async load() {
         const data = localStorage.getItem('novaDashboardCustomers');
         if (!data) {
-            console.log("[NeonovaDashboardController.load] no data in localStorage");
             return [];
         }
     
         try {
             const jsonStr = await NeonovaCryptoController.decryptData(data);
             const customers = JSON.parse(jsonStr).map(c => Object.assign(new Customer('', ''), c));
-            console.log(`[NeonovaDashboardController.load] DECRYPTED successfully — ${customers.length} customers`);
             return customers;
         } catch (e) {
-            console.error("[NeonovaDashboardController.load] Decryption failed", e);
             alert("Decryption failed. Clearing everything.");
             localStorage.removeItem('novaDashboardCustomers');
             return [];
@@ -140,10 +132,8 @@ class NeonovaDashboardController {
      * Keeps the "protect empty" guard you already liked.
      */
     async save() {
-        console.log(`[NeonovaDashboardController.save] save called — length: ${this.customers ? this.customers.length : 'undefined'}`);
-    
         if (!this.customers) {
-            console.log("[NeonovaDashboardController.save] customers undefined — SKIPPING (protecting data)");
+            //customers undefined — SKIPPING (protecting data)
             return;
         }
     
@@ -152,7 +142,7 @@ class NeonovaDashboardController {
         try {
             const encrypted = await NeonovaCryptoController.encryptData(jsonStr);
             localStorage.setItem('novaDashboardCustomers', encrypted);
-            console.log("[NeonovaDashboardController.save] ENCRYPTED and saved successfully");
+            //ENCRYPTED and saved successfully
         } catch (e) {
             console.error("[NeonovaDashboardController.save] Encryption failed", e);
         }
@@ -280,7 +270,6 @@ class NeonovaDashboardController {
             if (isNew) {
                 customer.update(status, durationSeconds);
                 customer.lastEventTime = eventMs;
-                console.log(`[updateCustomerStatus] Updated with new event:`, { status, durationSeconds, timestamp: latest.timestamp });
             } else {
                 // No change — just keep incrementing duration
                 if (customer.lastEventTime !== null) {
@@ -288,7 +277,7 @@ class NeonovaDashboardController {
                     durationSeconds = Math.floor((Date.now() - existingEventDate.getTime()) / 1000);
                     if (durationSeconds >= 0) customer.update(customer.status, durationSeconds);
                 }
-                console.log('[updateCustomerStatus] No new event; incremented duration');
+                //No new event; incremented duration
             }
         } catch (err) {
             console.error('[updateCustomerStatus] error:', err);
