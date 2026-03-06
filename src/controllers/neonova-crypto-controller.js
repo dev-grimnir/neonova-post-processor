@@ -138,6 +138,21 @@ class NeonovaCryptoController {
         console.log("[NeonovaCryptoController.initMasterKey] 🔑 No remembered key — waiting for passphrase from NeonovaPassphraseController");
     }
 
+        /**
+     * Simple getter so NeonovaDashboardController knows whether it needs to show the passphrase modal.
+     * 
+     * Called from:
+     *   - NeonovaDashboardController.initAsync()
+     * 
+     * This is the ONLY place outside this class that checks if a key exists.
+     * Keeps the masterKey truly private while still allowing the dashboard to make the right decision.
+     */
+    static get hasMasterKey() {
+        const hasKey = !!this.#masterKey;
+        console.log(`[NeonovaCryptoController.hasMasterKey] returning: ${hasKey}`);
+        return hasKey;
+    }
+
     /**
      * Encrypts a plaintext string (normally the JSON of this.customers) using AES-256-GCM.
      * 
