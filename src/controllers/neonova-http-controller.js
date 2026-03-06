@@ -363,6 +363,10 @@ static async paginateReportLogs(username, startDate = null, endDate = null, onPr
         // Uses private #extractTotalEntries — if it fails, total stays null.
         if (page === 1 && total === null) {
             total = this.#extractTotalEntries(doc);
+
+            if (total === null) {
+                return null;
+            }
         }
 
         // Line 50: Parse the rows from this page into LogEntry objects.
