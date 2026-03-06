@@ -427,7 +427,7 @@ static async paginateReportLogs(username, startDate = null, endDate = null, onPr
                 now
             );
     
-            if (entries.length === null) {
+            if (entries === null) {
                 return null;
             }
     
