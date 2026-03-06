@@ -3,13 +3,13 @@ class NeonovaDashboardController {
         this.masterPassphrase = null;   
         this.customers = [];   
         this._initialized = false;
+        this.passphraseController = null;
         this.initAsync();               
         this.pollingIntervalMinutes = 5;
         this.pollIntervalMs = 5 * 60 * 1000;
         this.pollInterval = null;  
         this.view = new NeonovaDashboardView(this);
         this.isPollingPaused = false;
-        this.startPolling();
     }
 
     startPolling() {
@@ -69,34 +69,28 @@ class NeonovaDashboardController {
     }
 
     async initAsync() {
-    console.log('=== initAsync called ===');
-    if (this._initialized) {
-        console.log('initAsync already ran — skipping duplicate call');
-        return;
-    }
-    this._initialized = true;
-
-    let rememberedKey = await loadRememberedMasterKey();
-    if (rememberedKey) {
-        masterKey = { key: rememberedKey, salt: null };
-        console.log('🔑 Remembered key LOADED successfully');
-    } else {
-        const passphrase = prompt("Enter encryption passphrase for customer list:\n(Leave blank to disable)", "");
-        if (!passphrase?.trim()) {
-            console.warn("🔓 Encryption disabled – plaintext mode");
-        } else {
-            const { key, salt } = await deriveKey(passphrase);
-            masterKey = { key, salt };
-            await saveRememberedMasterKey(key);
-            console.log('🔑 New key created and SAVED to localStorage');
+        if (this._initialized) {
+            console.log("initAsync already ran — skipping duplicate call");
+            return;
         }
+        this._initialized = true;
+    
+        console.log("=== initAsync starting ===");
+    
+        let rememberedKey = await loadRememberedMasterKey();
+        if (rememberedKey) {
+            masterKey = { key: rememberedKey, salt: null };
+            console.log("🔑 Remembered key LOADED successfully");
+        } else {
+            this.passphraseController = new NeonovaPassphraseController(this);
+            await this.passphraseController.show();   // only one modal
+        }
+    
+        this.customers = await this.load();
+        this.startPolling();
+        if (this.view) this.view.render();
+        console.log("✅ Neonova Dashboard with encryption loaded");
     }
-
-    this.customers = await this.load();
-    this.startPolling();
-    if (this.view) this.view.render();
-    console.log('initAsync finished — customers length:', this.customers.length);
-}
 
     async load() {
         const data = localStorage.getItem('novaDashboardCustomers');
@@ -126,16 +120,17 @@ class NeonovaDashboardController {
     }
     
     async save() {
-        console.log('save called — length:', this.customers ? this.customers.length : 'undefined');
+        console.log('save called — length:', this.customers?.length ?? 'undefined');
     
-        if (!this.customers || this.customers.length === 0) {
-            console.log('save: length 0 — SKIPPING remove (protecting data)');
+        if (!this.customers) {
+            console.log('save: customers undefined — SKIPPING');
             return;
         }
     
         const jsonStr = JSON.stringify(this.customers);
+        console.log('save: json length', jsonStr.length);
     
-        if (!masterKey) {
+        if (!masterKey?.key) {
             localStorage.setItem('novaDashboardCustomers', jsonStr);
             console.log('save: plaintext saved');
             return;
@@ -143,14 +138,25 @@ class NeonovaDashboardController {
     
         try {
             const encrypted = await encryptData(jsonStr);
+            if (!encrypted) throw new Error('encryptData returned null/empty');
             localStorage.setItem('novaDashboardCustomers', encrypted);
-            console.log('save: ENCRYPTED and saved successfully');
+            console.log('save: ENCRYPTED and saved OK, length:', encrypted.length);
         } catch (e) {
-            console.error("Encryption failed", e);
+            console.error("Encryption failed — NOT saving to avoid corruption", e);
+            // Optionally alert user or show toast: "Save failed — encryption error. Data not persisted."
+            // Do NOT clear anything here
         }
     }
 
     async poll() {
+        if (!this._initialized) {
+            return;
+        }
+
+        if (!this.customers?.length) {
+            return;
+        }
+
         if (this.isPollingPaused) {
             return;
         }

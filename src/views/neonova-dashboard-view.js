@@ -32,11 +32,12 @@ class NeonovaDashboardView extends BaseNeonovaView{
             justify-content: space-between;
             gap: 24px;
         `;
+
         this.minimizeBar.innerHTML = `
             <div class="flex items-center gap-4">
-                <div class="w-8 h-8 bg-emerald-500 rounded-2xl flex items-center justify-center text-black font-bold text-xl">N</div>
-                <h1 class="text-xl font-semibold" style="text-shadow: 0 0 15px #22ff88;">Neonova</h1>
-                <span class="text-emerald-400 text-xs font-mono tracking-widest">DASHBOARD</span>
+                <img src="https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/assets/nova-subscriber-logo.png" 
+                     alt="Nova Subscriber" 
+                     class="h-9 w-auto">
             </div>
             <button class="px-8 py-2.5 text-sm font-medium bg-emerald-500 hover:bg-emerald-600 text-black rounded-2xl flex items-center gap-2 transition shadow-md">
                 <i class="fas fa-chevron-up"></i> Maximize
@@ -137,15 +138,14 @@ class NeonovaDashboardView extends BaseNeonovaView{
                 <!-- HEADER -->
                 <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-800 bg-zinc-900 shrink-0">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 bg-emerald-500 rounded-2xl flex items-center justify-center text-black font-bold text-xl">N</div>
-                        <h1 class="text-2xl font-semibold" style="text-shadow: 0 0 15px #22ff88;">Neonova</h1>
-                        <span class="text-emerald-400 text-sm font-mono tracking-widest">DASHBOARD</span>
+                        <img src="https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/assets/nova-subscriber-logo.png" 
+                             alt="Nova Subscriber" 
+                             class="h-11 w-auto">
                     </div>
                     <button class="minimize-btn px-5 py-2 text-sm font-medium bg-emerald-500 hover:bg-emerald-600 text-black rounded-2xl flex items-center gap-2 transition">
                         <i class="fas fa-minus"></i> Minimize
                     </button>
                 </div>
-
                 <!-- SCROLLABLE TABLE ONLY -->
                 <div class="flex-1 overflow-y-auto px-6 pb-6 neonova-scroll">
                     <div class="bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden">
