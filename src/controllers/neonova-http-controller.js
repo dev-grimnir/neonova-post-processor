@@ -263,13 +263,7 @@ class NeonovaHTTPController {
         return `https://admin.neonova.net/rat/index.php?${params.toString()}`;
     }
 
-    /**
-     * paginateReportLogs — now with:
-     *   • Total count scraped from first page and passed to onProgress as 3rd arg
-     *   • AbortSignal support for cancellation (pass as final argument)
-     *   • Returns the entries array directly
-     *   • Backward-compatible: old onProgress handlers ignoring the 3rd arg still work
-     */
+
 /**
  * paginateReportLogs — now with:
  *   • Total count scraped from first page and passed to onProgress as 3rd arg
