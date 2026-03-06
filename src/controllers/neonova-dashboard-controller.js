@@ -244,9 +244,10 @@ class NeonovaDashboardController {
             // No logs at all (even after 30 days) → safe default
             console.log("NeonovaDashboardController.getLatestEntry() -> latest = " + latest);
             if (!latest) {
-                if (customer.status === undefined || customer.status === null) {
+                if (latest === null) {
                     customer.update('Account Not Found', 0);
                     console.log(`[updateCustomerStatus] No logs found after 11-month lookback — set to 'Account Not Found': ${customer.radiusUsername}`);
+                    return;
                 } else if (customer.lastEventTime !== null) {
                     // Existing customer with no new events — increment duration
                     const eventDate = new Date(customer.lastEventTime);
