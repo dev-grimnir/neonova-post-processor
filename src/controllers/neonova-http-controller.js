@@ -136,7 +136,6 @@ class NeonovaHTTPController {
             }
         }
     
-        console.warn('[#extractTotalEntries] No total found in header text. Snippet:', headerText.substring(0, 500));
         return null;
     }
 
@@ -365,6 +364,7 @@ static async paginateReportLogs(username, startDate = null, endDate = null, onPr
             total = this.#extractTotalEntries(doc);
 
             if (total === null) {
+                console.warn('[NeonovaHTTPController] user not found.  Returning null');
                 return null;
             }
         }
