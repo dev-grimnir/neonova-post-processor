@@ -16,9 +16,9 @@ class NeonovaPassphraseView extends BaseNeonovaView {
                   <h2 class="text-2xl font-bold text-emerald-400 mb-2">Encryption Passphrase</h2>
                   <p class="text-zinc-400 text-sm mb-6">This encrypts your customer list on disk.</p>
                   
-                  <input type="password" id="passphrase-input" 
+                  <input type="text" id="passphrase-input" 
                          class="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-5 py-4 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 mb-6"
-                         placeholder="Enter passphrase..." autocomplete="new-password">
+                         placeholder="Enter encryption key..." autocomplete="new-password">
             
                   <label class="flex items-center gap-3 text-zinc-400 text-sm mb-8 cursor-pointer">
                     <input type="checkbox" id="remember-cb" class="w-5 h-5 accent-emerald-500" checked>
@@ -58,8 +58,14 @@ class NeonovaPassphraseView extends BaseNeonovaView {
         const remember = this.modal.querySelector('#remember-cb');
         const overlay = this.modal.querySelector('#passphrase-modal');
 
+        input.addEventListener('input', () => {
+            const realValue = input.value;
+            input.value = '*'.repeat(realValue.length);
+            input.dataset.realValue = realValue;
+        });
+
         const submit = () => {
-            const passphrase = input.value.trim();
+            const passphrase = input.dataset.realValue || input.value.trim();
             this.controller.handleSubmit(passphrase, remember.checked);
         };
 
