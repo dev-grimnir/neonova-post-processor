@@ -41,19 +41,48 @@ class NeonovaDashboardController {
         }
     }
 
+    /**
+     * Toggles the polling state between paused and active.
+     * 
+     * Behavior:
+     *   - Flips the isPollingPaused flag.
+     *   - Always clears any existing poll interval.
+     *   - If resuming (not paused): Runs an immediate poll, then restarts the scheduled interval.
+     *   - Always saves the new paused state to localStorage for persistence across reloads.
+     *   - Refreshes the UI to reflect the new state (e.g., update button icons/text).
+     * 
+     * This ensures consistent state saving (paused or not) — original only saved on resume.
+     */
     togglePolling() {
+        // Flip the paused flag
         this.isPollingPaused = !this.isPollingPaused;
+        console.log(`[NeonovaDashboardController.togglePolling] Toggled polling paused: ${this.isPollingPaused}`);
+
+        // Always clear the existing interval to avoid duplicates
         if (this.pollInterval) {
             clearInterval(this.pollInterval);
+            this.pollInterval = null;
+            console.log("[NeonovaDashboardController.togglePolling] Cleared existing poll interval");
         }
+
+        // If resuming polling (not paused anymore)
         if (!this.isPollingPaused) {
-            this.poll();  // Immediate update on resume
+            // Run an immediate poll to get fresh data
+            this.poll();
+            console.log("[NeonovaDashboardController.togglePolling] Ran immediate poll on resume");
+
+            // Restart the scheduled interval
             this.pollInterval = setInterval(() => this.poll(), this.pollIntervalMs);
-            // Save the paused state
-            localStorage.setItem('novaPollingPaused', this.isPollingPaused.toString());
-            console.log(`[NeonovaDashboardController.togglePolling] Saved polling paused: ${this.isPollingPaused}`);
+            console.log(`[NeonovaDashboardController.togglePolling] Restarted poll interval: every ${this.pollingIntervalMinutes} minutes`);
         }
-        this.view?.render();  // Refresh UI to show pause/resume state
+
+        // Always persist the new paused state to localStorage (fix for original inconsistency)
+        localStorage.setItem('novaPollingPaused', this.isPollingPaused.toString());
+        console.log(`[NeonovaDashboardController.togglePolling] Saved polling paused state: ${this.isPollingPaused}`);
+
+        // Refresh the view to update UI elements (e.g., pause/resume button icon or text)
+        this.view?.render();
+        console.log("[NeonovaDashboardController.togglePolling] UI refreshed to reflect new polling state");
     }
 
     async add(radiusUsername, friendlyName) {
