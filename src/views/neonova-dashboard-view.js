@@ -423,49 +423,68 @@ class NeonovaDashboardView extends BaseNeonovaView{
         overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
     }
 
+    /**
+     * Toggles minimize/expand with smooth slide animation (no overshoot/snap).
+     * 
+     * Fixes the "slides too far then snaps" bug by:
+     *   - Using viewport-aware positions: slide down to just above minimized bar height (no overshoot).
+     *   - Matching animation duration (500ms) with setTimeout cleanup.
+     *   - Adding ease-in-out for controlled motion (starts/ends slow).
+     *   - Resetting transform after animation to prevent jank on next toggle.
+     * 
+     * No new CSS — keeps your existing transform + duration-300 (bumped to 500ms for smoother feel).
+     */
     toggleMinimize() {
         const dash = this.panel;
         const bar = this.minimizeBar;
         this.isMinimized = !this.isMinimized;
 
+        // Set transition for smooth slide (ease-in-out prevents bounce/overshoot)
+        dash.style.transition = 'transform 500ms ease-in-out';
+
         if (this.isMinimized) {
-            // SLIDE DOWN → off screen
-            dash.style.transform = 'translate(-50%, 100%)';
+            // Minimize: slide down to final position (viewport bottom minus bar height)
+            const viewportHeight = window.innerHeight;
+            const barHeight = bar.offsetHeight;  // dynamic bar height (in case it changes)
+            const slideDistance = viewportHeight - barHeight;  // exact distance to slide (no overshoot)
+            dash.style.transform = `translate(-50%, ${slideDistance}px)`;
             
-            // Hide panel + show minimize bar AFTER animation finishes
+            // Hide panel + show bar AFTER animation completes (no snap)
             setTimeout(() => {
                 dash.style.display = 'none';
                 bar.style.display = 'flex';
-            }, 480);   // slightly longer than transition
+                // Reset transform for next maximize (prevents jank)
+                dash.style.transition = '';
+                dash.style.transform = 'translateX(-50%)';
+            }, 500);  // match duration
+            console.log("[NeonovaDashboardView.toggleMinimize] Minimized — slid down to exact position");
         } else {
-            // MAXIMIZE → SLIDE UP
+            // Maximize: slide up from bottom to center
             bar.style.display = 'none';
             dash.style.display = 'block';
             
-            // Start completely off-screen at the bottom
-            dash.style.transform = 'translate(-50%, 100%)';
+            // Start at minimized position (bottom, just above bar)
+            const viewportHeight = window.innerHeight;
+            const barHeight = bar.offsetHeight;
+            const startPosition = viewportHeight - barHeight;
+            dash.style.transform = `translate(-50%, ${startPosition}px)`;
             
-            // Force browser to read the new transform (reflow)
+            // Force reflow for animation start
             void dash.offsetWidth;
             
-            // Now animate it up to centered position
+            // Animate up to centered position
             requestAnimationFrame(() => {
                 dash.style.transform = 'translateX(-50%)';
             });
+            
+            // Reset transition after animation (no jank on next toggle)
+            setTimeout(() => {
+                dash.style.transition = '';
+            }, 500);
+            console.log("[NeonovaDashboardView.toggleMinimize] Maximized — slid up from bottom");
         }
     }
 
     update() { this.render(); }
-/*
-    updatePollingButton() {
-        const btn = this.panel.querySelector('#poll-toggle-btn');
-        if (!btn) return;
-    
-        if (this.controller.isPollingPaused) {
-            btn.innerHTML = '<i class="fas fa-play"></i> Resume Polling';
-        } else {
-            btn.innerHTML = '<i class="fas fa-pause"></i> Pause Polling';
-            }
-    }
-    */
+
 }
