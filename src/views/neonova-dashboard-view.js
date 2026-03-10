@@ -440,51 +440,40 @@ class NeonovaDashboardView extends BaseNeonovaView{
         const dash = this.panel;
         const bar = this.minimizeBar;
         this.isMinimized = !this.isMinimized;
-    
-        // Set transition for smooth slide (your existing cubic-bezier for controlled motion)
-        dash.style.transition = 'transform 500ms cubic-bezier(0.32, 0.72, 0, 1)';
-    
+
         if (this.isMinimized) {
-            // Minimize: slide down to bottom as one piece
-            dash.style.position = 'fixed';  // Ensure fixed
-            dash.style.bottom = '0';  // Align to bottom for precise stop
-            dash.style.transform = 'translateY(0)';  // Start at center
+            // Minimize: slide down but stop at viewport bottom (no going too far)
+            const viewportHeight = window.innerHeight;
+            const dashTop = 60;  // Your top: 60px from style
+            const dashHeight = dash.offsetHeight;
+            const maxSlide = viewportHeight - dashTop;  // Max Y to keep within viewport
+            dash.style.transform = 'translateX(-50%)';  // Start from center
             requestAnimationFrame(() => {
-                dash.style.transform = 'translateY(calc(100vh - ' + dash.offsetHeight + 'px))';  // Slide down to bottom (full height)
+                dash.style.transform = `translateX(-50%) translateY(${maxSlide}px)`;
             });
-    
-            // Switch to bar AFTER animation (no snap)
+
+            // Hide panel + show bar AFTER animation (no snap)
             setTimeout(() => {
                 dash.style.display = 'none';
                 bar.style.display = 'flex';
-                // Reset for next (prevents jank)
+                // Reset for next
                 dash.style.transition = '';
-                dash.style.transform = 'translateY(0)';
-                dash.style.bottom = '';
-            }, 500);
-            console.log("[NeonovaDashboardView.toggleMinimize] Minimized — slid down as one piece");
+                dash.style.transform = 'translateX(-50%)';
+            }, 500);  // match duration
+            console.log("[NeonovaDashboardView.toggleMinimize] Minimized — slid down to viewport bottom");
         } else {
-            // Maximize: slide up from bottom as one piece
+            // Maximize: unchanged (works perfectly)
             bar.style.display = 'none';
             dash.style.display = 'block';
-            dash.style.position = 'fixed';
-            dash.style.bottom = '0';
-            dash.style.transform = 'translateY(calc(100vh - ' + dash.offsetHeight + 'px))';  // Start at bottom
-    
-            // Force reflow
+            dash.style.transform = 'translate(-50%, 100%)';
             void dash.offsetWidth;
-    
-            // Animate up to center
             requestAnimationFrame(() => {
-                dash.style.transform = 'translateY(0)';
+                dash.style.transform = 'translateX(-50%)';
             });
-    
-            // Reset after (no jank)
             setTimeout(() => {
                 dash.style.transition = '';
-                dash.style.bottom = '';
             }, 500);
-            console.log("[NeonovaDashboardView.toggleMinimize] Maximized — slid up from bottom as one piece");
+            console.log("[NeonovaDashboardView.toggleMinimize] Maximized — slid up from bottom");
         }
     }
 
