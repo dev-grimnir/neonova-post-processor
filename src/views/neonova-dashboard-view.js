@@ -440,40 +440,39 @@ class NeonovaDashboardView extends BaseNeonovaView{
         const dash = this.panel;
         const bar = this.minimizeBar;
         this.isMinimized = !this.isMinimized;
-
+    
         if (this.isMinimized) {
-            // Minimize: slide down but stop at viewport bottom (no going too far)
+            // SLIDE DOWN to position where header is at bottom (reverse of maximize)
+            const header = this.panel.querySelector('.flex items-center justify-between');
+            const headerHeight = header.offsetHeight;
+            const panelTop = parseInt(getComputedStyle(dash).top, 10); // Current top position (60px)
+            const panelHeight = dash.offsetHeight;
             const viewportHeight = window.innerHeight;
-            const dashTop = 60;  // Your top: 60px from style
-            const dashHeight = dash.offsetHeight;
-            const maxSlide = viewportHeight - dashTop;  // Max Y to keep within viewport
-            dash.style.transform = 'translateX(-50%)';  // Start from center
-            requestAnimationFrame(() => {
-                dash.style.transform = `translateX(-50%) translateY(${maxSlide}px)`;
-            });
-
-            // Hide panel + show bar AFTER animation (no snap)
+            const targetTop = viewportHeight - headerHeight;
+            const delta = targetTop - panelTop;
+            const translatePercent = (delta / panelHeight) * 100;
+            dash.style.transform = `translate(-50%, ${translatePercent}%)`;
+            
+            // Hide panel + show minimize bar AFTER animation finishes
             setTimeout(() => {
                 dash.style.display = 'none';
                 bar.style.display = 'flex';
-                // Reset for next
-                dash.style.transition = '';
-                dash.style.transform = 'translateX(-50%)';
-            }, 500);  // match duration
-            console.log("[NeonovaDashboardView.toggleMinimize] Minimized — slid down to viewport bottom");
+            }, 480);   // slightly longer than transition
         } else {
-            // Maximize: unchanged (works perfectly)
+            // MAXIMIZE → SLIDE UP (unchanged)
             bar.style.display = 'none';
             dash.style.display = 'block';
+            
+            // Start completely off-screen at the bottom
             dash.style.transform = 'translate(-50%, 100%)';
+            
+            // Force browser to read the new transform (reflow)
             void dash.offsetWidth;
+            
+            // Now animate it up to centered position
             requestAnimationFrame(() => {
                 dash.style.transform = 'translateX(-50%)';
             });
-            setTimeout(() => {
-                dash.style.transition = '';
-            }, 500);
-            console.log("[NeonovaDashboardView.toggleMinimize] Maximized — slid up from bottom");
         }
     }
 
