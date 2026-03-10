@@ -9,6 +9,7 @@ class NeonovaDashboardView extends BaseNeonovaView{
     createElements() {
         // Minimized bar – matches dashboard width exactly
         this.minimizeBar = document.createElement('div');
+        this.minimizedHeight = this.minimizeBar.offsetHeight + 'px';
         this.minimizeBar.style.cssText = `
             position: fixed;
             bottom: 0;
@@ -427,61 +428,61 @@ class NeonovaDashboardView extends BaseNeonovaView{
      * Toggles minimize/expand with smooth slide animation (no overshoot/snap).
      * 
      * Fixes the "slides too far then snaps" bug by:
-     *   - Using viewport-aware positions: slide down to just above minimized bar height (no overshoot).
-     *   - Matching animation duration (500ms) with setTimeout cleanup.
-     *   - Adding ease-in-out for controlled motion (starts/ends slow).
-     *   - Resetting transform after animation to prevent jank on next toggle.
+     *   - Animating max-height from full to minimized (shrink down, stop at bar height).
+     *   - Using ease-in-out for controlled motion (starts/ends slow).
+     *   - Matching 500ms duration with setTimeout cleanup (no timing mismatch).
+     *   - Dynamic heights (viewport - bar height for start, exact bar for end).
      * 
-     * No new CSS — keeps your existing transform + duration-300 (bumped to 500ms for smoother feel).
+     * No new CSS — keeps your transform + duration setup, but max-height prevents overshoot.
      */
     toggleMinimize() {
         const dash = this.panel;
         const bar = this.minimizeBar;
         this.isMinimized = !this.isMinimized;
 
-        // Set transition for smooth slide (ease-in-out prevents bounce/overshoot)
-        dash.style.transition = 'transform 500ms ease-in-out';
+        // Set transition for smooth shrink/slide (ease-in-out prevents bounce)
+        dash.style.transition = 'max-height 500ms ease-in-out, transform 500ms ease-in-out';
 
         if (this.isMinimized) {
-            // Minimize: slide down to final position (viewport bottom minus bar height)
-            const viewportHeight = window.innerHeight;
-            const barHeight = bar.offsetHeight;  // dynamic bar height (in case it changes)
-            const slideDistance = viewportHeight - barHeight;  // exact distance to slide (no overshoot)
-            dash.style.transform = `translate(-50%, ${slideDistance}px)`;
-            
-            // Hide panel + show bar AFTER animation completes (no snap)
+            // Minimize: shrink height to bar size + slide down slightly for "minimize" feel
+            dash.style.maxHeight = dash.scrollHeight + 'px';  // Start from current full
+            requestAnimationFrame(() => {
+                dash.style.maxHeight = this.minimizedHeight;  // Shrink to exact bar height
+                dash.style.transform = 'translate(-50%, calc(100vh - ' + this.minimizedHeight + '))';  // Slide to bottom (viewport - bar, no overshoot)
+            });
+
+            // Hide panel + show bar AFTER animation (no snap)
             setTimeout(() => {
                 dash.style.display = 'none';
                 bar.style.display = 'flex';
-                // Reset transform for next maximize (prevents jank)
+                // Reset styles for next maximize (prevents jank)
                 dash.style.transition = '';
+                dash.style.maxHeight = '';
                 dash.style.transform = 'translateX(-50%)';
             }, 500);  // match duration
-            console.log("[NeonovaDashboardView.toggleMinimize] Minimized — slid down to exact position");
+            console.log("[NeonovaDashboardView.toggleMinimize] Minimized — shrunk to bar height with no overshoot");
         } else {
-            // Maximize: slide up from bottom to center
+            // Maximize: expand height from bar size + slide up to center
             bar.style.display = 'none';
             dash.style.display = 'block';
-            
-            // Start at minimized position (bottom, just above bar)
-            const viewportHeight = window.innerHeight;
-            const barHeight = bar.offsetHeight;
-            const startPosition = viewportHeight - barHeight;
-            dash.style.transform = `translate(-50%, ${startPosition}px)`;
-            
+            dash.style.maxHeight = this.minimizedHeight;  // Start from bar height
+            dash.style.transform = 'translate(-50%, calc(100vh - ' + this.minimizedHeight + '))';  // Start at bottom
+
             // Force reflow for animation start
             void dash.offsetWidth;
-            
-            // Animate up to centered position
+
+            // Animate expand + slide up
             requestAnimationFrame(() => {
-                dash.style.transform = 'translateX(-50%)';
+                dash.style.maxHeight = dash.scrollHeight + 'px';  // Expand to full content
+                dash.style.transform = 'translateX(-50%)';  // Slide to center
             });
-            
-            // Reset transition after animation (no jank on next toggle)
+
+            // Reset styles after animation (no jank on next toggle)
             setTimeout(() => {
                 dash.style.transition = '';
+                dash.style.maxHeight = '';
             }, 500);
-            console.log("[NeonovaDashboardView.toggleMinimize] Maximized — slid up from bottom");
+            console.log("[NeonovaDashboardView.toggleMinimize] Maximized — expanded from bar height");
         }
     }
 
