@@ -128,7 +128,7 @@ class NeonovaDashboardView extends BaseNeonovaView{
         const savedScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
     
         let rows = '';
-        this.controller.customers.forEach(c => {
+        this.controller.model.customers.forEach(c => {
             const isConnected = c.status === 'Connected';
             const durationText = c.getDurationStr();
             rows += `
