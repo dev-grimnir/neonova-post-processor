@@ -1,6 +1,4 @@
-// src/models/neonova-dashboard-model.js  (or wherever models live)
-
-export class NeonovaDashboardModel {
+class NeonovaDashboardModel {
     constructor() {
         // Core data
         this.customers = new Map();           // radiusUsername → customer object (we'll keep plain objects for now)
