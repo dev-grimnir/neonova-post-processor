@@ -31,7 +31,7 @@ class NeonovaDashboardModel {
             Object.assign(existing, customerData);
         } else {
             // Ensure we always store a real Customer instance (with .update etc.)
-            const customer = customerData instanceof Customer ? customerData : new Customer(username, customerData.friendlyName || '');
+            const customer = customerData instanceof NeonovaCustomer ? customerData : new NeonovaCustomer(username, customerData.friendlyName || '');
             Object.assign(customer, customerData);
             this.customers.push(customer);
         }
