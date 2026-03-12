@@ -1,7 +1,7 @@
 class NeonovaDashboardModel {
     constructor() {
         // Core data
-        this.customers = new Map();           // radiusUsername → customer object (we'll keep plain objects for now)
+        this.customers = [];           // array of Customer instances
         this.pollingIntervalMinutes = 5;
         this.isPollingPaused = false;
         this.lastUpdate = null;
@@ -15,31 +15,33 @@ class NeonovaDashboardModel {
     // ─── Basic accessors ─────────────────────────────────────────────
 
     getCustomersArray() {
-        return Array.from(this.customers.values());
+        return [...this.customers];
     }
 
     getCustomer(username) {
-        return this.customers.get(username);
+        return this.customers.find(c => c.radiusUsername === username);
     }
 
     addOrUpdateCustomer(customerData) {
-        const username = customerData.radiusUsername;
-        if (!username) return null;
+        if (!customerData || !customerData.radiusUsername) return null;
 
-        // If we already have it → shallow merge (protect friendlyName etc.)
-        const existing = this.customers.get(username);
+        const username = customerData.radiusUsername;
+        const existing = this.getCustomer(username);
         if (existing) {
             Object.assign(existing, customerData);
         } else {
-            this.customers.set(username, { ...customerData });
+            // Ensure we always store a real Customer instance (with .update etc.)
+            const customer = customerData instanceof Customer ? customerData : new Customer(username, customerData.friendlyName || '');
+            Object.assign(customer, customerData);
+            this.customers.push(customer);
         }
 
         this.lastUpdate = new Date();
-        return this.customers.get(username);
+        return this.getCustomer(username);
     }
 
     removeCustomer(username) {
-        this.customers.delete(username);
+        this.customers = this.customers.filter(c => c.radiusUsername !== username);
         this.lastUpdate = new Date();
     }
 
@@ -65,7 +67,7 @@ class NeonovaDashboardModel {
     // For future persistence / debug
     toJSON() {
         return {
-            customers: Array.from(this.customers.values()),
+            customers: this.customers,
             pollingIntervalMinutes: this.pollingIntervalMinutes,
             isPollingPaused: this.isPollingPaused,
             lastUpdate: this.lastUpdate?.toISOString() ?? null,
