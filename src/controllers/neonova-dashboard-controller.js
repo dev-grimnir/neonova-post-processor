@@ -91,7 +91,7 @@ class NeonovaDashboardController {
         if (!radiusUsername?.trim()) {
             return;
         }
-        if (this.model.customers.some(c => c.radiusUsername === radiusUsername.trim())) {
+        if (this.model.customers(c => c.radiusUsername === radiusUsername.trim())) {
             alert('Already added');
             return;
         }
