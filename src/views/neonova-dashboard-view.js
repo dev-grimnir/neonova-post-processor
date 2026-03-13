@@ -89,7 +89,7 @@ class NeonovaDashboardView extends BaseNeonovaView {
             box-shadow: 0 -12px 40px rgba(0,0,0,0.8);
             border: 1px solid #22ff88;
             border-bottom: none;
-            overflow: hidden;
+            overflow: visible;
             display: flex;
             align-items: center;
             justify-content: space-between;
