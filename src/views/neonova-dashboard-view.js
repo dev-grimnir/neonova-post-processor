@@ -88,10 +88,6 @@ class NeonovaDashboardView extends BaseNeonovaView {
             box-shadow: 0 -12px 40px rgba(0,0,0,0.8);
             border: 1px solid #22ff88;
             border-bottom: none;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 24px;
         `;
 
         this.minimizeBar.innerHTML = this.getHeaderHTML(true);
@@ -127,7 +123,7 @@ class NeonovaDashboardView extends BaseNeonovaView {
         document.body.appendChild(this.panel);
 
         // Initial state
-        this.minimizeBar.style.display = 'flex';
+        this.minimizeBar.style.display = 'block';
         this.panel.style.display = 'none';
 
         // Beautiful emerald scrollbar
@@ -475,7 +471,7 @@ class NeonovaDashboardView extends BaseNeonovaView {
             // Hide panel + show minimize bar AFTER animation finishes
             setTimeout(() => {
                 dash.style.display = 'none';
-                bar.style.display = 'flex';
+                bar.style.display = 'block';
             }, 480);
         } else {
             // MAXIMIZE → SLIDE UP
