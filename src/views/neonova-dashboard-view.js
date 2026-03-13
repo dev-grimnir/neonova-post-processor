@@ -6,16 +6,12 @@ class NeonovaDashboardView extends BaseNeonovaView {
         this.createElements();
     }
 
-    getHeaderHTML(isMinimized) {
-        const actionText = isMinimized ? 'Maximize' : 'Minimize';
-        const actionIcon = isMinimized ? 'fa-chevron-up' : 'fa-minus';
+    getHeaderHTML() {
+        const actionText = this.isMinimized ? 'Maximize' : 'Minimize';
+        const actionIcon = this.isMinimized ? 'fa-chevron-up' : 'fa-minus';
         const pollIcon = this.controller.model.isPollingPaused ? 'fa-play' : 'fa-pause';
         const pollText = this.controller.model.isPollingPaused ? 'Resume' : 'Pause';
         const interval = this.controller.model.pollingIntervalMinutes;
-        const pollIdSuffix = isMinimized ? '-bar' : '';
-        const addIdSuffix = isMinimized ? '-bar' : '';
-        const minIdSuffix = isMinimized ? '-bar' : '';
-        const tooltipIdSuffix = isMinimized ? '-bar' : '';
 
         return `
             <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-800 bg-zinc-900 shrink-0 relative z-10">
@@ -27,7 +23,7 @@ class NeonovaDashboardView extends BaseNeonovaView {
                 <div class="flex items-center gap-4">
                     <!-- Polling control (button + hover slider) -->
                     <div class="relative group/polling">
-                        <button id="poll-toggle-btn${pollIdSuffix}" 
+                        <button id="poll-toggle-btn" 
                                 class="min-w-[180px] px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-2xl flex items-center justify-center gap-2.5 transition-all border border-zinc-700">
                             <i class="fas ${pollIcon} text-emerald-400"></i>
                             <span>${pollText} Polling</span>
@@ -39,9 +35,9 @@ class NeonovaDashboardView extends BaseNeonovaView {
                             <div class="bg-zinc-900 border border-zinc-700 rounded-2xl p-4 shadow-2xl w-80">
                                 <div class="flex items-center justify-between mb-2">
                                     <span class="text-xs uppercase tracking-widest text-zinc-400">Polling Interval</span>
-                                    <span id="interval-value-tooltip${tooltipIdSuffix}" class="font-mono text-emerald-400">${interval} min</span>
+                                    <span id="interval-value-tooltip" class="font-mono text-emerald-400">${interval} min</span>
                                 </div>
-                                <input type="range" id="polling-interval-slider-tooltip${tooltipIdSuffix}" 
+                                <input type="range" id="polling-interval-slider-tooltip" 
                                        min="1" max="60" value="${interval}" 
                                        class="w-full accent-emerald-500 cursor-pointer">
                             </div>
@@ -54,12 +50,12 @@ class NeonovaDashboardView extends BaseNeonovaView {
                         <i class="fas fa-sync-alt"></i> Refresh
                     </button>
 
-                    <button id="add-customer-btn${addIdSuffix}" 
+                    <button id="add-customer-btn" 
                             class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-black font-medium rounded-2xl flex items-center gap-2 transition shadow-sm">
                         Add Customer
                     </button>
 
-                    <button id="minimize-btn${minIdSuffix}" 
+                    <button id="minimize-btn" 
                             class="minimize-btn px-5 py-2.5 text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-white rounded-2xl flex items-center gap-2 transition border border-zinc-700">
                         <i class="fas ${actionIcon}"></i> ${actionText}
                     </button>
@@ -69,47 +65,6 @@ class NeonovaDashboardView extends BaseNeonovaView {
     }
 
     createElements() {
-        // Minimized bar – now contains the FULL header with all buttons (exactly like the maximized header)
-        this.minimizeBar = document.createElement('div');
-        this.minimizeBar.classList.add('minimizeBar');
-        this.minimizeBar.style.cssText = `
-            position: fixed;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 92%;
-            max-width: 1100px;
-            background: #18181b;
-            color: white;
-            padding: 0;
-            border-radius: 24px 24px 0 0;
-            cursor: pointer;
-            z-index: 10000;
-            font-family: system-ui;
-            box-shadow: 0 -12px 40px rgba(0,0,0,0.8);
-            border: 1px solid #22ff88;
-            border-bottom: none;
-            overflow: visible;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 24px;
-        `;
-
-                // Initial state
-        this.minimizeBar.style.display = 'flex';
-        this.panel.style.display = 'none';
-
-        this.minimizeBar.innerHTML = this.getHeaderHTML(true);
-        this.minimizeBar.addEventListener('click', (e) => {
-            // Prevent clicks on buttons from triggering the whole-bar toggle
-            if (!e.target.closest('button')) {
-                this.toggleMinimize();
-            }
-        });
-        document.body.appendChild(this.minimizeBar);
-
-        // Panel (maximized view) – now reuses the same header via getHeaderHTML(false)
         this.panel = document.createElement('div');
         this.panel.style.cssText = `
             position: fixed; 
@@ -118,7 +73,6 @@ class NeonovaDashboardView extends BaseNeonovaView {
             transform: translateX(-50%);
             width: 92%; 
             max-width: 1100px; 
-            height: calc(100vh - 80px);
             background: #09090b; 
             border: 1px solid #27272a;
             border-radius: 24px; 
@@ -126,15 +80,24 @@ class NeonovaDashboardView extends BaseNeonovaView {
             padding: 0; 
             font-family: system-ui; 
             z-index: 9999; 
-            display: none;
-            overflow: visible;  
-            transition: transform 500ms cubic-bezier(0.32, 0.72, 0, 1);
+            overflow: hidden;  
+            transition: all 500ms cubic-bezier(0.32, 0.72, 0, 1);
         `;
         document.body.appendChild(this.panel);
 
-        // Initial state
-        this.minimizeBar.style.display = 'block';
-        this.panel.style.display = 'none';
+        // Single header lives here forever
+        this.header = document.createElement('div');
+        this.header.innerHTML = this.getHeaderHTML();
+        this.panel.appendChild(this.header);
+
+        // Content area (updated by render)
+        this.contentArea = document.createElement('div');
+        this.contentArea.className = 'flex-1 overflow-hidden flex flex-col';
+        this.panel.appendChild(this.contentArea);
+
+        // Initial minimized state
+        this.isMinimized = true;
+        this.applyMinimizedStyle();
 
         // Beautiful emerald scrollbar
         if (!document.getElementById('neonova-scroll-style')) {
@@ -146,68 +109,44 @@ class NeonovaDashboardView extends BaseNeonovaView {
                 .neonova-scroll::-webkit-scrollbar-thumb { background: #34d399; border-radius: 9999px; border: 2px solid #18181b; }
                 .neonova-scroll::-webkit-scrollbar-thumb:hover { background: #10b981; }
                 .neonova-scroll { scrollbar-width: thin; scrollbar-color: #34d399 #18181b; }
-                /* Minimized bar tooltip: pops UP instead of down + arrow fix */
-                .minimizeBar .poll-slider-tooltip {
+
+                /* Tooltip pops UP when minimized so it never goes off-screen */
+                .minimized .poll-slider-tooltip {
                     top: auto !important;
                     bottom: 100% !important;
                     margin-top: 0 !important;
                     margin-bottom: 12px !important;
                 }
-                .minimizeBar .poll-slider-tooltip > div:last-child {
+                .minimized .poll-slider-tooltip > div:last-child {
                     top: auto !important;
                     bottom: -8px !important;
                     transform: rotate(225deg) !important;
-                }
-                /*Tooltip stays open while you hover OR move onto the slider itself */
-                .minimizeBar .group\\/polling:hover .poll-slider-tooltip,
-                .minimizeBar .poll-slider-tooltip:hover {
-                    display: block !important;
                 }
             `;
             document.head.appendChild(style);
         }
 
-        // Attach listeners to the minimize bar (once, since it is never rebuilt)
-        this.attachMinimizeBarListeners();
-
         this.render();
     }
 
-    attachMinimizeBarListeners() {
-        // Polling toggle
-        const barPollBtn = this.minimizeBar.querySelector('#poll-toggle-btn-bar');
-        if (barPollBtn) {
-            barPollBtn.addEventListener('click', () => {
-                this.controller.togglePolling();
-                this.updatePollingButton(barPollBtn);
-            });
+    applyMinimizedStyle() {
+        if (this.isMinimized) {
+            this.panel.style.height = '80px';
+            this.panel.style.top = 'auto';
+            this.panel.style.bottom = '0';
+            this.panel.style.borderRadius = '24px 24px 0 0';
+            this.panel.style.borderColor = '#22ff88';
+            this.contentArea.style.display = 'none';
+            this.panel.classList.add('minimized');
+        } else {
+            this.panel.style.height = 'calc(100vh - 80px)';
+            this.panel.style.top = '60px';
+            this.panel.style.bottom = 'auto';
+            this.panel.style.borderRadius = '24px';
+            this.panel.style.borderColor = '#27272a';
+            this.contentArea.style.display = 'flex';
+            this.panel.classList.remove('minimized');
         }
-
-        // Slider in tooltip (bar version)
-        const sliderBar = this.minimizeBar.querySelector('#polling-interval-slider-tooltip-bar');
-        const intervalDisplayBar = this.minimizeBar.querySelector('#interval-value-tooltip-bar');
-        if (sliderBar && intervalDisplayBar) {
-            sliderBar.addEventListener('input', () => {
-                const minutes = parseInt(sliderBar.value);
-                intervalDisplayBar.textContent = `${minutes} min`;
-                this.controller.setPollingInterval(minutes);
-
-                const mainSpan = barPollBtn?.querySelector('span.text-emerald-400\\/80');
-                if (mainSpan) mainSpan.textContent = `· ${minutes} min`;
-            });
-        }
-
-        // Refresh
-        this.minimizeBar.querySelector('.refresh-btn')?.addEventListener('click', () => this.controller.poll());
-
-        // Add customer
-        this.minimizeBar.querySelector('#add-customer-btn-bar')?.addEventListener('click', () => {
-            const addController = new NeonovaAddCustomerController(this.controller);
-            addController.show();
-        });
-
-        // Minimize / Maximize
-        this.minimizeBar.querySelector('#minimize-btn-bar')?.addEventListener('click', () => this.toggleMinimize());
     }
 
     updatePollingButton(btn) {
@@ -229,24 +168,10 @@ class NeonovaDashboardView extends BaseNeonovaView {
         }
     }
 
-    updateMinimizeBar() {
-        const barPollBtn = this.minimizeBar.querySelector('#poll-toggle-btn-bar');
-        if (barPollBtn) {
-            this.updatePollingButton(barPollBtn);
-        }
-        const sliderBar = this.minimizeBar.querySelector('#polling-interval-slider-tooltip-bar');
-        if (sliderBar) {
-            sliderBar.value = this.controller.model.pollingIntervalMinutes;
-        }
-    }
-
     render() {
-        if (!this.panel) {
-            console.warn('Panel not ready yet');
-            return;
-        }
+        if (!this.panel) return;
 
-        const scrollContainer = this.panel.querySelector('.flex-1.overflow-y-auto');
+        const scrollContainer = this.contentArea.querySelector('.flex-1.overflow-y-auto');
         const savedScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
 
         let rows = '';
@@ -276,42 +201,30 @@ class NeonovaDashboardView extends BaseNeonovaView {
             `;
         });
 
-        this.panel.innerHTML = `
-            <div class="flex flex-col h-full">
-                <!-- HEADER – reused from getHeaderHTML -->
-                ${this.getHeaderHTML(false)}
-
-                <!-- MAIN CONTENT AREA -->
-                <div class="flex-1 overflow-hidden flex flex-col">
-                    <div class="flex-1 overflow-y-auto px-6 py-6 neonova-scroll">
-                        <div class="bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden h-full">
-                            <table class="w-full">
-                                <thead class="sticky top-0 bg-zinc-900 z-10">
-                                    <tr class="border-b border-zinc-800 text-xs uppercase tracking-widest text-zinc-500">
-                                        <th class="px-6 py-4 text-left">Friendly Name</th>
-                                        <th class="px-6 py-4 text-left">RADIUS Username</th>
-                                        <th class="px-6 py-4 text-left">Status</th>
-                                        <th class="px-6 py-4 text-left">Duration</th>
-                                        <th class="px-6 py-4 text-right">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>${rows}</tbody>
-                            </table>
-                        </div>
-                    </div>
+        this.contentArea.innerHTML = `
+            <div class="flex-1 overflow-y-auto px-6 py-6 neonova-scroll">
+                <div class="bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden h-full">
+                    <table class="w-full">
+                        <thead class="sticky top-0 bg-zinc-900 z-10">
+                            <tr class="border-b border-zinc-800 text-xs uppercase tracking-widest text-zinc-500">
+                                <th class="px-6 py-4 text-left">Friendly Name</th>
+                                <th class="px-6 py-4 text-left">RADIUS Username</th>
+                                <th class="px-6 py-4 text-left">Status</th>
+                                <th class="px-6 py-4 text-left">Duration</th>
+                                <th class="px-6 py-4 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
                 </div>
             </div>
         `;
 
         // Restore scroll
-        const newScrollContainer = this.panel.querySelector('.flex-1.overflow-y-auto');
+        const newScrollContainer = this.contentArea.querySelector('.flex-1.overflow-y-auto');
         if (newScrollContainer) newScrollContainer.scrollTop = savedScrollTop;
 
-        // Attach / re-attach panel listeners (panel is rebuilt every render)
         this.attachPanelListeners();
-
-        // Keep the minimized bar in sync
-        this.updateMinimizeBar();
     }
 
     attachPanelListeners() {
@@ -479,39 +392,9 @@ class NeonovaDashboardView extends BaseNeonovaView {
      * No new CSS — keeps your transform + duration setup, but max-height prevents overshoot.
      */
     toggleMinimize() {
-        const dash = this.panel;
-        const bar = this.minimizeBar;
         this.isMinimized = !this.isMinimized;
-    
-        if (this.isMinimized) {
-            // SLIDE DOWN to position where header is at bottom (reverse of maximize)
-            const header = this.panel.querySelector('.flex.items-center.justify-between');
-            const headerHeight = header ? header.offsetHeight : 0;
-            const panelTop = parseInt(getComputedStyle(dash).top, 10);
-            const panelHeight = dash.offsetHeight;
-            const viewportHeight = window.innerHeight;
-            const targetTop = viewportHeight - headerHeight;
-            const delta = targetTop - panelTop;
-            const translatePercent = (delta / panelHeight) * 100;
-            dash.style.transform = `translate(-50%, ${translatePercent}%)`;
-            
-            // Hide panel + show minimize bar AFTER animation finishes
-            setTimeout(() => {
-                dash.style.display = 'none';
-                bar.style.display = 'block';
-            }, 480);
-        } else {
-            // MAXIMIZE → SLIDE UP
-            bar.style.display = 'none';
-            dash.style.display = 'block';
-            
-            dash.style.transform = 'translate(-50%, 100%)';
-            void dash.offsetWidth;
-            
-            requestAnimationFrame(() => {
-                dash.style.transform = 'translateX(-50%)';
-            });
-        }
+        this.applyMinimizedStyle();
+        this.render(); // refresh button text + polling state
     }
 
     update() { this.render(); }
