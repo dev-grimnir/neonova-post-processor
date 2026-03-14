@@ -104,7 +104,7 @@ getHeaderHTML() {
                     <div class="flex-1 bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden flex flex-col">
                         
                         <!-- STATIC COLUMN HEADER (never scrolls) -->
-                        <div class="px-6 py-2 bg-zinc-900 border-b border-zinc-800">
+                        <div class="px-6 py-1 bg-zinc-900 border-b border-zinc-800">
                             <table class="w-full">
                                 <thead>
                                     <tr class="text-xs uppercase tracking-widest text-zinc-500">
