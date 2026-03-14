@@ -6,8 +6,7 @@ class NeonovaDashboardView extends BaseNeonovaView {
         this.createElements();
     }
 
-    // Single header – created once, lives forever inside the panel
-    getHeaderHTML() {
+getHeaderHTML() {
         const pollIcon = this.controller.model.isPollingPaused ? 'fa-play' : 'fa-pause';
         const pollText = this.controller.model.isPollingPaused ? 'Resume' : 'Pause';
         const interval = this.controller.model.pollingIntervalMinutes;
@@ -44,6 +43,12 @@ class NeonovaDashboardView extends BaseNeonovaView {
                             <div class="absolute left-1/2 -translate-x-1/2 -top-2 w-4 h-4 bg-zinc-900 border-l border-t border-zinc-700 rotate-45"></div>
                         </div>
                     </div>
+
+                    <!-- Last Updated – pure data from model (no calculation here) -->
+                    <span id="last-updated" 
+                          class="text-xs text-zinc-400 font-mono whitespace-nowrap">
+                        Last Updated: <span class="text-emerald-400" id="last-updated-value">--</span>
+                    </span>
 
                     <button class="refresh-btn px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-black font-medium rounded-2xl flex items-center gap-2 transition shadow-sm">
                         <i class="fas fa-sync-alt"></i> Refresh
@@ -292,6 +297,18 @@ class NeonovaDashboardView extends BaseNeonovaView {
 
         const slider = this.header.querySelector('#polling-interval-slider-tooltip');
         if (slider) slider.value = this.controller.model.pollingIntervalMinutes;
+
+        // Last Updated now comes straight from the model (view does zero work)
+        this.updateLastUpdated();
+    }
+
+    updateLastUpdated() {
+        const valueSpan = this.header.querySelector('#last-updated-value');
+        if (!valueSpan) return;
+
+        // This is the ONLY place the view touches the timestamp
+        // → Your MODEL/CONTROLLER is now responsible for the string
+        valueSpan.textContent = this.controller.model.lastUpdatedDisplay || 'Never';
     }
 
     // ====================== STYLE MORPH ======================
@@ -354,7 +371,7 @@ class NeonovaDashboardView extends BaseNeonovaView {
 
         tbody.innerHTML = rows;
         this.attachRowListeners();
-        this.updateHeader();
+        this.updateHeader();   // ← now also pulls the clean model value
     }
 
     // ====================== TOGGLE (now pure morph – no duplicate DOM, no black box) ======================
