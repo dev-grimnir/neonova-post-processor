@@ -101,7 +101,7 @@ getHeaderHTML() {
                 <div id="header-container"></div>
                 <div id="content-area" class="flex-1 overflow-hidden flex flex-col">
                     <div class="flex-1 overflow-y-auto px-6 py-6 neonova-scroll">
-                        <div class="bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden h-full">
+                        <div class="bg-zinc-900 border border-zinc-700 rounded-3xl">
                             <table class="w-full">
                                 <thead class="sticky top-0 bg-zinc-900 z-10">
                                     <tr class="border-b border-zinc-800 text-xs uppercase tracking-widest text-zinc-500">
