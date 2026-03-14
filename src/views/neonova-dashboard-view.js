@@ -100,18 +100,12 @@ getHeaderHTML() {
             <div class="flex flex-col h-full">
                 <div id="header-container"></div>
                 <div id="content-area" class="flex-1 overflow-hidden flex flex-col">
-                    <div class="flex-1 overflow-y-auto px-6 py-6 neonova-scroll">
-                        <div class="bg-zinc-900 border border-zinc-700 rounded-3xl">
+                    <!-- Card with rounded corners + overflow-hidden -->
+                    <div class="flex-1 bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden flex flex-col">
+                        <!-- Scrollable table area (padding stays nice) -->
+                        <div class="flex-1 overflow-y-auto px-6 py-6 neonova-scroll">
                             <table class="w-full">
-                                <thead class="sticky top-0 bg-zinc-900 z-10">
-                                    <tr class="border-b border-zinc-800 text-xs uppercase tracking-widest text-zinc-500">
-                                        <th class="px-6 py-4 text-left">Friendly Name</th>
-                                        <th class="px-6 py-4 text-left">RADIUS Username</th>
-                                        <th class="px-6 py-4 text-left">Status</th>
-                                        <th class="px-6 py-4 text-left">Duration</th>
-                                        <th class="px-6 py-4 text-right">Action</th>
-                                    </tr>
-                                </thead>
+                                <thead class="sticky top-0 bg-zinc-900 z-10">...</thead>
                                 <tbody id="customer-table-body"></tbody>
                             </table>
                         </div>
