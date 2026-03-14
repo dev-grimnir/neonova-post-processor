@@ -112,7 +112,7 @@ getHeaderHTML() {
                                         <th class="px-6 py-1 text-left">RADIUS Username</th>
                                         <th class="px-6 py-1 text-left">Status</th>
                                         <th class="px-6 py-1 text-left">Duration</th>
-                                        <th class="px-6 py-3 text-right">Action</th>
+                                        <th class="px-6 py-1 text-right">Action</th>
                                     </tr>
                                 </thead>
                             </table>
