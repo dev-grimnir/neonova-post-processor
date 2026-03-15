@@ -115,7 +115,7 @@ class NeonovaDashboardController {
         this.customerControllers.set(trimmed, ctrl);
     
         await this.save();
-        this.view.render();  // or rebuildTable()
+        this.rebuildTable();
         this.poll();
     }
 
@@ -123,7 +123,7 @@ class NeonovaDashboardController {
         this.model.removeCustomer(radiusUsername);
         this.customerControllers.delete(radiusUsername);
         await this.save();
-        if (this.view) this.view.render();
+        if (this.view) this.rebuildTable();
     }
 
     /**
@@ -158,7 +158,7 @@ class NeonovaDashboardController {
         await this.load(); 
 
         if (!this.model.isPollingPaused) this.startPolling();
-        if (this.view) this.view.render();
+        if (this.view) this.rebuildTable();
     }
 
     /**
@@ -236,7 +236,7 @@ class NeonovaDashboardController {
         }
     
         await this.save();
-        if (this.view) this.view.render();
+        if (this.view) this.rebuildTable();
         if (pollStatusEl) pollStatusEl.textContent = 'Last update: ' + new Date().toLocaleTimeString();
 
         this.model.lastUpdatedDisplay = new Date().toLocaleTimeString([], {
