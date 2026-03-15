@@ -5,7 +5,7 @@ class NeonovaCustomerController {
     #customer;
 
     constructor(radiusUsername, friendlyName = null, dashboardController) {
-        this.#model = new NeonovaCustomer(radiusUsername, friendlyName);
+        this.#model = new NeonovaCustomerModel(radiusUsername, friendlyName);
         this.dashboardController = dashboardController;
         this.view = new NeonovaCustomerView(this);
     }
