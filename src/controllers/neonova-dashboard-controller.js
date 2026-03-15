@@ -116,6 +116,7 @@ class NeonovaDashboardController {
     
         // Show the row immediately (with "Connecting...")
         this.rebuildTable();  // or this.view.appendRow(ctrl.getRowElement()) for instant add
+        this.view.updateHeader();
     
         // Immediate single-customer poll to get real status
         try {
@@ -145,6 +146,7 @@ class NeonovaDashboardController {
         this.customerControllers.delete(radiusUsername);
         await this.save();
         if (this.view) this.rebuildTable();
+        this.view.updateHeader();
     }
 
     /**
