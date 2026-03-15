@@ -64,7 +64,10 @@ class NeonovaCustomerView extends BaseNeonovaView {
                 border: 'border-purple-700/50',
                 dot: 'bg-purple-400'
             },
-            // Add more statuses as your model supports them
+            .report-btn:hover {
+                transform: scale(1.2);
+                transition: transform 100ms ease;
+            }
         };
     
         const style = statusStyles[status] || statusStyles['Unknown'];  // fallback
@@ -83,9 +86,12 @@ class NeonovaCustomerView extends BaseNeonovaView {
                 </span>
             </td>
             <td class="px-2 py-1 text-sm text-gray-300">${durationStr}</td>
-            <td class="px-2 py-1 text-right">
-                <button class="remove-btn text-red-400 hover:text-red-300 text-lg font-bold px-2" title="Remove customer">
+            <td class="px-2 py-1 text-right whitespace-nowrap">
+                <button class="remove-btn text-red-400 hover:text-red-300 text-lg font-bold px-1.5" title="Remove customer">
                     ×
+                </button>
+                <button class="report-btn text-emerald-400 hover:text-emerald-300 text-xl px-1.5 ml-2" title="Generate Report">
+                    📊
                 </button>
             </td>
         `;
