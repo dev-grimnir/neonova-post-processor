@@ -63,7 +63,8 @@ class NeonovaCustomerController {
 
     launchReport() {
         const username = this.#model.radiusUsername;
-        const friendlyName = this.#model.friendlyName || username;  // fallback if null/empty
+        const friendlyName = this.#model.friendlyName || username; 
+        console.log('[launchReport] Starting for:', username, friendlyName);
         new NeonovaReportOrderController(username, friendlyName);
     }
 
