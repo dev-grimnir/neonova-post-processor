@@ -93,22 +93,21 @@ class NeonovaDashboardController {
 
     async add(radiusUsername, friendlyName) {
         if (!radiusUsername?.trim()) return;
-        
         const trimmed = radiusUsername.trim();
+    
         if (this.model.getCustomer(trimmed)) {
             alert('Already added');
             return;
         }
-        
-        const newCustomer = new NeonovaCustomer(trimmed, friendlyName);
-        this.model.addOrUpdateCustomer(newCustomer);
-
-        // Create the per-customer controller (which will create its view internally)
-        this.createCustomerController(newCustomer);
-        
+    
+        const ctrl = new NeonovaCustomerController(trimmed, friendlyName, this);
+        this.model.addOrUpdateCustomer(ctrl.toJSON());  // store plain data
+    
+        this.customerControllers.set(trimmed, ctrl);
+    
         await this.save();
-        if (this.view) this.view.render();
-        this.poll();  // Immediate update for the new customer
+        this.view.render();  // or rebuildTable()
+        this.poll();
     }
 
     async remove(radiusUsername) {
@@ -165,28 +164,26 @@ class NeonovaDashboardController {
             return;
         }
     
-    try {
-        const jsonStr = await NeonovaCryptoController.decryptData(data);
-        const parsed = JSON.parse(jsonStr);
-        
-        this.model.customers = (parsed.customers || []).map(c => Object.assign(new NeonovaCustomer('', ''), c));
-        this.model.pollingIntervalMinutes = parsed.pollingIntervalMinutes || this.model.pollingIntervalMinutes;
-        this.model.isPollingPaused = parsed.isPollingPaused || this.model.isPollingPaused;
-        if (parsed.lastUpdate) {
-            this.model.lastUpdate = new Date(parsed.lastUpdate);
-        }
+        try {
+            const jsonStr = await NeonovaCryptoController.decryptData(data);
+            const parsed = JSON.parse(jsonStr);
     
-        // Only one creation loop – after model is fully populated
-        this.customerControllers.clear();
-        for (const customer of this.model.getCustomersArray()) {
-            this.createCustomerController(customer);
+            this.model.customers = parsed.customers || [];
+    
+            this.customerControllers.clear();
+            for (const json of this.model.customers) {
+                const ctrl = NeonovaCustomerController.fromJSON(json, this);
+                this.customerControllers.set(json.radiusUsername, ctrl);
+            }
+    
+            this.model.pollingIntervalMinutes = parsed.pollingIntervalMinutes || 1;
+            this.model.isPollingPaused = parsed.isPollingPaused || false;
+            
+        } catch (e) {
+            alert("Decryption failed. Clearing everything.");
+            localStorage.removeItem('novaDashboardCustomers');
+            return;
         }
-        
-    } catch (e) {
-        alert("Decryption failed. Clearing everything.");
-        localStorage.removeItem('novaDashboardCustomers');
-        return;
-    }
     }
 
     /**
@@ -199,9 +196,9 @@ class NeonovaDashboardController {
         const jsonStr = JSON.stringify(this.model.toJSON());
     
         try {
+            const jsonStr = JSON.stringify(this.model.toJSON());
             const encrypted = await NeonovaCryptoController.encryptData(jsonStr);
             localStorage.setItem('novaDashboardCustomers', encrypted);
-            //ENCRYPTED and saved successfully
         } catch (e) {
             console.error("[NeonovaDashboardController.save] Encryption failed", e);
         }
