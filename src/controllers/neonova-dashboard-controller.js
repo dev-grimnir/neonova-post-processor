@@ -1,5 +1,6 @@
 class NeonovaDashboardController {
     constructor() {
+        this.customerControllers = new Map();
         this.model = new NeonovaDashboardModel();
         this.masterPassphrase = null;    
         this._initialized = false;
@@ -14,6 +15,25 @@ class NeonovaDashboardController {
         // If paused, don't start polling yet
         if (!this.model.isPollingPaused) this.startPolling();
         this.view = new NeonovaDashboardView(this);
+    }
+
+    createCustomerController(customer) {
+        const ctrl = new NeonovaCustomerController(customer, this);
+        this.customerControllers.set(customer.radiusUsername, ctrl);
+        return ctrl;
+    }
+    
+    getCustomerController(username) {
+        return this.customerControllers.get(username);
+    }
+
+    rebuildTable() {
+        const rows = [];
+        for (const ctrl of this.customerControllers.values()) {
+            const row = ctrl.getRowElement();
+            if (row) rows.push(row);
+        }
+            this.view.setRows(rows);
     }
 
     startPolling() {
@@ -62,51 +82,71 @@ class NeonovaDashboardController {
         if (this.pollInterval) {
             clearInterval(this.pollInterval);
             this.pollInterval = null;
-            console.log("[NeonovaDashboardController.togglePolling] Cleared existing poll interval");
         }
 
         // If resuming polling (not paused anymore)
         if (!this.model.isPollingPaused) {
             // Run an immediate poll to get fresh data
             this.poll();
-            console.log("[NeonovaDashboardController.togglePolling] Ran immediate poll on resume");
 
             // Restart the scheduled interval
             this.pollInterval = setInterval(() => this.poll(), this.model.pollingIntervalMinutes * 60 * 1000);
-            console.log(`[NeonovaDashboardController.togglePolling] Restarted poll interval: every ${this.model.pollingIntervalMinutes} minutes`);
         }
 
         // Always persist the new paused state to localStorage (fix for original inconsistency)
         localStorage.setItem('novaPollingPaused', this.model.isPollingPaused.toString());
-        console.log(`[NeonovaDashboardController.togglePolling] Saved polling paused state: ${this.model.isPollingPaused}`);
-
-
 
         // Refresh the view to update UI elements (e.g., pause/resume button icon or text)
         this.view?.render();
-        console.log("[NeonovaDashboardController.togglePolling] UI refreshed to reflect new polling state");
     }
 
     async add(radiusUsername, friendlyName) {
-        if (!radiusUsername?.trim()) {
-            return;
-        }
+        if (!radiusUsername?.trim()) return;
         const trimmed = radiusUsername.trim();
+    
         if (this.model.getCustomer(trimmed)) {
             alert('Already added');
             return;
         }
-        const newCustomer = new NeonovaCustomer(trimmed, friendlyName);
-        this.model.addOrUpdateCustomer(newCustomer);
-        await this.save();
-        if (this.view) this.view.render();
-        this.poll();  // Immediate update for the new customer
+    
+        // Create controller + view + row
+        const ctrl = new NeonovaCustomerController(trimmed, friendlyName, this);
+        this.customerControllers.set(trimmed, ctrl);
+        this.model.addOrUpdateCustomer(ctrl.toJSON());
+    
+        // Show the row immediately (with "Connecting...")
+        this.rebuildTable();  // or this.view.appendRow(ctrl.getRowElement()) for instant add
+        this.view.updateHeader();
+    
+        // Immediate single-customer poll to get real status
+        try {
+            await this.updateCustomerStatus(ctrl.model);  // uses the model object directly
+    
+            // If poll found nothing → auto-remove + toast
+            if (ctrl.model.status === 'Account Not Found') {
+                this.remove(trimmed);
+                this.view.showToast('Customer not found in RADIUS', { type: 'error', duration: 5000 });
+                return;
+            }
+    
+            // Otherwise → update the row with real status/duration
+            ctrl.view.update();
+    
+            await this.save();
+            this.rebuildTable();  // full refresh if needed
+        } catch (err) {
+            console.error('Initial poll failed:', err);
+            ctrl.model.status = 'Error';
+            ctrl.view.update();
+        }
     }
 
     async remove(radiusUsername) {
         this.model.removeCustomer(radiusUsername);
+        this.customerControllers.delete(radiusUsername);
         await this.save();
-        if (this.view) this.view.render();
+        if (this.view) this.rebuildTable();
+        this.view.updateHeader();
     }
 
     /**
@@ -141,7 +181,7 @@ class NeonovaDashboardController {
         await this.load(); 
 
         if (!this.model.isPollingPaused) this.startPolling();
-        if (this.view) this.view.render();
+        if (this.view) this.rebuildTable();
     }
 
     /**
@@ -159,13 +199,18 @@ class NeonovaDashboardController {
         try {
             const jsonStr = await NeonovaCryptoController.decryptData(data);
             const parsed = JSON.parse(jsonStr);
-            
-            this.model.customers = (parsed.customers || []).map(c => Object.assign(new NeonovaCustomer('', ''), c));
-            this.model.pollingIntervalMinutes = parsed.pollingIntervalMinutes || this.model.pollingIntervalMinutes;
-            this.model.isPollingPaused = parsed.isPollingPaused || this.model.isPollingPaused;
-            if (parsed.lastUpdate) {
-                this.model.lastUpdate = new Date(parsed.lastUpdate);
+    
+            this.model.customers = parsed.customers || [];
+    
+            this.customerControllers.clear();
+            for (const json of this.model.customers) {
+                const ctrl = NeonovaCustomerController.fromJSON(json, this);
+                this.customerControllers.set(json.radiusUsername, ctrl);
             }
+    
+            this.model.pollingIntervalMinutes = parsed.pollingIntervalMinutes || 1;
+            this.model.isPollingPaused = parsed.isPollingPaused || false;
+            
         } catch (e) {
             alert("Decryption failed. Clearing everything.");
             localStorage.removeItem('novaDashboardCustomers');
@@ -183,42 +228,39 @@ class NeonovaDashboardController {
         const jsonStr = JSON.stringify(this.model.toJSON());
     
         try {
+            const jsonStr = JSON.stringify(this.model.toJSON());
             const encrypted = await NeonovaCryptoController.encryptData(jsonStr);
             localStorage.setItem('novaDashboardCustomers', encrypted);
-            //ENCRYPTED and saved successfully
         } catch (e) {
             console.error("[NeonovaDashboardController.save] Encryption failed", e);
         }
     }
 
     async poll() {
-        if (!this._initialized) {
-            return;
-        }
-
-        if (!this.model.getCustomersArray()?.length) {
-            return;
-        }
-
-        if (this.model.isPollingPaused) {
+        if (!this._initialized || !this.customerControllers || this.customerControllers.size === 0 || this.model.isPollingPaused) {
             return;
         }
     
         const pollStatusEl = this.view?.panel?.querySelector('#pollStatus');
         if (pollStatusEl) pollStatusEl.textContent = 'Fetching...';
     
-        for (const customer of this.model.getCustomersArray()) {
+        for (const ctrl of this.customerControllers.values()) {
             try {
-                await this.updateCustomerStatus(customer);
+                await this.updateCustomerStatus(ctrl.model);  // pass ctrl.model (the live object)
+                ctrl.view.update();  // refresh this row with new status/duration
             } catch (err) {
-                customer.update('Error', 0);
+                console.error(`Poll error for ${ctrl.radiusUsername}:`, err);
+                ctrl.model.update('Error', 0);
+                ctrl.view.update();
             }
         }
     
         await this.save();
-        if (this.view) this.view.render();
+        this.rebuildTable();  // or just header if you prefer targeted updates
+        this.view.updateHeader();
+    
         if (pollStatusEl) pollStatusEl.textContent = 'Last update: ' + new Date().toLocaleTimeString();
-
+    
         this.model.lastUpdatedDisplay = new Date().toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',
@@ -253,7 +295,7 @@ class NeonovaDashboardController {
         if (statusText.includes('start') || statusText.includes('connect')) {
             status = 'Connected';
         } else if (statusText.includes('stop') || statusText.includes('disconnect')) {
-            status = 'Not Connected';
+            status = 'Disconnected';
             // Rough duration: from timestamp to now (improve with last Start if available)
             const lastTime = new Date(timestamp).getTime();
             durationSec = Math.round((Date.now() - lastTime) / 1000);
@@ -296,6 +338,9 @@ class NeonovaDashboardController {
                 if (latest === null) {
                     customer.update('Account Not Found', 0);
                     console.log(`[updateCustomerStatus] No logs found after 11-month lookback — set to 'Account Not Found': ${customer.radiusUsername}`);
+                    this.view.showToast('Customer not found in RADIUS', {
+                        type: 'error',
+                        duration: 5000});
                     return;
                 } else if (customer.lastEventTime !== null) {
                     // Existing customer with no new events — increment duration
