@@ -108,8 +108,6 @@ class NeonovaDashboardController {
         
         await this.save();
         if (this.view) this.view.render();
-        this.rebuildTable();
-        
         this.poll();  // Immediate update for the new customer
     }
 
@@ -167,31 +165,28 @@ class NeonovaDashboardController {
             return;
         }
     
-        try {
-            const jsonStr = await NeonovaCryptoController.decryptData(data);
-            const parsed = JSON.parse(jsonStr);
-            
-            this.model.customers = (parsed.customers || []).map(c => Object.assign(new NeonovaCustomer('', ''), c));
-            this.customerControllers.clear();
-            for (const customer of this.model.getCustomersArray()) {
-                this.createCustomerController(customer);
-            }
-            this.model.pollingIntervalMinutes = parsed.pollingIntervalMinutes || this.model.pollingIntervalMinutes;
-            this.model.isPollingPaused = parsed.isPollingPaused || this.model.isPollingPaused;
-            if (parsed.lastUpdate) {
-                this.model.lastUpdate = new Date(parsed.lastUpdate);
-            }
-
-            this.customerControllers.clear();
-            for (const customer of this.model.getCustomersArray()) {
-                this.createCustomerController(customer);
-            }
-            
-        } catch (e) {
-            alert("Decryption failed. Clearing everything.");
-            localStorage.removeItem('novaDashboardCustomers');
-            return;
+    try {
+        const jsonStr = await NeonovaCryptoController.decryptData(data);
+        const parsed = JSON.parse(jsonStr);
+        
+        this.model.customers = (parsed.customers || []).map(c => Object.assign(new NeonovaCustomer('', ''), c));
+        this.model.pollingIntervalMinutes = parsed.pollingIntervalMinutes || this.model.pollingIntervalMinutes;
+        this.model.isPollingPaused = parsed.isPollingPaused || this.model.isPollingPaused;
+        if (parsed.lastUpdate) {
+            this.model.lastUpdate = new Date(parsed.lastUpdate);
         }
+    
+        // Only one creation loop – after model is fully populated
+        this.customerControllers.clear();
+        for (const customer of this.model.getCustomersArray()) {
+            this.createCustomerController(customer);
+        }
+        
+    } catch (e) {
+        alert("Decryption failed. Clearing everything.");
+        localStorage.removeItem('novaDashboardCustomers');
+        return;
+    }
     }
 
     /**
@@ -221,10 +216,10 @@ class NeonovaDashboardController {
         if (pollStatusEl) pollStatusEl.textContent = 'Fetching...';
     
         for (const customer of this.model.getCustomersArray()) {
-            let const ctrl = this.getCustomerController(customer.radiusUsername);
+            let ctrl = this.getCustomerController(customer.radiusUsername);
             if (!ctrl) {
                 // Safety: recreate if missing (should not happen)
-                this.createCustomerController(customer);
+                this.createCustomerContrthis.rebuildTable();oller(customer);
                 ctrl = this.getCustomerController(customer.radiusUsername);
             }
             try {
