@@ -2,6 +2,7 @@
 
 class NeonovaCustomerController {
     #model;
+    #customer;
 
     constructor(radiusUsername, friendlyName = null, dashboardController) {
         this.#model = new NeonovaCustomer(radiusUsername, friendlyName);
@@ -10,7 +11,7 @@ class NeonovaCustomerController {
     }
 
     get customer() {
-        return this.customer;
+        return this.#customer;
     }
 
     // For runtime use
