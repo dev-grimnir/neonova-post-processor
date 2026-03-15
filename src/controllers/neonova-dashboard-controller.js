@@ -337,6 +337,9 @@ class NeonovaDashboardController {
                 if (latest === null) {
                     customer.update('Account Not Found', 0);
                     console.log(`[updateCustomerStatus] No logs found after 11-month lookback — set to 'Account Not Found': ${customer.radiusUsername}`);
+                    this.view.showToast('Customer not found in RADIUS', {
+                        type: 'error',
+                        duration: 5000});
                     return;
                 } else if (customer.lastEventTime !== null) {
                     // Existing customer with no new events — increment duration
