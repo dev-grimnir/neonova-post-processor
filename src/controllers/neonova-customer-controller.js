@@ -1,27 +1,32 @@
 // src/controllers/neonova-customer-controller.js
 
 class NeonovaCustomerController {
-    #model;
-    #customer;
+    #model;  
 
     constructor(radiusUsername, friendlyName = null, dashboardController) {
-        this.#model = new NeonovaCustomerModel(radiusUsername, friendlyName);
+        if (typeof radiusUsername !== 'string' || !radiusUsername.trim()) {
+            throw new Error('radiusUsername must be a non-empty string');
+        }
+        this.#model = new NeonovaCustomerModel(radiusUsername.trim(), friendlyName);
         this.dashboardController = dashboardController;
         this.view = new NeonovaCustomerView(this);
     }
 
-    get customer() {
-        return this.#customer;
+    // Main getter for the customer model (use this everywhere)
+    get model() {
+        return this.#model;
     }
 
-    // For runtime use
-    get model() { return this.#model; }
-    
-    get radiusUsername() { return this.#model.radiusUsername; }
-    
-    get friendlyName() { return this.#model.friendlyName; }
+    // Convenience getters (optional but useful)
+    get radiusUsername() {
+        return this.#model.radiusUsername;
+    }
 
-        // Serialization for model storage
+    get friendlyName() {
+        return this.#model.friendlyName;
+    }
+
+    // Serialization - store plain JSON
     toJSON() {
         return {
             radiusUsername: this.#model.radiusUsername,
@@ -29,48 +34,51 @@ class NeonovaCustomerController {
             status: this.#model.status,
             durationSec: this.#model.durationSec,
             lastEventTime: this.#model.lastEventTime?.toISOString(),
-            // add any other fields that need persisting
+            lastUpdate: this.#model.lastUpdate
+            // Add any other fields you want to persist
         };
     }
 
     // Rehydrate from stored JSON
     static fromJSON(json, dashboardController) {
         const ctrl = new NeonovaCustomerController(json.radiusUsername, json.friendlyName, dashboardController);
-        ctrl.#model.status = json.status || 'Unknown';
+        ctrl.#model.status = json.status || 'Connecting...';
         ctrl.#model.durationSec = json.durationSec || 0;
         ctrl.#model.lastEventTime = json.lastEventTime ? new Date(json.lastEventTime) : null;
-        // restore any other fields
+        ctrl.#model.lastUpdate = json.lastUpdate || new Date().toLocaleString();
         ctrl.view.update();  // refresh row with loaded data
         return ctrl;
     }
 
-    // Called during polling when fresh data arrives for this customer
-    updateFromPoll(data) {
-        this.customer.update(data);
-        // View update triggered separately by dashboard controller
+    // Called by dashboard controller during polling
+    updateFromPoll() {
+        // Model was already updated externally (in updateCustomerStatus)
+        // If you ever want to trigger view update here, do it:
+        // this.view.update();
     }
 
     remove() {
-        this.dashboardController.removeCustomer(this.customer.radiusUsername);
+        this.dashboardController.removeCustomer(this.radiusUsername);
     }
 
     launchReport() {
-        // Create and kick off the report flow
-        // Adjust constructor params to match what NeonovaReportOrderController actually expects
-        // (likely customer object, username, or some config)
-        new NeonovaReportOrderController(this.customer);
-        // If it needs more (e.g. dashboard ref, callbacks), pass them here
-        // Example: new NeonovaReportOrderController(this.customer, this.dashboardController);
+        new NeonovaReportOrderController(this.model);
+        // or pass this.radiusUsername, this.friendlyName, etc. if needed
     }
 
     updateFriendlyName(newName) {
         const trimmed = newName.trim();
         if (trimmed === '') {
-            // Could show toast or just ignore; for now silently keep old
             return false;
         }
-        this.customer.friendlyName = trimmed;
-        this.dashboardController.save(); // persist to storage
+        this.#model.friendlyName = trimmed;
+        this.dashboardController.save();
+        this.view.update();  // refresh row to show new name
         return true;
+    }
+
+    // Expose the row for dashboard controller to collect
+    getRowElement() {
+        return this.view.getElement();
     }
 }
