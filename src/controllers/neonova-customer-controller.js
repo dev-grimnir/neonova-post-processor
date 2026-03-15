@@ -3,6 +3,7 @@
 class NeonovaCustomerController {
     #customer;              // NeonovaCustomer instance
     #dashboardController;   // reference back to NeonovaDashboardController
+    this.view = new NeonovaCustomerView(this);
 
     constructor(customer, dashboardController) {
         if (!(customer instanceof NeonovaCustomer)) {
