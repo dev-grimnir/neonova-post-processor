@@ -20,7 +20,7 @@ class NeonovaCustomerController {
 
     // Called during polling when fresh data arrives for this customer
     updateFromPoll(data) {
-        this.#customer.update(data);
+        this.customer.update(data);
         // View update triggered separately by dashboard controller
     }
 
@@ -32,9 +32,9 @@ class NeonovaCustomerController {
         // Create and kick off the report flow
         // Adjust constructor params to match what NeonovaReportOrderController actually expects
         // (likely customer object, username, or some config)
-        new NeonovaReportOrderController(this.#customer);
+        new NeonovaReportOrderController(this.customer);
         // If it needs more (e.g. dashboard ref, callbacks), pass them here
-        // Example: new NeonovaReportOrderController(this.#customer, this.#dashboardController);
+        // Example: new NeonovaReportOrderController(this.customer, this.dashboardController);
     }
 
     updateFriendlyName(newName) {
