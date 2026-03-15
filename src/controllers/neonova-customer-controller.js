@@ -11,11 +11,11 @@ class NeonovaCustomerController {
     }
 
     get customer() {
-        return this.#customer;
+        return this.customer;
     }
 
     get radiusUsername() {
-        return this.#customer.radiusUsername;
+        return this.customer.radiusUsername;
     }
 
     // Called during polling when fresh data arrives for this customer
@@ -25,7 +25,7 @@ class NeonovaCustomerController {
     }
 
     remove() {
-        this.#dashboardController.removeCustomer(this.#customer.radiusUsername);
+        this.dashboardController.removeCustomer(this.customer.radiusUsername);
     }
 
     launchReport() {
@@ -43,8 +43,8 @@ class NeonovaCustomerController {
             // Could show toast or just ignore; for now silently keep old
             return false;
         }
-        this.#customer.friendlyName = trimmed;
-        this.#dashboardController.save(); // persist to storage
+        this.customer.friendlyName = trimmed;
+        this.dashboardController.save(); // persist to storage
         return true;
     }
 }
