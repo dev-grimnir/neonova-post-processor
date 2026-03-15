@@ -235,7 +235,7 @@ class NeonovaDashboardController {
     }
 
     async poll() {
-        if (!this._initialized || this.customerControllers.size === 0 || this.model.isPollingPaused) {
+        if (!this._initialized || !this.customerControllers || this.customerControllers.size === 0 || this.model.isPollingPaused) {
             return;
         }
     
