@@ -58,7 +58,7 @@ class NeonovaCustomerController {
     }
 
     remove() {
-        this.dashboardController.removeCustomer(this.radiusUsername);
+        this.dashboardController.remove(this.radiusUsername);
     }
 
     launchReport() {
