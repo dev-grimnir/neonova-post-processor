@@ -294,7 +294,7 @@ class NeonovaDashboardController {
         if (statusText.includes('start') || statusText.includes('connect')) {
             status = 'Connected';
         } else if (statusText.includes('stop') || statusText.includes('disconnect')) {
-            status = 'Not Connected';
+            status = 'Disconnected';
             // Rough duration: from timestamp to now (improve with last Start if available)
             const lastTime = new Date(timestamp).getTime();
             durationSec = Math.round((Date.now() - lastTime) / 1000);
