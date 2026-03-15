@@ -109,14 +109,35 @@ class NeonovaDashboardController {
             return;
         }
     
+        // Create controller + view + row
         const ctrl = new NeonovaCustomerController(trimmed, friendlyName, this);
-        this.model.addOrUpdateCustomer(ctrl.toJSON());  // store plain data
-    
         this.customerControllers.set(trimmed, ctrl);
+        this.model.addOrUpdateCustomer(ctrl.toJSON());
     
-        await this.save();
-        this.rebuildTable();
-        this.poll();
+        // Show the row immediately (with "Connecting...")
+        this.rebuildTable();  // or this.view.appendRow(ctrl.getRowElement()) for instant add
+    
+        // Immediate single-customer poll to get real status
+        try {
+            await this.updateCustomerStatus(ctrl.model);  // uses the model object directly
+    
+            // If poll found nothing → auto-remove + toast
+            if (ctrl.model.status === 'Account Not Found') {
+                this.remove(trimmed);
+                this.view.showToast('Customer not found in RADIUS', { type: 'error', duration: 5000 });
+                return;
+            }
+    
+            // Otherwise → update the row with real status/duration
+            ctrl.view.update();
+    
+            await this.save();
+            this.rebuildTable();  // full refresh if needed
+        } catch (err) {
+            console.error('Initial poll failed:', err);
+            ctrl.model.status = 'Error';
+            ctrl.view.update();
+        }
     }
 
     async remove(radiusUsername) {
