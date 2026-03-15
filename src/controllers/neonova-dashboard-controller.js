@@ -14,6 +14,17 @@ class NeonovaDashboardController {
         // If paused, don't start polling yet
         if (!this.model.isPollingPaused) this.startPolling();
         this.view = new NeonovaDashboardView(this);
+        this.customerControllers = new Map();
+    }
+
+    createCustomerController(customer) {
+        const ctrl = new NeonovaCustomerController(customer, this);
+        this.customerControllers.set(customer.radiusUsername, ctrl);
+        return ctrl;
+    }
+    
+    getCustomerController(username) {
+        return this.customerControllers.get(username);
     }
 
     startPolling() {
@@ -62,49 +73,48 @@ class NeonovaDashboardController {
         if (this.pollInterval) {
             clearInterval(this.pollInterval);
             this.pollInterval = null;
-            console.log("[NeonovaDashboardController.togglePolling] Cleared existing poll interval");
         }
 
         // If resuming polling (not paused anymore)
         if (!this.model.isPollingPaused) {
             // Run an immediate poll to get fresh data
             this.poll();
-            console.log("[NeonovaDashboardController.togglePolling] Ran immediate poll on resume");
 
             // Restart the scheduled interval
             this.pollInterval = setInterval(() => this.poll(), this.model.pollingIntervalMinutes * 60 * 1000);
-            console.log(`[NeonovaDashboardController.togglePolling] Restarted poll interval: every ${this.model.pollingIntervalMinutes} minutes`);
         }
 
         // Always persist the new paused state to localStorage (fix for original inconsistency)
         localStorage.setItem('novaPollingPaused', this.model.isPollingPaused.toString());
-        console.log(`[NeonovaDashboardController.togglePolling] Saved polling paused state: ${this.model.isPollingPaused}`);
-
-
 
         // Refresh the view to update UI elements (e.g., pause/resume button icon or text)
         this.view?.render();
-        console.log("[NeonovaDashboardController.togglePolling] UI refreshed to reflect new polling state");
     }
 
     async add(radiusUsername, friendlyName) {
-        if (!radiusUsername?.trim()) {
-            return;
-        }
+        if (!radiusUsername?.trim()) return;
+        
         const trimmed = radiusUsername.trim();
         if (this.model.getCustomer(trimmed)) {
             alert('Already added');
             return;
         }
+        
         const newCustomer = new NeonovaCustomer(trimmed, friendlyName);
         this.model.addOrUpdateCustomer(newCustomer);
+
+        // Create the per-customer controller (which will create its view internally)
+        this.createCustomerController(newCustomer);
+        
         await this.save();
         if (this.view) this.view.render();
+        
         this.poll();  // Immediate update for the new customer
     }
 
     async remove(radiusUsername) {
         this.model.removeCustomer(radiusUsername);
+        this.customerControllers.delete(radiusUsername);
         await this.save();
         if (this.view) this.view.render();
     }
@@ -161,6 +171,10 @@ class NeonovaDashboardController {
             const parsed = JSON.parse(jsonStr);
             
             this.model.customers = (parsed.customers || []).map(c => Object.assign(new NeonovaCustomer('', ''), c));
+            this.customerControllers.clear();
+            for (const customer of this.model.getCustomersArray()) {
+                this.createCustomerController(customer);
+            }
             this.model.pollingIntervalMinutes = parsed.pollingIntervalMinutes || this.model.pollingIntervalMinutes;
             this.model.isPollingPaused = parsed.isPollingPaused || this.model.isPollingPaused;
             if (parsed.lastUpdate) {
@@ -192,15 +206,7 @@ class NeonovaDashboardController {
     }
 
     async poll() {
-        if (!this._initialized) {
-            return;
-        }
-
-        if (!this.model.getCustomersArray()?.length) {
-            return;
-        }
-
-        if (this.model.isPollingPaused) {
+        if (!this._initialized || !this.model.getCustomersArray()?.length || this.model.isPollingPaused) {
             return;
         }
     
@@ -208,6 +214,12 @@ class NeonovaDashboardController {
         if (pollStatusEl) pollStatusEl.textContent = 'Fetching...';
     
         for (const customer of this.model.getCustomersArray()) {
+            const ctrl = this.getCustomerController(customer.radiusUsername);
+            if (!ctrl) {
+                // Safety: recreate if missing (should not happen)
+                this.createCustomerController(customer);
+                ctrl = this.getCustomerController(customer.radiusUsername);
+            }
             try {
                 await this.updateCustomerStatus(customer);
             } catch (err) {
