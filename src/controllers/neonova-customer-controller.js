@@ -11,7 +11,7 @@ class NeonovaCustomerController {
     }
 
     get customer() {
-        return this.#customer;
+        return #customer;
     }
 
     // For runtime use
