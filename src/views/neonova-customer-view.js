@@ -64,10 +64,6 @@ class NeonovaCustomerView extends BaseNeonovaView {
                 border: 'border-purple-700/50',
                 dot: 'bg-purple-400'
             },
-            .report-btn:hover {
-                transform: scale(1.2);
-                transition: transform 100ms ease;
-            }
         };
     
         const style = statusStyles[status] || statusStyles['Unknown'];  // fallback
@@ -180,11 +176,5 @@ class NeonovaCustomerView extends BaseNeonovaView {
         if (!this.#isEditing) return;
         this.#isEditing = false;
         this.#renderContent();
-    }
-
-    // Optional: expose a destroy method if you want explicit cleanup later
-    destroy() {
-        this.#tr.remove();
-        // any other cleanup if needed
     }
 }
