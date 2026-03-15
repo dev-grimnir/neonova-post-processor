@@ -1,8 +1,10 @@
 class NeonovaReportOrderController {
     constructor(username, friendlyName) {
+        console.log("ReportOrderController constructor");
         this.username = username;
         this.friendlyName = friendlyName || username;
         this.view = null;  // Created in start()
+        this.start();
     }
 
     start() {
