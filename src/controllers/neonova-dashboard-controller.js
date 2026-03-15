@@ -180,6 +180,12 @@ class NeonovaDashboardController {
             if (parsed.lastUpdate) {
                 this.model.lastUpdate = new Date(parsed.lastUpdate);
             }
+
+            this.customerControllers.clear();
+            for (const customer of this.model.getCustomersArray()) {
+                this.createCustomerController(customer);
+            }
+            
         } catch (e) {
             alert("Decryption failed. Clearing everything.");
             localStorage.removeItem('novaDashboardCustomers');
@@ -214,7 +220,7 @@ class NeonovaDashboardController {
         if (pollStatusEl) pollStatusEl.textContent = 'Fetching...';
     
         for (const customer of this.model.getCustomersArray()) {
-            const ctrl = this.getCustomerController(customer.radiusUsername);
+            let const ctrl = this.getCustomerController(customer.radiusUsername);
             if (!ctrl) {
                 // Safety: recreate if missing (should not happen)
                 this.createCustomerController(customer);
