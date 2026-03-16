@@ -1,6 +1,7 @@
 class NeonovaDashboardView extends BaseNeonovaView {
     constructor(controller) {
         super();
+        this.privacyEnabled = localStorage.getItem('neonova-privacy-enabled') === 'true';
         this.controller = controller;
         this.isMinimized = true;
         this.createElements();
@@ -39,6 +40,11 @@ class NeonovaDashboardView extends BaseNeonovaView {
                 <div class="flex items-center gap-4">
                     <img src="https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/assets/nova-subscriber-logo.png" 
                          alt="Nova Subscriber" class="h-10 w-auto">
+                    <button id="privacy-toggle-btn" 
+                        class="px-4 py-2.5 text-2xl bg-zinc-800 hover:bg-zinc-700 rounded-2xl flex items-center justify-center transition-all border border-zinc-700 hover:border-zinc-600"
+                        title="Toggle Privacy Mode">
+                        <i class="fas fa-eye text-emerald-400"></i>
+                    </button>
                 </div>
 
                 <div class="flex items-center gap-4">
@@ -185,6 +191,11 @@ class NeonovaDashboardView extends BaseNeonovaView {
             const style = document.createElement('style');
             style.id = 'neonova-scroll-style';
             style.innerHTML = `
+                .neonova-privacy-mode td:nth-child(1),
+                .neonova-privacy-mode td:nth-child(2) {
+                    filter: blur(5px);
+                    transition: filter 300ms ease;
+                }
                 .neonova-scroll::-webkit-scrollbar { width: 7px; }
                 .neonova-scroll::-webkit-scrollbar-track { background: #18181b; border-radius: 9999px; }
                 .neonova-scroll::-webkit-scrollbar-thumb { background: #34d399; border-radius: 9999px; border: 2px solid #18181b; }
@@ -249,10 +260,10 @@ class NeonovaDashboardView extends BaseNeonovaView {
 
     attachHeaderListeners() {
         const privacyBtn = this.header.querySelector('#privacy-toggle-btn');
-        privacyBtn?.addEventListener('click', () => {
-            this.togglePrivacy();           // flips state + localStorage + applies blur
-            this.updatePrivacyButton(privacyBtn); // updates eye / eye-slash icon + tooltip
-        });
+        if (privacyBtn) {
+            privacyBtn.addEventListener('click', () => this.togglePrivacy());
+            this.updatePrivacyButton(privacyBtn);  // set correct eye / eye-slash on load
+        }
         
         // Polling toggle
         const pollBtn = this.header.querySelector('#poll-toggle-btn');
@@ -378,4 +389,40 @@ class NeonovaDashboardView extends BaseNeonovaView {
     }
 
     update() { this.render(); }
+
+// ====================== PRIVACY MODE ======================
+applyPrivacyBlur() {
+    const tbody = this.panel.querySelector('#customer-table-body');
+    if (tbody) {
+        if (this.privacyEnabled) {
+            tbody.classList.add('neonova-privacy-mode');
+        } else {
+            tbody.classList.remove('neonova-privacy-mode');
+        }
+    }
+}
+
+togglePrivacy() {
+    this.privacyEnabled = !this.privacyEnabled;
+    localStorage.setItem('neonova-privacy-enabled', this.privacyEnabled);
+    
+    this.applyPrivacyBlur();
+    
+    const btn = this.header.querySelector('#privacy-toggle-btn');
+    this.updatePrivacyButton(btn);
+}
+
+updatePrivacyButton(btn) {
+    if (!btn) return;
+    const icon = btn.querySelector('i');
+    
+    if (this.privacyEnabled) {
+        icon.className = 'fas fa-eye-slash text-red-400';
+        btn.title = 'Privacy ON — names blurred';
+    } else {
+        icon.className = 'fas fa-eye text-emerald-400';
+        btn.title = 'Privacy OFF — names visible';
+    }
+}
+    
 }
