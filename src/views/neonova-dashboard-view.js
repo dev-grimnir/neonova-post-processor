@@ -41,8 +41,8 @@ class NeonovaDashboardView extends BaseNeonovaView {
                     <img src="https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/assets/nova-subscriber-logo.png" 
                          alt="Nova Subscriber" class="h-10 w-auto">
                     <button id="privacy-toggle-btn" 
-                        class="px-4 py-2.5 text-2xl bg-zinc-800 hover:bg-zinc-700 rounded-2xl flex items-center justify-center transition-all border border-zinc-700 hover:border-zinc-600"
-                        title="Toggle Privacy Mode">
+                            class="p-3 text-xl bg-zinc-800 hover:bg-zinc-700 rounded-2xl flex items-center justify-center transition-all border border-zinc-700"
+                            title="Toggle Privacy Mode">
                         <i class="fas fa-eye text-emerald-400"></i>
                     </button>
                 </div>
