@@ -41,7 +41,8 @@ class NeonovaDashboardController {
             localStorage.removeItem('neonova-privacy-enabled');
             localStorage.removeItem('novaPollingIntervalMinutes');
             localStorage.removeItem('novaPollingPaused');
-
+            localStorage.removeItem('novaPrivacyMode');
+            localStorage.removeItem('isDisplayFormSubmitted');
             await this.saveSettings();
             return;
         }
