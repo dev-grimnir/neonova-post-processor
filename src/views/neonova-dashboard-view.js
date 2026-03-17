@@ -396,9 +396,9 @@ class NeonovaDashboardView extends BaseNeonovaView {
 
     update() { this.render(); }
 
-    togglePrivacy() {
+    async togglePrivacy() {
         this.controller.model.settings.privacyEnabled = !this.controller.model.settings.privacyEnabled;
-        this.controller.model.saveSettings();
+        await this.controller.model.saveSettings();
     
         this.applyPrivacyBlur();
         
