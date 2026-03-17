@@ -65,7 +65,7 @@ class NeonovaDashboardController {
         minutes = Math.max(1, Math.min(60, parseInt(minutes) || 5));
         this.model.pollingIntervalMinutes = minutes;
         this.pollIntervalMs = this.model.pollingIntervalMinutes * 60 * 1000;
-        this.model.saveSettings();
+        await this.model.saveSettings();
         
         if (this.pollInterval) {
             clearInterval(this.pollInterval);
@@ -105,7 +105,7 @@ class NeonovaDashboardController {
         }
 
         // Always persist the new paused state to localStorage (fix for original inconsistency)
-        this.model.saveSettings();
+        await this.model.saveSettings();
         
         // Refresh the view to update UI elements (e.g., pause/resume button icon or text)
         this.view?.render();
