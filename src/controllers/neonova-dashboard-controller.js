@@ -14,62 +14,6 @@ class NeonovaDashboardController {
         this.view = new NeonovaDashboardView(this);
     }
 
-    // ====================== SETTINGS BLOB ======================
-    settings = {
-        privacyEnabled: false,
-        pollingIntervalMinutes: 1,
-        pollingPaused: false
-    };
-
-    /**
-     * Loads all settings from the single encrypted blob (or defaults).
-     * Called once after crypto master key is ready.
-     */
-    async loadSettings() {
-        const encrypted = localStorage.getItem('novaDashboardSettings');
-        if (!encrypted) {
-            // Migration from old individual keys (one-time only)
-            const oldPrivacy = localStorage.getItem('neonova-privacy-enabled');
-            const oldInterval = localStorage.getItem('novaPollingIntervalMinutes');
-            const oldPaused = localStorage.getItem('novaPollingPaused');
-
-            if (oldPrivacy) this.settings.privacyEnabled = oldPrivacy === 'true';
-            if (oldInterval) this.settings.pollingIntervalMinutes = parseInt(oldInterval) || 1;
-            if (oldPaused) this.settings.pollingPaused = oldPaused === 'true';
-
-            // Clear old keys so we never read them again
-            localStorage.removeItem('neonova-privacy-enabled');
-            localStorage.removeItem('novaPollingIntervalMinutes');
-            localStorage.removeItem('novaPollingPaused');
-            localStorage.removeItem('novaPrivacyMode');
-            localStorage.removeItem('isDisplayFormSubmitted');
-            await this.saveSettings();
-            return;
-        }
-
-        try {
-            const jsonStr = await NeonovaCryptoController.decryptData(encrypted);
-            const parsed = JSON.parse(jsonStr);
-            this.settings = { ...this.settings, ...parsed };  // merge with defaults
-        } catch (e) {
-            console.warn("[Settings] Decryption failed — using defaults");
-            await this.saveSettings();
-        }
-    }
-
-    /**
-     * Saves the entire settings object as one encrypted blob.
-     */
-    async saveSettings() {
-        try {
-            const jsonStr = JSON.stringify(this.settings);
-            const encrypted = await NeonovaCryptoController.encryptData(jsonStr);
-            localStorage.setItem('novaDashboardSettings', encrypted);
-        } catch (e) {
-            console.error("[Settings] Encryption failed", e);
-        }
-    }
-
     createCustomerController(customer) {
         const ctrl = new NeonovaCustomerController(customer, this);
         this.customerControllers.set(customer.radiusUsername, ctrl);
@@ -121,7 +65,7 @@ class NeonovaDashboardController {
         minutes = Math.max(1, Math.min(60, parseInt(minutes) || 5));
         this.model.pollingIntervalMinutes = minutes;
         this.pollIntervalMs = this.model.pollingIntervalMinutes * 60 * 1000;
-        this.saveSettings();
+        this.model.saveSettings();
         
         if (this.pollInterval) {
             clearInterval(this.pollInterval);
@@ -161,7 +105,7 @@ class NeonovaDashboardController {
         }
 
         // Always persist the new paused state to localStorage (fix for original inconsistency)
-        this.saveSettings();
+        this.model.saveSettings();
         
         // Refresh the view to update UI elements (e.g., pause/resume button icon or text)
         this.view?.render();
@@ -246,7 +190,7 @@ class NeonovaDashboardController {
         }
     
         await this.load(); 
-        await this.loadSettings();  
+        await this.model.loadSettings();  
 
         // Use settings for polling
         this.model.pollingIntervalMinutes = this.settings.pollingIntervalMinutes;
