@@ -74,6 +74,12 @@ class NeonovaCustomerController {
             return false;
         }
         this.#model.friendlyName = trimmed;
+
+        this.dashboardController.model.addOrUpdateCustomer({
+            radiusUsername: this.radiusUsername,
+            friendlyName: trimmed
+        });
+        
         await this.dashboardController.save();
         this.view.update();  // refresh row to show new name
         return true;
