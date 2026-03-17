@@ -41,9 +41,9 @@ class NeonovaDashboardView extends BaseNeonovaView {
                     <img src="https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/main/src/assets/nova-subscriber-logo.png" 
                          alt="Nova Subscriber" class="h-10 w-auto">
                     <button id="privacy-toggle-btn" 
-                            class="p-3 text-xl bg-zinc-800 hover:bg-zinc-700 rounded-2xl flex items-center justify-center transition-all border border-zinc-700"
+                            class="px-6 py-2.5 font-medium rounded-2xl flex items-center justify-center transition-all border shadow-sm"
                             title="Toggle Privacy Mode">
-                        <i class="fas fa-eye text-emerald-400"></i>
+                        Privacy Off
                     </button>
                 </div>
 
@@ -390,39 +390,33 @@ class NeonovaDashboardView extends BaseNeonovaView {
 
     update() { this.render(); }
 
-// ====================== PRIVACY MODE ======================
-applyPrivacyBlur() {
-    const tbody = this.panel.querySelector('#customer-table-body');
-    if (tbody) {
-        if (this.privacyEnabled) {
-            tbody.classList.add('neonova-privacy-mode');
-        } else {
-            tbody.classList.remove('neonova-privacy-mode');
+    applyPrivacyBlur() {
+        const tbody = this.panel.querySelector('#customer-table-body');
+        if (tbody) {
+            tbody.classList.toggle('neonova-privacy-mode', this.privacyEnabled);
         }
     }
-}
-
-togglePrivacy() {
-    this.privacyEnabled = !this.privacyEnabled;
-    localStorage.setItem('neonova-privacy-enabled', this.privacyEnabled);
     
-    this.applyPrivacyBlur();
-    
-    const btn = this.header.querySelector('#privacy-toggle-btn');
-    this.updatePrivacyButton(btn);
-}
-
-updatePrivacyButton(btn) {
-    if (!btn) return;
-    const icon = btn.querySelector('i');
-    
-    if (this.privacyEnabled) {
-        icon.className = 'fas fa-eye-slash text-red-400';
-        btn.title = 'Privacy ON — names blurred';
-    } else {
-        icon.className = 'fas fa-eye text-emerald-400';
-        btn.title = 'Privacy OFF — names visible';
+    togglePrivacy() {
+        this.privacyEnabled = !this.privacyEnabled;
+        localStorage.setItem('neonova-privacy-enabled', this.privacyEnabled.toString());
+        this.applyPrivacyBlur();
+        
+        const btn = this.header.querySelector('#privacy-toggle-btn');
+        this.updatePrivacyButton(btn);
     }
-}
     
+    updatePrivacyButton(btn) {
+        if (!btn) return;
+        
+        if (this.privacyEnabled) {
+            btn.textContent = 'Privacy On';
+            btn.className = 'px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-2xl flex items-center justify-center transition-all border border-zinc-700 shadow-sm';
+            btn.title = 'Privacy ON — names blurred';
+        } else {
+            btn.textContent = 'Privacy Off';
+            btn.className = 'px-6 py-2.5 bg-zinc-700 hover:bg-zinc-600 text-white font-medium rounded-2xl flex items-center justify-center transition-all border border-zinc-600 shadow-sm';
+            btn.title = 'Privacy OFF — names visible';
+        }
+    }
 }
