@@ -396,16 +396,10 @@ class NeonovaDashboardView extends BaseNeonovaView {
 
     update() { this.render(); }
 
-    applyPrivacyBlur() {
-        const tbody = this.panel.querySelector('#customer-table-body');
-        if (tbody) {
-            tbody.classList.toggle('neonova-privacy-mode', this.controller.model.settings.privacyEnabled);
-        }
-    }
-    
     togglePrivacy() {
-        this.privacyEnabled = !this.privacyEnabled;
+        this.controller.model.settings.privacyEnabled = !this.controller.model.settings.privacyEnabled;
         this.controller.model.saveSettings();
+    
         this.applyPrivacyBlur();
         
         const btn = this.header.querySelector('#privacy-toggle-btn');
@@ -414,10 +408,9 @@ class NeonovaDashboardView extends BaseNeonovaView {
     
     updatePrivacyButton(btn) {
         if (!btn) return;
-
         const enabled = this.controller.model.settings.privacyEnabled;
         
-        if (this.privacyEnabled) {
+        if (enabled) {
             btn.textContent = 'Privacy On';
             btn.className = 'px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-2xl flex items-center justify-center transition-all border border-zinc-700 shadow-sm';
             btn.title = 'Privacy ON — names blurred';
@@ -427,4 +420,12 @@ class NeonovaDashboardView extends BaseNeonovaView {
             btn.title = 'Privacy OFF — names visible';
         }
     }
+    
+    applyPrivacyBlur() {
+        const tbody = this.panel.querySelector('#customer-table-body');
+        if (tbody) {
+            tbody.classList.toggle('neonova-privacy-mode', this.controller.model.settings.privacyEnabled);
+        }
+    }
+
 }
