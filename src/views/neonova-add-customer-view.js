@@ -3,6 +3,21 @@ class NeonovaAddCustomerView extends BaseNeonovaView {
         super();
         this.controller = controller;
         this.modal = null;
+        this._keyListener = null;
+    }
+
+    handleKeyDown(e) {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            this.hide();
+        } else if (e.key === 'Enter') {
+            // Only trigger if focus is inside the modal (not on body or elsewhere)
+            if (this.modal && this.modal.contains(document.activeElement)) {
+                e.preventDefault();
+                const addBtn = this.modal.querySelector('#add-btn');
+                if (addBtn) addBtn.click();  // simulates button click → runs validation/submit
+            }
+        }
     }
 
     /**
@@ -66,6 +81,9 @@ class NeonovaAddCustomerView extends BaseNeonovaView {
         }, 10);
 
         this.attachListeners();
+
+        this._keyListener = this.handleKeyDown.bind(this);
+        document.addEventListener('keydown', this._keyListener);
     }
 
     attachListeners() {
@@ -103,6 +121,13 @@ class NeonovaAddCustomerView extends BaseNeonovaView {
 
     hide() {
         if (!this.modal) return;
+        
+        if (this._keyListener) {
+            document.removeEventListener('keydown', this._keyListener);
+            this._keyListener = null;
+        }
+
+        
 
         const overlay = this.modal.querySelector('#add-customer-modal');
         const box = this.modal.querySelector('.transform');
