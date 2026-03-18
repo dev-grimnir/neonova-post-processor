@@ -6,10 +6,7 @@ class NeonovaDashboardController {
         this._initialized = false;
         this.passphraseController = null;
         this.initAsync();
-        // Load persisted polling interval (default 1 min) and paused state (default false)
-        this.model.pollingIntervalMinutes = parseInt(localStorage.getItem('novaPollingIntervalMinutes')) || 1;
-        this.model.isPollingPaused = localStorage.getItem('novaPollingPaused') === 'true';  // string 'true' or false
-
+        
         this.pollIntervalMs = this.model.pollingIntervalMinutes * 60 * 1000;
 
         // If paused, don't start polling yet
@@ -27,28 +24,63 @@ class NeonovaDashboardController {
         return this.customerControllers.get(username);
     }
 
+    #parseDurationToSeconds(durationStr) {
+        if (!durationStr || durationStr === '—' || durationStr.includes('<1min')) {
+            return 30;  // treat <1min as ~30s so very new sessions sort near top
+        }
+    
+        let totalSeconds = 0;
+        const parts = durationStr.match(/(\d+)([dhms])/g) || [];
+    
+        for (const part of parts) {
+            const num = parseInt(part, 10);
+            const unit = part.slice(-1);
+    
+            if (unit === 'd') totalSeconds += num * 86400;
+            else if (unit === 'h') totalSeconds += num * 3600;
+            else if (unit === 'm') totalSeconds += num * 60;
+            else if (unit === 's') totalSeconds += num;
+        }
+    
+        return totalSeconds || 0;
+    }
+
     rebuildTable() {
         const rows = [];
         for (const ctrl of this.customerControllers.values()) {
             const row = ctrl.getRowElement();
             if (row) rows.push(row);
         }
-
-         // === SORT: Disconnected/Not Connected at the very top ===
+    
         rows.sort((a, b) => {
-            // Status is always the 3rd column (nth-child(3))
+            // Primary: disconnected first
             const aStatus = a.querySelector('td:nth-child(3)')?.textContent.trim() || '';
             const bStatus = b.querySelector('td:nth-child(3)')?.textContent.trim() || '';
     
             const aDisconnected = aStatus !== 'Connected' && aStatus !== 'Connecting...';
             const bDisconnected = bStatus !== 'Connected' && bStatus !== 'Connecting...';
     
-            if (aDisconnected && !bDisconnected) return -1;   // disconnected first
-            if (!aDisconnected && bDisconnected) return 1;
-            return 0;   // keep original relative order inside each group (stable)
+            if (aDisconnected !== bDisconnected) {
+                return aDisconnected ? -1 : 1;
+            }
+    
+            // Secondary: among connected rows, shortest duration first
+            if (!aDisconnected) {
+                // Duration is always the 4th column (nth-child(4))
+                const aDurationCell = a.querySelector('td:nth-child(4)')?.textContent.trim() || '';
+                const bDurationCell = b.querySelector('td:nth-child(4)')?.textContent.trim() || '';
+    
+                // Convert to seconds (handle "<1min", "2d 3h 45m", etc.)
+                const aSeconds = this.#parseDurationToSeconds(aDurationCell) || 0;
+                const bSeconds = this.#parseDurationToSeconds(bDurationCell) || 0;
+    
+                return aSeconds - bSeconds;  // ascending = shortest first
+            }
+    
+            return 0;  // preserve original order within same category
         });
-        
-            this.view.setRows(rows);
+    
+        this.view.setRows(rows);
     }
 
     startPolling() {
@@ -64,12 +96,12 @@ class NeonovaDashboardController {
         }
     }
 
-    setPollingInterval(minutes) {
+    async setPollingInterval(minutes) {
         minutes = Math.max(1, Math.min(60, parseInt(minutes) || 5));
         this.model.pollingIntervalMinutes = minutes;
         this.pollIntervalMs = this.model.pollingIntervalMinutes * 60 * 1000;
-        localStorage.setItem('novaPollingIntervalMinutes', this.model.pollingIntervalMinutes.toString());
-        console.log(`[NeonovaDashboardController.setPollingInterval] Saved new interval: ${this.model.pollingIntervalMinutes} minutes`);
+        await this.model.saveSettings();
+        
         if (this.pollInterval) {
             clearInterval(this.pollInterval);
             this.pollInterval = setInterval(() => this.poll(), this.model.pollingIntervalMinutes * 60 * 1000);
@@ -88,10 +120,9 @@ class NeonovaDashboardController {
      * 
      * This ensures consistent state saving (paused or not) — original only saved on resume.
      */
-    togglePolling() {
+    async togglePolling() {
         // Flip the paused flag
         this.model.isPollingPaused = !this.model.isPollingPaused;
-        console.log(`[NeonovaDashboardController.togglePolling] Toggled polling paused: ${this.model.isPollingPaused}`);
 
         // Always clear the existing interval to avoid duplicates
         if (this.pollInterval) {
@@ -109,8 +140,8 @@ class NeonovaDashboardController {
         }
 
         // Always persist the new paused state to localStorage (fix for original inconsistency)
-        localStorage.setItem('novaPollingPaused', this.model.isPollingPaused.toString());
-
+        await this.model.saveSettings();
+        
         // Refresh the view to update UI elements (e.g., pause/resume button icon or text)
         this.view?.render();
     }
@@ -177,24 +208,20 @@ class NeonovaDashboardController {
      *   4. Start polling and render
      */
     async initAsync() {
-        if (this._initialized) {
-            return;
-        }
+        if (this._initialized) return;
         this._initialized = true;
     
-        // Delegate ALL key setup to the static crypto controller
         await NeonovaCryptoController.initMasterKey();
     
-        // If this is the very first time (no remembered key), show passphrase modal exactly once
         if (!NeonovaCryptoController.hasMasterKey) {
             this.passphraseController = new NeonovaPassphraseController(this);
-            await this.passphraseController.show();   // only one modal
-        } else {
-            
+            await this.passphraseController.show();
         }
     
-        await this.load(); 
-
+        await this.load();           // ← customers (still works, key is there)
+        await this.model.loadSettings();   // ← now in the model
+    
+        // NO MORE this.settings lines — the model already synced polling values
         if (!this.model.isPollingPaused) this.startPolling();
         if (this.view) this.rebuildTable();
     }
@@ -222,9 +249,6 @@ class NeonovaDashboardController {
                 const ctrl = NeonovaCustomerController.fromJSON(json, this);
                 this.customerControllers.set(json.radiusUsername, ctrl);
             }
-    
-            this.model.pollingIntervalMinutes = parsed.pollingIntervalMinutes || 1;
-            this.model.isPollingPaused = parsed.isPollingPaused || false;
             
         } catch (e) {
             alert("Decryption failed. Clearing everything.");
@@ -374,7 +398,7 @@ class NeonovaDashboardController {
             let durationSeconds = Math.floor((Date.now() - eventMs) / 1000);
             if (durationSeconds < 0) durationSeconds = 0;
 
-            const status = latest.status === 'Start' ? 'Connected' : 'Not Connected';
+            const status = latest.status === 'Start' ? 'Connected' : 'Disconnected';
 
             const isNew = customer.lastEventTime === null || eventMs > customer.lastEventTime;
 

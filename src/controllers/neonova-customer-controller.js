@@ -68,13 +68,19 @@ class NeonovaCustomerController {
         new NeonovaReportOrderController(username, friendlyName);
     }
 
-    updateFriendlyName(newName) {
+    async updateFriendlyName(newName) {
         const trimmed = newName.trim();
         if (trimmed === '') {
             return false;
         }
         this.#model.friendlyName = trimmed;
-        this.dashboardController.save();
+
+        this.dashboardController.model.addOrUpdateCustomer({
+            radiusUsername: this.radiusUsername,
+            friendlyName: trimmed
+        });
+        
+        await this.dashboardController.save();
         this.view.update();  // refresh row to show new name
         return true;
     }

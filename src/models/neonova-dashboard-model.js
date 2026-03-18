@@ -5,6 +5,12 @@ class NeonovaDashboardModel {
         this.isPollingPaused = false;
         this.lastUpdate = null;
         this.lastUpdatedDisplay = '--';
+        // Single encrypted settings blob (privacy + polling + future settings)
+        this.settings = {
+            privacyEnabled: false,
+            pollingIntervalMinutes: 1,
+            pollingPaused: false
+        };
     }
 
     // ─── Basic accessors ─────────────────────────────────────────────
@@ -31,13 +37,17 @@ class NeonovaDashboardModel {
     }
 
     // Polling settings
-    setPollingInterval(minutes) {
+    async setPollingInterval(minutes) {
         const safe = Math.max(1, Math.min(60, Number(minutes)));
         this.pollingIntervalMinutes = safe;
+        this.settings.pollingIntervalMinutes = safe;
+        await this.saveSettings();
     }
 
-    togglePolling() {
+    async togglePolling() {
         this.isPollingPaused = !this.isPollingPaused;
+        this.settings.pollingPaused = this.isPollingPaused;
+        await this.saveSettings(); 
     }
 
     // Optional: simple computed / status
@@ -57,5 +67,55 @@ class NeonovaDashboardModel {
             lastUpdate: this.lastUpdate?.toISOString(),
             lastUpdatedDisplay: this.lastUpdatedDisplay
         };
+    }
+
+    // ====================== ENCRYPTED SETTINGS BLOB ======================
+    async loadSettings() {
+        const encrypted = localStorage.getItem('novaDashboardSettings');
+        
+        if (!encrypted) {
+            // === ONE-TIME MIGRATION FROM OLD KEYS ===
+            const oldPrivacy = localStorage.getItem('neonova-privacy-enabled');
+            const oldInterval = localStorage.getItem('novaPollingIntervalMinutes');
+            const oldPaused = localStorage.getItem('novaPollingPaused');
+
+            if (oldPrivacy !== null) this.settings.privacyEnabled = oldPrivacy === 'true';
+            if (oldInterval !== null) this.settings.pollingIntervalMinutes = parseInt(oldInterval, 10) || 1;
+            if (oldPaused !== null) this.settings.pollingPaused = oldPaused === 'true';
+
+            // Clean up every leftover raw key
+            localStorage.removeItem('neonova-privacy-enabled');
+            localStorage.removeItem('novaPollingIntervalMinutes');
+            localStorage.removeItem('novaPollingPaused');
+            localStorage.removeItem('novaPrivacyMode');
+            localStorage.removeItem('isDisplayFormSubmitted');
+
+            await this.saveSettings();
+            return;
+        }
+
+        try {
+            const jsonStr = NeonovaCryptoController.decryptData(encrypted);
+            const parsed = JSON.parse(jsonStr);
+            this.settings = { ...this.settings, ...parsed };
+        } catch (e) {
+            console.warn("[Settings] Decryption failed — using defaults");
+            await this.saveSettings();
+        }
+
+        // Keep the existing top-level properties in sync
+        this.pollingIntervalMinutes = this.settings.pollingIntervalMinutes;
+        this.isPollingPaused = this.settings.pollingPaused;
+        
+    }
+
+    async saveSettings() {
+        try {
+            const jsonStr = JSON.stringify(this.settings);
+            const encrypted = await NeonovaCryptoController.encryptData(jsonStr);
+            localStorage.setItem('novaDashboardSettings', encrypted);
+        } catch (e) {
+            console.error("[Settings] Encryption failed", e);
+        }
     }
 }
