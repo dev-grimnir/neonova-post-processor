@@ -86,11 +86,6 @@ class NeonovaDashboardView extends BaseNeonovaView {
                             class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-black font-medium rounded-2xl flex items-center gap-2 transition shadow-sm">
                         Add Customer
                     </button>
-
-                    <button id="minimize-btn" 
-                            class="minimize-btn px-5 py-2.5 text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-white rounded-2xl flex items-center gap-2 transition border border-zinc-700">
-                        <i class="fas fa-chevron-up"></i> Maximize
-                    </button>
                 </div>
             </div>
         `;
@@ -238,6 +233,22 @@ class NeonovaDashboardView extends BaseNeonovaView {
             }
         });
 
+        this._escListener = (e) => {
+            if (e.key === 'Escape' && !this.isMinimized) {
+                e.preventDefault();
+                this.toggleMinimize();
+            }
+        };
+        document.addEventListener('keydown', this._escListener);
+
+        this._outsideListener = (e) => {
+            if (this.isMinimized) return;
+            if (!this.panel.contains(e.target)) {
+                this.toggleMinimize();
+            }
+        };
+        document.addEventListener('click', this._outsideListener);
+
         this.render();
     }
 
@@ -298,9 +309,6 @@ class NeonovaDashboardView extends BaseNeonovaView {
             const addController = new NeonovaAddCustomerController(this.controller);
             addController.show();
         });
-
-        // Minimize button
-        this.header.querySelector('#minimize-btn')?.addEventListener('click', () => this.toggleMinimize());
     }
 
     updatePollingButton(btn) {
@@ -317,14 +325,6 @@ class NeonovaDashboardView extends BaseNeonovaView {
             textSpan.textContent = 'Pause Polling';
         }
         if (intervalSpan) intervalSpan.textContent = `· ${this.controller.model.pollingIntervalMinutes} min`;
-    }
-
-    updateHeaderForState() {
-        const minBtn = this.header.querySelector('#minimize-btn');
-        if (!minBtn) return;
-        const actionText = this.isMinimized ? 'Maximize' : 'Minimize';
-        const actionIcon = this.isMinimized ? 'fa-chevron-up' : 'fa-minus';
-        minBtn.innerHTML = `<i class="fas ${actionIcon}"></i> ${actionText}`;
     }
 
     updateHeader() {
@@ -383,7 +383,6 @@ class NeonovaDashboardView extends BaseNeonovaView {
     // ====================== TOGGLE (now pure morph – no duplicate DOM, no black box) ======================
     toggleMinimize() {
         this.isMinimized = !this.isMinimized;
-        this.updateHeaderForState();
 
         if (this.isMinimized) {
             this.applyMinimizedStyles();
