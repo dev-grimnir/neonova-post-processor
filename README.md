@@ -71,7 +71,7 @@ In short: it just saves you from having to sit there clicking “Next” for 45 
 ### Persistent Storage (Encrypted)
 - The **only** data saved between sessions is your personal list of monitored customers (usernames, friendly names, and latest status).  
 - This data is stored in the browser’s `localStorage` and is **fully AES-256-GCM encrypted** on disk using the Web Crypto API.  
-- On first use you set a passphrase (or leave it blank to disable encryption). The key is remembered securely on your device for zero-prompt future visits.  
+- On first use you set a passphrase (the dashboard cannot be used without a passphrase). The key is remembered securely on your device for zero-prompt future visits.  
 - To force a re-prompt or wipe the key at any time: run `localStorage.removeItem('novaDashboardMasterKey')` in the console.
 
 ### No Persistent Logs or Reports
