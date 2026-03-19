@@ -142,4 +142,12 @@ class NeonovaAddCustomerView extends BaseNeonovaView {
             this.modal = null;
         }, 300);
     }
+
+    showError(msg) {
+    const errorEl = this.container.querySelector('#error-message');
+    if (errorEl) {
+        errorEl.textContent = msg;
+        errorEl.classList.remove('hidden');
+    }
+}
 }
