@@ -1,8 +1,3 @@
-/**
- * @file src/core/utils.js
- * Shared formatting and math helpers + Encryption
- * No dependencies
- */
 function formatDuration(sec) {
     if (sec <= 0) return '0s';
     const d = Math.floor(sec / 86400);
