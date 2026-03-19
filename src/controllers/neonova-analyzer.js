@@ -11,14 +11,15 @@ class NeonovaAnalyzer {
         const normalized = this.#normalizeInput(cleanedEntries);
 
         if (requestedStart && requestedEnd) {
-        const startMs = requestedStart.getTime();
-        const endMs   = requestedEnd.getTime();
-        const beforeCount = normalized.entries.length;
-        
-        normalized.entries = normalized.entries.filter(e => {
-            const ts = e.dateObj.getTime();
-            return ts >= startMs && ts <= endMs;
-        });
+            const startMs = requestedStart.getTime();
+            const endMs   = requestedEnd.getTime();
+            const beforeCount = normalized.entries.length;
+            
+            normalized.entries = normalized.entries.filter(e => {
+                const ts = e.dateObj.getTime();
+                return ts >= startMs && ts <= endMs;
+            });
+        }
 
         if (normalized.entries.length === 0) {
             console.log(`[NeonovaAnalyzer] computeMetrics → EMPTY set, returning {} (as before)`);
