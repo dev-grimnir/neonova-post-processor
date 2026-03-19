@@ -41,7 +41,7 @@ class NeonovaProgressController {
             // 3. Clean/dedupe
             const sanitizedEntries = NeonovaCollector.cleanEntries(rawEntries);
 
-            
+            const metrics = NeonovaAnalyzer.computeMetrics(sanitizedEntries, startDate, endDate);
 
             // 4. Analyze & compute metrics
             const metrics = NeonovaAnalyzer.computeMetrics(sanitizedEntries);
