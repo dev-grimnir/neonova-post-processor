@@ -5,8 +5,20 @@ class NeonovaDashboardController {
         this.masterPassphrase = null;    
         this._initialized = false;
         this.passphraseController = null;
+        this.#modalActive = false;
         this.initAsync();
         this.view = new NeonovaDashboardView(this);
+    }
+
+    #attachModalListeners() {
+        // Track modal state so dashboard never minimizes while anything is open
+        document.addEventListener('neonova:modal-opened', () => {
+            this._modalActive = true;
+        });
+
+        document.addEventListener('neonova:modal-closed', () => {
+            this._modalActive = false;
+        });
     }
 
     createCustomerController(customer) {
@@ -219,6 +231,7 @@ class NeonovaDashboardController {
         // NO MORE this.settings lines — the model already synced polling values
         if (!this.model.isPollingPaused) this.startPolling();
         if (this.view) this.rebuildTable();
+        this.#attachModalListeners();
     }
 
     /**
