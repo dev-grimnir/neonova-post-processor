@@ -10,6 +10,10 @@ class NeonovaDashboardController {
         this.view = new NeonovaDashboardView(this);
     }
 
+    modalActive(){
+        return this.modalActive;
+    }
+
     _attachModalListeners() {
         // Track modal state so dashboard never minimizes while anything is open
         document.addEventListener('neonova:modal-opened', () => {
