@@ -43,7 +43,7 @@ class NeonovaAddCustomerView extends BaseNeonovaView {
                             <label class="block text-sm font-medium text-zinc-400 mb-1.5">RADIUS Username <span class="text-red-400">*</span></label>
                             <input id="radius-username" type="text" 
                                    class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 placeholder-zinc-500"
-                                   placeholder="username@domain.com" autocomplete="off">
+                                   placeholder="Valid Radius username" autocomplete="off">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-zinc-400 mb-1.5">Friendly Name (optional)</label>
