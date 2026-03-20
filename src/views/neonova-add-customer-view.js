@@ -1,33 +1,14 @@
-class NeonovaAddCustomerView extends BaseNeonovaView {
+class NeonovaAddCustomerView extends NeonovaBaseModalView {
     constructor(controller) {
-        super();
-        this.controller = controller;
-        this.modal = null;
-        this._keyListener = null;
-    }
-
-    handleKeyDown(e) {
-        if (e.key === 'Escape') {
-            e.preventDefault();
-            this.hide();
-        } else if (e.key === 'Enter') {
-            // Only trigger if focus is inside the modal (not on body or elsewhere)
-            if (this.modal && this.modal.contains(document.activeElement)) {
-                e.preventDefault();
-                const addBtn = this.modal.querySelector('#add-btn');
-                if (addBtn) addBtn.click();  // simulates button click → runs validation/submit
-            }
-        }
+        super(controller);
+        this._enterListener = null;
     }
 
     /**
-     * Shows the modal with top-fade animation (exactly as requested).
-     * Copies style/structure of NeonovaReportProgressView / ReportOrderView:
-     * dark backdrop, emerald accents, centered rounded box, close X.
+     * Shows the modal — exactly the same HTML and entrance animation as before.
+     * All heavy lifting (overlay, append, fade + slide, Esc listener, opened event) is now in the base.
      */
     show() {
-        if (this.modal) this.hide();
-
         const html = `
             <div id="add-customer-modal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-[10000] opacity-0 transition-all duration-300">
                 <div class="bg-zinc-900 border border-zinc-700 rounded-3xl w-full max-w-md mx-4 overflow-hidden shadow-2xl transform -translate-y-12 transition-all duration-300">
@@ -69,22 +50,18 @@ class NeonovaAddCustomerView extends BaseNeonovaView {
             </div>
         `;
 
-        this.modal = document.createElement('div');
-        this.modal.innerHTML = html;
-        document.body.appendChild(this.modal);
-
-        // Trigger top-fade entrance
-        setTimeout(() => {
-            const overlay = this.modal.querySelector('#add-customer-modal');
-            const box = this.modal.querySelector('.transform');
-            if (overlay) overlay.classList.add('opacity-100');
-            if (box) box.classList.remove('-translate-y-12');
-        }, 10);
-
+        super.createModal(html);
         this.attachListeners();
 
-        this._keyListener = this.handleKeyDown.bind(this);
-        document.addEventListener('keydown', this._keyListener);
+        // Preserve original Enter key behavior (base only handles Escape)
+        this._enterListener = (e) => {
+            if (e.key === 'Enter' && this.modal && this.modal.contains(document.activeElement)) {
+                e.preventDefault();
+                const addBtn = this.modal.querySelector('#add-btn');
+                if (addBtn) addBtn.click();
+            }
+        };
+        document.addEventListener('keydown', this._enterListener);
     }
 
     attachListeners() {
@@ -115,31 +92,16 @@ class NeonovaAddCustomerView extends BaseNeonovaView {
                 return;
             }
 
-            // Hand data to controller
             this.controller.handleSubmit(radiusUsername, friendlyName);
         });
     }
 
     hide() {
-        if (!this.modal) return;
-        
-        if (this._keyListener) {
-            document.removeEventListener('keydown', this._keyListener);
-            this._keyListener = null;
+        if (this._enterListener) {
+            document.removeEventListener('keydown', this._enterListener);
+            this._enterListener = null;
         }
-
-        const overlay = this.modal.querySelector('#add-customer-modal');
-        const box = this.modal.querySelector('.transform');
-
-        if (overlay) overlay.classList.remove('opacity-100');
-        if (box) box.classList.add('-translate-y-12');   // ← reverse slide up
-
-        setTimeout(() => {
-            if (this.modal && this.modal.parentNode) {
-                this.modal.parentNode.removeChild(this.modal);
-            }
-            this.modal = null;
-        }, 300);
+        super.hide();
     }
 
     showError(msg) {
@@ -148,12 +110,11 @@ class NeonovaAddCustomerView extends BaseNeonovaView {
             errorEl.textContent = msg;
             errorEl.classList.remove('hidden');
             
-            // Optional: flash red border on input
             const input = document.getElementById('radius-username');
             if (input) input.classList.add('border-red-500');
         } else {
             console.warn("Username error element not found");
-            alert(msg); // only fallback if HTML is broken
+            alert(msg);
         }   
     }
 
@@ -166,5 +127,5 @@ class NeonovaAddCustomerView extends BaseNeonovaView {
             const input = document.getElementById('radius-username');
             if (input) input.classList.remove('border-red-500');
         }
-}
+    }
 }
