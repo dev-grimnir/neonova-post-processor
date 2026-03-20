@@ -5,12 +5,12 @@ class NeonovaDashboardController {
         this.masterPassphrase = null;    
         this._initialized = false;
         this.passphraseController = null;
-        this.#modalActive = false;
+        this.modalActive = false;
         this.initAsync();
         this.view = new NeonovaDashboardView(this);
     }
 
-    #attachModalListeners() {
+    _attachModalListeners() {
         // Track modal state so dashboard never minimizes while anything is open
         document.addEventListener('neonova:modal-opened', () => {
             this._modalActive = true;
