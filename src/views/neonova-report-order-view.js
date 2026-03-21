@@ -34,6 +34,10 @@ class NeonovaReportOrderView extends NeonovaBaseModalView {
     }
 
     render() {
+        if (!this.modal) {
+            return;
+        }
+        
         const content = this.modal.querySelector('#report-content');
         if (!content) return;
 
