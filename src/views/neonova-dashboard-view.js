@@ -241,15 +241,24 @@ class NeonovaDashboardView extends BaseNeonovaView {
         };
         document.addEventListener('keydown', this.escListener);
 
-        this._outsideListener = (e) => {
-            if (this.controller.isModalActive() || this.isMinimized || this.panel.contains(e.target)) {
+        this.outsideListener = (e) => {
+            // Ignore the click entirely if:
+            // - A modal is currently open (protect modal interaction)
+            // - Dashboard is already minimized (no need to toggle)
+            if (this.controller.isModalActive() || this.isMinimized) {
                 return;
             }
         
-            console.log('  → Should minimize now');
+            // At this point: no modal, dashboard is maximized
+            // Now check if the click landed INSIDE the dashboard panel
+            if (this.panel.contains(e.target)) {
+                return;  // user is interacting with dashboard → do nothing
+            }
+        
+            // Click is truly "somewhere else on the page" → minimize
             this.toggleMinimize();
         };
-        document.addEventListener('click', this._outsideListener);
+        document.addEventListener('click', this.outsideListener);
 
         this.render();
     }
