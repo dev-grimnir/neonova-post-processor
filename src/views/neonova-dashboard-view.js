@@ -233,16 +233,16 @@ class NeonovaDashboardView extends BaseNeonovaView {
             }
         });
 
-        this._escListener = (e) => {
-            if (e.key === 'Escape' && !this.isMinimized && !this.controller.modalActive()) {
+        this.escListener = (e) => {
+            if (e.key === 'Escape' && !this.isMinimized && !this.controller.isModalActive()) {
                 e.preventDefault();
                 this.toggleMinimize();
             }
         };
-        document.addEventListener('keydown', this._escListener);
+        document.addEventListener('keydown', this.escListener);
 
-        this._outsideListener = (e) => {
-            if (this.isMinimized || this.controller.modalActive()) return;
+        this.outsideListener = (e) => {
+            if (this.isMinimized || this.controller.isModalActive()) return;
             if (!this.panel.contains(e.target)) {
                 this.toggleMinimize();
             }
