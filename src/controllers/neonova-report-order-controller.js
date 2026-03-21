@@ -23,7 +23,7 @@ class NeonovaReportOrderController {
         });
 
         // Now show the view (controller manages view lifecycle)
-        this.view.showModal();
+        this.view.show();
     }
 
     handleQuickReport(timeframe) {
