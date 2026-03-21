@@ -12,7 +12,7 @@ class NeonovaDashboardController {
     }
 
     isModalActive() {
-        return this.modalActive;
+        return this.#modalActive;
     }
 
     #attachModalListeners() {
