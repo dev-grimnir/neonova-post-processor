@@ -1,6 +1,8 @@
 class NeonovaReportOrderView extends NeonovaBaseModalView {
+    controller;
     constructor(controller, username, friendlyName) {
         super(controller);
+        this.controller = controller;
         this.username = username;
         this.friendlyName = friendlyName || username;
     }
