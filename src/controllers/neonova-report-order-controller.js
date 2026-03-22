@@ -9,7 +9,7 @@ class NeonovaReportOrderController {
 
     start() {
         // Controller creates its own view
-        this.view = new NeonovaReportOrderView(null, this.username, this.friendlyName);
+        this.view = new NeonovaReportOrderView(this, this.username, this.friendlyName);
 
         // Listen to the view's events
         this.view.addEventListener('quickReportRequested', (event) => {
@@ -23,7 +23,7 @@ class NeonovaReportOrderController {
         });
 
         // Now show the view (controller manages view lifecycle)
-        this.view.showModal();
+        this.view.show();
     }
 
     handleQuickReport(timeframe) {
@@ -50,7 +50,7 @@ class NeonovaReportOrderController {
             startDate = new Date();
             startDate.setDate(startDate.getDate() - 90);
         } else {
-            this.view.showError('Invalid timeframe');
+            console.error("NeonovaReportOrderController.handleQuickReport() -> Invalid Timeframe.");
             return;
         }
 

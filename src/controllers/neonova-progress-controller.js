@@ -21,8 +21,8 @@ class NeonovaProgressController {
      */
     async start(username, friendlyName, startDate = null, endDate = null, signal = null) {
         // 1. Create and show the progress view
-        const progressView = new NeonovaProgressView(username, friendlyName);
-        progressView.showModal();
+        const progressView = new NeonovaProgressView(this, username, friendlyName);
+        progressView.show();
 
         let rawEntries = [];
 
@@ -45,18 +45,26 @@ class NeonovaProgressController {
             const metrics = NeonovaAnalyzer.computeMetrics(sanitizedEntries, startDate, endDate);
 
             // 5. Success: tell view to finish (opens report tab + closes modal)
-            progressView.finish({
+            const reportView = new NeonovaReportView(
                 username,
                 friendlyName,
                 metrics,
-                entries: sanitizedEntries
-            });
-        } catch (err) {
-            if (err.name === 'AbortError') {
-                console.log('Report generation cancelled by user');
-                // View already closed itself on abort
-                return;
-            }
+                sanitizedEntries.length,
+                metrics.longDisconnects || []
+            );
+
+            const reportHTML = reportView.generateReportHTML('');
+            const newTab = window.open('', '_blank');
+            newTab.document.write(reportHTML);
+            newTab.document.close();
+            progressView.markComplete();
+               
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    console.log('Report generation cancelled by user');
+                    // View already closed itself on abort
+                    return;
+                }
 
             console.error('Report generation failed:', err);
             progressView.showError(err.message || 'Failed to generate report');

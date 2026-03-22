@@ -233,21 +233,36 @@ class NeonovaDashboardView extends BaseNeonovaView {
             }
         });
 
-        this._escListener = (e) => {
-            if (e.key === 'Escape' && !this.isMinimized) {
+        this.escListener = (e) => {
+            if (e.key !== 'Escape') return;
+
+            if (!this.isMinimized && !this.controller.isModalActive()) {
                 e.preventDefault();
                 this.toggleMinimize();
             }
         };
-        document.addEventListener('keydown', this._escListener);
+        document.addEventListener('keydown', this.escListener, { capture: true });
 
-        this._outsideListener = (e) => {
-            if (this.isMinimized) return;
-            if (!this.panel.contains(e.target)) {
-                this.toggleMinimize();
+        this.outsideListener = (e) => {
+            // Quick DOM check: if any modal is still in the document, ignore
+            if (document.querySelector('.neonova-modal, #add-customer-modal, #passphrase-modal, [id*="modal"]')) {
+                return;
             }
+        
+            // Or use the controller flag (both for redundancy)
+            if (this.controller.isModalActive() || this.isMinimized) {
+                return;
+            }
+        
+            // Ignore clicks inside our own panel
+            if (this.panel.contains(e.target)) {
+                return;
+            }
+        
+            // True outside click → minimize
+            this.toggleMinimize();
         };
-        document.addEventListener('click', this._outsideListener);
+        document.addEventListener('click', this.outsideListener);
 
         this.render();
     }
