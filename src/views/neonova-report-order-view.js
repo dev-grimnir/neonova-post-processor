@@ -128,7 +128,12 @@ class NeonovaReportOrderView extends NeonovaBaseModalView {
         populate('#end-day', days, currentDay);
     }
 
-    attachListeners() {        
+    attachListeners() {
+        if (!this.controller) {
+            console.error('[NeonovaReportOrderView] Controller missing');
+            return;
+        }
+
         const modalEl = this.modal.querySelector('#report-order-modal');
         const closeBtn = this.modal.querySelector('#close-btn');
         const generateBtn = this.modal.querySelector('#generate-custom');
@@ -140,29 +145,29 @@ class NeonovaReportOrderView extends NeonovaBaseModalView {
             if (e.target === modalEl) close();
         });
 
-        // Quick preset buttons
+        // Quick presets — send the exact string format controller expects
         this.modal.querySelectorAll('.quick-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                const days = parseInt(btn.dataset.days);
-                // Set start/end dates to today - days (you can expand this if your original had more logic)
-                const end = new Date();
-                const start = new Date();
-                start.setDate(start.getDate() - days);
-                // Update selects here if you want full auto-fill (add your original quick logic)
-                this.controller.handleQuickReport?.(days); // optional
-                generateBtn.click();
+                const days = parseInt(btn.dataset.days) || 7;
+                const timeframe = `${days}_DAYS`;          // ← this is what handleQuickReport wants
+
+                this.controller.handleQuickReport(timeframe);
             });
         });
 
+        // Custom Generate — build proper ISO dates with zero-padding
         generateBtn.addEventListener('click', () => {
-            // Collect values exactly as your original did
-            const startYear = this.modal.querySelector('#start-year').value;
-            const startMonth = this.modal.querySelector('#start-month').value;
-            const startDay = this.modal.querySelector('#start-day').value;
-            const endYear = this.modal.querySelector('#end-year').value;
-            const endMonth = this.modal.querySelector('#end-month').value;
-            const endDay = this.modal.querySelector('#end-day').value;
-            this.controller.handleCustomReport(startYear, startMonth, startDay, endYear, endMonth, endDay);
+            const startYear  = this.modal.querySelector('#start-year').value;
+            const startMonth = this.modal.querySelector('#start-month').value.padStart(2, '0');
+            const startDay   = this.modal.querySelector('#start-day').value.padStart(2, '0');
+            const endYear    = this.modal.querySelector('#end-year').value;
+            const endMonth   = this.modal.querySelector('#end-month').value.padStart(2, '0');
+            const endDay     = this.modal.querySelector('#end-day').value.padStart(2, '0');
+
+            const startIso = `${startYear}-${startMonth}-${startDay}`;
+            const endIso   = `${endYear}-${endMonth}-${endDay}`;
+
+            this.controller.handleCustomReport(startIso, endIso);
         });
     }
 
