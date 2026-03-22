@@ -58,8 +58,7 @@ class NeonovaProgressController {
             newTab.document.close();
 
             progressView.markComplete();
-            
-            });
+               
         } catch (err) {
             if (err.name === 'AbortError') {
                 console.log('Report generation cancelled by user');
