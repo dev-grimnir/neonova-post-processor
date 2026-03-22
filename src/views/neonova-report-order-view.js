@@ -147,7 +147,7 @@ class NeonovaReportOrderView extends NeonovaBaseModalView {
                 const start = new Date();
                 start.setDate(start.getDate() - days);
                 // Update selects here if you want full auto-fill (add your original quick logic)
-                this.controller.handleQuickPreset?.(days); // optional
+                this.controller.handleQuickReport?.(days); // optional
                 generateBtn.click();
             });
         });
@@ -160,7 +160,7 @@ class NeonovaReportOrderView extends NeonovaBaseModalView {
             const endYear = this.modal.querySelector('#end-year').value;
             const endMonth = this.modal.querySelector('#end-month').value;
             const endDay = this.modal.querySelector('#end-day').value;
-            this.controller.handleGenerate(startYear, startMonth, startDay, endYear, endMonth, endDay);
+            this.controller.handleCustomReport(startYear, startMonth, startDay, endYear, endMonth, endDay);
         });
     }
 
