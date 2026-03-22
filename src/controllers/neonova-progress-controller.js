@@ -45,7 +45,7 @@ class NeonovaProgressController {
             const metrics = NeonovaAnalyzer.computeMetrics(sanitizedEntries, startDate, endDate);
 
             // 5. Success: tell view to finish (opens report tab + closes modal)
-            const reportHTML = NeonovaReportView.generateStandaloneHTML(
+            const reportHTML = NeonovaReportView.generateReportHTML(
                 username,
                 friendlyName,
                 metrics,
