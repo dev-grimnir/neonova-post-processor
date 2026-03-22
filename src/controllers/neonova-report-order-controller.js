@@ -50,7 +50,7 @@ class NeonovaReportOrderController {
             startDate = new Date();
             startDate.setDate(startDate.getDate() - 90);
         } else {
-            this.view.showError('Invalid timeframe');
+            console.error("NeonovaReportOrderController.handleQuickReport() -> Invalid Timeframe.");
             return;
         }
 
