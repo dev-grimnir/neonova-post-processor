@@ -45,7 +45,7 @@ class NeonovaProgressController {
             const metrics = NeonovaAnalyzer.computeMetrics(sanitizedEntries, startDate, endDate);
 
             // 5. Success: tell view to finish (opens report tab + closes modal)
-            const reportView = new NeonovaReportView(
+            const reportController = new NeonovaReportController(
                 username,
                 friendlyName,
                 metrics,
@@ -53,10 +53,7 @@ class NeonovaProgressController {
                 metrics.longDisconnects || []
             );
 
-            const reportHTML = reportView.generateReportHTML('');
-            const newTab = window.open('', '_blank');
-            newTab.document.write(reportHTML);
-            newTab.document.close();
+            reportController.generateAndOpen();            
             progressView.markComplete();
                
             } catch (err) {
