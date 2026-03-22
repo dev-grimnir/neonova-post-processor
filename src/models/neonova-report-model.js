@@ -5,7 +5,7 @@ class NeonovaReportModel {
         this.metrics = metrics;
         this.entryCount = entryCount;
         this.longDisconnects = longDisconnects || [];
-        this.sanitizedEntries = sanitizedEntries;
+    }
 
     getUsername() {
         return this.username;
