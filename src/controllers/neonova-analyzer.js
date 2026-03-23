@@ -20,7 +20,6 @@ class NeonovaAnalyzer {
         }
 
         if (normalized.entries.length === 0) {
-            console.log(`[NeonovaAnalyzer] computeMetrics → EMPTY set, returning {} (as before)`);
             return {};
         }
 
@@ -73,10 +72,8 @@ class NeonovaAnalyzer {
     }
 
     static #determineLeadingConnectedTime(entries, requestedStart) {
-        console.log(`[NeonovaAnalyzer] #determineLeadingConnectedTime | requestedStart=${requestedStart?.toISOString() || 'null'} | firstEvent=${entries[0]?.dateObj?.toISOString() || 'none'} | status=${entries[0]?.status || 'none'}`);
 
         if (!requestedStart || entries.length === 0) {
-            console.log(`[NeonovaAnalyzer] Leading → no credit (no range or no entries)`);
             return { leadingConnectedSec: 0 };
         }
 
@@ -84,7 +81,6 @@ class NeonovaAnalyzer {
         const firstMs = entries[0].dateObj.getTime();
 
         if (firstMs <= rangeStartMs) {
-            console.log(`[NeonovaAnalyzer] Leading → no gap (first event already inside range)`);
             return { leadingConnectedSec: 0 };
         }
 
@@ -94,15 +90,11 @@ class NeonovaAnalyzer {
             ? gapSec
             : 0;
 
-        console.log(`[NeonovaAnalyzer] Leading gap = ${gapSec.toFixed(0)}s | First event is ${entries[0].status} → credit ${credit.toFixed(0)}s as connected`);
         return { leadingConnectedSec: credit };
     }
 
     static #determineTrailingConnectedTime(entries, requestedEnd) {
-        console.log(`[NeonovaAnalyzer] #determineTrailingConnectedTime | requestedEnd=${requestedEnd?.toISOString() || 'null'} | lastEvent=${entries[entries.length-1]?.dateObj?.toISOString() || 'none'} | status=${entries[entries.length-1]?.status || 'none'}`);
-
         if (!requestedEnd || entries.length === 0) {
-            console.log(`[NeonovaAnalyzer] Trailing → no credit (no range or no entries)`);
             return { trailingConnectedSec: 0 };
         }
 
@@ -110,7 +102,6 @@ class NeonovaAnalyzer {
         const lastMs = entries[entries.length - 1].dateObj.getTime();
 
         if (lastMs >= rangeEndMs) {
-            console.log(`[NeonovaAnalyzer] Trailing → no gap (last event already at/after end)`);
             return { trailingConnectedSec: 0 };
         }
 
@@ -118,7 +109,6 @@ class NeonovaAnalyzer {
 
         const credit = entries[entries.length - 1].status === "Stop" ? 0 : gapSec;
 
-        console.log(`[NeonovaAnalyzer] Trailing gap = ${gapSec.toFixed(0)}s | Last event is ${entries[entries.length-1].status} → credit ${credit.toFixed(0)}s as ${credit > 0 ? 'connected' : 'disconnected'}`);
         return { trailingConnectedSec: credit };
     }
     
@@ -348,8 +338,6 @@ class NeonovaAnalyzer {
 
         percentConnected = Math.min(100, percentConnected).toFixed(1);
         const daysSpanned = (totalRangeSec / 86400).toFixed(2);
-
-        console.log(`[NeonovaAnalyzer] #computeUptimeMetrics → Using range ${rangeStart?.toISOString()} to ${rangeEnd?.toISOString()} | totalRangeSec=${totalRangeSec.toFixed(0)}s (${daysSpanned} days) | totalConnectedSec=${totalConnectedSec.toFixed(0)}s | uptime=${percentConnected}%`);
 
         return { 
             totalConnectedSec, 
