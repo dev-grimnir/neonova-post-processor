@@ -119,7 +119,7 @@ class NeonovaReportOrderView extends NeonovaBaseModalView {
             select.innerHTML = values.map(v => `<option value="${v}" ${v === defaultVal ? 'selected' : ''}>${v}</option>`).join('');
         };
 
-        const years = Array.from({length: 3}, (_, i) => currentYear - i);
+        const years = Array.from({length: 2}, (_, i) => currentYear - i);
         populate('#start-year', years, startYear);
         populate('#end-year', years, currentYear);
 
@@ -181,5 +181,4 @@ class NeonovaReportOrderView extends NeonovaBaseModalView {
         super.hide();
     }
 
-    // If your original had custom error or toast methods, keep them here unchanged
 }
