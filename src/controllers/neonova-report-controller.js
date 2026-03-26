@@ -24,50 +24,35 @@ class NeonovaReportController {
             endDate.setHours(23, 59, 59, 999);
 
             const overrides = {
-                syear:  startDate.getFullYear().toString(),
+                syear: startDate.getFullYear().toString(),
                 smonth: (startDate.getMonth() + 1).toString().padStart(2, '0'),
-                sday:   startDate.getDate().toString().padStart(2, '0'),
-                eyear:  endDate.getFullYear().toString(),
+                sday: startDate.getDate().toString().padStart(2, '0'),
+                eyear: endDate.getFullYear().toString(),
                 emonth: (endDate.getMonth() + 1).toString().padStart(2, '0'),
-                eday:   endDate.getDate().toString().padStart(2, '0')
+                eday: endDate.getDate().toString().padStart(2, '0')
             };
 
-            console.log('📡 Calling paginateReportLogs with overrides:', overrides);
+            console.log('📡 overrides:', overrides);
 
-            // Use the method you told me to use
-            const searchDoc = await NeonovaHTTPController.paginateReportLogs(
-                this.model.username,
-                overrides
-            );
+            // Direct call — no extra logic that could retry
+            const searchDoc = await NeonovaHTTPController.paginateReportLogs(this.model.username, overrides);
 
-            console.log('📦 paginateReportLogs returned type:', typeof searchDoc);
+            console.log('📦 paginateReportLogs returned:', typeof searchDoc, searchDoc ? 'non-null' : 'null');
 
-            // Robust extraction (handles Map, array, or object)
+            // Minimal processing
             let rawEntries = [];
-            if (searchDoc instanceof Map) {
-                rawEntries = Array.from(searchDoc.values());
-            } else if (Array.isArray(searchDoc)) {
-                rawEntries = searchDoc;
-            } else if (searchDoc && typeof searchDoc === 'object') {
-                rawEntries = Object.values(searchDoc);
-            }
+            if (searchDoc instanceof Map) rawEntries = Array.from(searchDoc.values());
+            else if (Array.isArray(searchDoc)) rawEntries = searchDoc;
+            else if (searchDoc && typeof searchDoc === 'object') rawEntries = Object.values(searchDoc);
 
-            console.log('🔄 Raw entries length:', rawEntries.length);
+            console.log('🔄 rawEntries length:', rawEntries.length);
 
-            // Lenient filter for cleanEntries
-            const validEntries = rawEntries.filter(entry => 
-                entry && typeof entry === 'object' && 
-                (entry.dateObj || entry.timestamp || entry.stopTime || entry.startTime || entry.time)
-            );
+            const validEntries = rawEntries.filter(e => e && typeof e === 'object');
 
-            console.log('✅ Valid entries after filter:', validEntries.length);
-
-            // Static collector call
             const processed = NeonovaCollector.cleanEntries(validEntries);
-
             const events = Array.isArray(processed) ? processed : [];
 
-            console.log('🔧 cleanEntries returned length:', events.length);
+            console.log('✅ events length:', events.length);
 
             const dailyModel = new NeonovaDailyDisconnectModel(
                 this.model.username,
@@ -76,14 +61,13 @@ class NeonovaReportController {
                 events
             );
 
-            console.log('✅ Daily model created with', dailyModel.events.length, 'events');
+            console.log('✅ Model ready — launching view');
 
             const dailyView = new NeonovaDailyDisconnectView(this, dailyModel);
             dailyView.show();
 
         } catch (err) {
-            console.error('❌ Daily detail failed:', err);
-            alert('Could not load daily details. Check console.');
+            console.error('❌ openDailyDisconnectDetail failed:', err);
         }
     }
     
