@@ -85,14 +85,14 @@ class NeonovaReportView extends NeonovaBaseModalView {
 
     initCharts() {
         const accentColor = this.accent === 'emerald' ? '#10b981' :
-            this.accent === 'blue' ? '#3b82f6' :
-            this.accent === 'violet' ? '#8b5cf6' : '#10b981';
+                           this.accent === 'blue' ? '#3b82f6' :
+                           this.accent === 'violet' ? '#8b5cf6' : '#10b981';
 
         const commonOptions = {
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: false,           // keep this false for modal flexibility
             layout: {
-                padding: { right: 20, left: 10 }   // prevents tooltip from pushing the chart
+                padding: { left: 12, right: 30, top: 10, bottom: 10 }   // extra right padding for tooltip
             },
             plugins: {
                 tooltip: {
@@ -103,36 +103,60 @@ class NeonovaReportView extends NeonovaBaseModalView {
                     titleColor: '#e5e7eb',
                     bodyColor: '#e5e7eb',
                     borderColor: accentColor,
-                    borderWidth: 1
+                    borderWidth: 1,
+                    padding: 12,
+                    caretPadding: 10,
+                    // This helps prevent layout shifts during tooltip display
+                    callbacks: {
+                        label: (context) => `${context.parsed.y}`
+                    }
                 },
                 legend: { display: false }
             },
             scales: {
-                y: { beginAtZero: true }
+                y: { 
+                    beginAtZero: true,
+                    grid: { color: '#27272a' }
+                },
+                x: {
+                    grid: { color: '#27272a' }
+                }
+            },
+            // Force stable sizing — critical for hover stability
+            animation: {
+                duration: 0   // disable animation on hover updates if needed
             }
         };
 
-        // Hourly chart
+        // Hourly chart (bar)
         new Chart(document.getElementById('hourlyChart'), {
             type: 'bar',
             data: {
                 labels: Array.from({length: 24}, (_, i) => `${i}:00`),
-                datasets: [{ label: 'Disconnects', data: this.metrics.hourlyDisconnects || Array(24).fill(0), backgroundColor: accentColor }]
+                datasets: [{ 
+                    label: 'Disconnects', 
+                    data: this.metrics.hourlyDisconnects || Array(24).fill(0), 
+                    backgroundColor: accentColor 
+                }]
             },
             options: { ...commonOptions }
         });
 
-        // Daily chart
+        // Daily chart (bar)
         new Chart(document.getElementById('dailyChart'), {
             type: 'bar',
             data: {
                 labels: this.metrics.dailyLabels || [],
-                datasets: [{ label: 'Disconnects', data: this.metrics.dailyDisconnects || [], backgroundColor: accentColor }]
+                datasets: [{ 
+                    label: 'Disconnects', 
+                    data: this.metrics.dailyDisconnects || [], 
+                    backgroundColor: accentColor 
+                }]
             },
             options: { ...commonOptions }
         });
 
-        // Rolling 7-day chart (keeps legend)
+        // Rolling 7-day chart (line with legend)
         new Chart(document.getElementById('rollingChart'), {
             type: 'line',
             data: {
@@ -157,12 +181,13 @@ class NeonovaReportView extends NeonovaBaseModalView {
                     legend: {
                         display: true,
                         position: 'top',
-                        labels: { color: '#e5e7eb', boxWidth: 12 }
+                        labels: { color: '#e5e7eb', boxWidth: 12, padding: 15 }
                     }
                 },
                 scales: {
                     ...commonOptions.scales,
                     x: {
+                        ...commonOptions.scales.x,
                         ticks: { maxRotation: 45, minRotation: 45 }
                     }
                 }
