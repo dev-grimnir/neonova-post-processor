@@ -41,7 +41,7 @@ class NeonovaReportController {
 
             console.log('📦 submitSearch returned document of type:', typeof searchDoc);
 
-            // Robust conversion — works whether it's a Map, array, or plain object
+            // Robust conversion that matches what cleanEntries expects (array of objects)
             let rawEntries = [];
             if (searchDoc instanceof Map) {
                 rawEntries = Array.from(searchDoc.values());
@@ -51,9 +51,13 @@ class NeonovaReportController {
                 rawEntries = Object.values(searchDoc);
             }
 
-            console.log('🔄 Converted to array — length:', rawEntries.length);
+            // ← THIS IS THE FIX: remove null/undefined entries that break cleanEntries
+            const validEntries = rawEntries.filter(entry => entry && typeof entry === 'object' && entry.dateObj);
 
-            const processed = NeonovaCollector.cleanEntries(rawEntries);   // exactly what cleanEntries expects
+            console.log('🔄 Converted to array — total items:', rawEntries.length, '→ valid entries:', validEntries.length);
+
+            // NeonovaCollector is static (as you reminded me)
+            const processed = NeonovaCollector.cleanEntries(validEntries);
 
             console.log('🔧 cleanEntries finished — processed length:', processed.length);
 
