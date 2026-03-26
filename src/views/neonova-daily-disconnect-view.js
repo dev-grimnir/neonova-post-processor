@@ -5,6 +5,7 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
     }
 
     show() {
+        console.log('📋 DailyDisconnectView.show() called');
         const modalHTML = `
             <div id="daily-modal" class="fixed inset-0 bg-black/85 flex items-center justify-center z-[10001] opacity-0 transition-opacity duration-400">
                 <div class="bg-[#18181b] border border-[#27272a] rounded-3xl w-[1280px] max-w-[96vw] max-h-[96vh] overflow-hidden shadow-2xl flex flex-col transform scale-95 transition-all duration-500">
