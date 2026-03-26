@@ -122,8 +122,9 @@ class NeonovaReportView extends NeonovaBaseModalView {
             options: { ...commonOptions }
         });
 
-        // Daily chart (clickable drill-down)
-        new Chart(document.getElementById('dailyChart'), {
+        // Daily chart (clickable drill-down) — bulletproof version
+        const dailyCanvas = document.getElementById('dailyChart');
+        const dailyChartInstance = new Chart(dailyCanvas, {
             type: 'bar',
             data: {
                 labels: this.metrics.dailyLabels || [],
@@ -133,23 +134,29 @@ class NeonovaReportView extends NeonovaBaseModalView {
                     backgroundColor: accentColor 
                 }]
             },
-            options: {
-                ...commonOptions,
-                // ← THIS IS THE FIX
-                onClick: (event, elements) => {
-                    console.log('Daily bar clicked!');   // ← debug line so you can see it fire
+            options: { ...commonOptions }
+        });
 
-                    if (elements.length === 0) return;
+        console.log('✅ Daily chart created successfully');   // ← should always print when modal opens
 
-                    const index = elements[0].index;
-                    const clickedDate = this.metrics.dailyDates?.[index];
+        // Manual listener — attached directly to the canvas (most reliable in modals)
+        dailyCanvas.style.cursor = 'pointer';
+        dailyCanvas.addEventListener('click', (e) => {
+            console.log('🔥 Daily bar click detected!');   // ← this must appear when you click
 
-                    console.log('Clicked date index:', index, '→', clickedDate); // extra debug
+            const points = dailyChartInstance.getElementsAtEventForMode(e, 'nearest', { intersect: true }, false);
+            if (points.length === 0) {
+                console.log('No bar hit');
+                return;
+            }
 
-                    if (clickedDate) {
-                        this.controller.openDailyDisconnectDetail(clickedDate);
-                    }
-                }
+            const index = points[0].index;
+            const clickedDate = this.metrics.dailyDates?.[index];
+
+            console.log('Clicked index:', index, '→ Date:', clickedDate);
+
+            if (clickedDate) {
+                this.controller.openDailyDisconnectDetail(clickedDate);
             }
         });
 
