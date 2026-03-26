@@ -122,7 +122,7 @@ class NeonovaReportView extends NeonovaBaseModalView {
             options: { ...commonOptions }
         });
 
-        // Daily chart (clickable drill-down) — bulletproof version
+        // Daily chart (clickable drill-down)
         const dailyCanvas = document.getElementById('dailyChart');
         const dailyChartInstance = new Chart(dailyCanvas, {
             type: 'bar',
@@ -137,21 +137,22 @@ class NeonovaReportView extends NeonovaBaseModalView {
             options: { ...commonOptions }
         });
 
-        console.log('✅ Daily chart created successfully');   // ← should always print when modal opens
-
-        // Manual listener — attached directly to the canvas (most reliable in modals)
         dailyCanvas.style.cursor = 'pointer';
         dailyCanvas.addEventListener('click', (e) => {
-            console.log('🔥 Daily bar click detected!');   // ← this must appear when you click
+            console.log('🔥 Daily bar click detected!');
 
             const points = dailyChartInstance.getElementsAtEventForMode(e, 'nearest', { intersect: true }, false);
-            if (points.length === 0) {
-                console.log('No bar hit');
-                return;
-            }
+            if (points.length === 0) return;
 
             const index = points[0].index;
-            const clickedDate = this.metrics.dailyDates?.[index];
+            let clickedDate = this.metrics.dailyDates?.[index];
+
+            // Fallback: parse the label string into a Date if dailyDates doesn't exist yet
+            if (!clickedDate && this.metrics.dailyLabels?.[index]) {
+                const label = this.metrics.dailyLabels[index];
+                clickedDate = new Date(label);   // works if label is "2026-03-15", "Mar 15 2026", etc.
+                console.log('Parsed date from label:', label, '→', clickedDate);
+            }
 
             console.log('Clicked index:', index, '→ Date:', clickedDate);
 
