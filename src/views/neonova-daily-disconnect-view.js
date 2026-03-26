@@ -52,6 +52,19 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
     }
 
     initEKGChart() {
+        console.log('🎨 initEKGChart called — events count:', this.model.events.length);
+
+        const ctx = document.getElementById('ekgChart');
+        if (!ctx) {
+            console.error('❌ EKG canvas not found!');
+            return;
+        }
+
+        if (this.model.events.length === 0) {
+            console.warn('⚠️ No events in model — chart will be empty');
+            // You can optionally show a message on the canvas here later
+        }
+        
         const ctx = document.getElementById('ekgChart');
         if (!ctx) return;
 
