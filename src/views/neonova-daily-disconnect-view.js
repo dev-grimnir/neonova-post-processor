@@ -30,7 +30,22 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
 
     render() {
         const content = this.modal.querySelector('#daily-content');
+        if (!content) {
+            console.error('❌ #daily-content not found');
+            return;
+        }
+
         content.innerHTML = this.generateEKGHTML();
+
+        if (!this.model.events || this.model.events.length === 0) {
+            content.innerHTML += `
+                <div class="text-center text-zinc-400 py-20 text-lg">
+                    No connection events found for this day.<br>
+                    (The main report showed ${this.model.events ? '0' : '?'} events)
+                </div>`;
+            return;
+        }
+
         requestAnimationFrame(() => this.initEKGChart());
     }
 
