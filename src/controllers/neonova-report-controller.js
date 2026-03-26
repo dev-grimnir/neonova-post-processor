@@ -32,16 +32,11 @@ class NeonovaReportController {
                 eday:   endDate.getDate().toString().padStart(2, '0')
             };
 
-            console.log('📡 Calling submitSearch with overrides:', overrides);
+            const searchDoc = await NeonovaHTTPController.submitSearch(this.model.username, overrides);
 
-            const searchDoc = await NeonovaHTTPController.submitSearch(
-                this.model.username,
-                overrides
-            );
+            console.log('📦 submitSearch returned type:', typeof searchDoc, 'keys:', searchDoc ? Object.keys(searchDoc) : 'null');
 
-            console.log('📦 submitSearch returned document of type:', typeof searchDoc);
-
-            // Robust conversion that matches what cleanEntries expects (array of objects)
+            // More aggressive extraction
             let rawEntries = [];
             if (searchDoc instanceof Map) {
                 rawEntries = Array.from(searchDoc.values());
@@ -51,21 +46,28 @@ class NeonovaReportController {
                 rawEntries = Object.values(searchDoc);
             }
 
-            // ← THIS IS THE FIX: remove null/undefined entries that break cleanEntries
-            const validEntries = rawEntries.filter(entry => entry && typeof entry === 'object' && entry.dateObj);
+            console.log('🔄 Raw entries length:', rawEntries.length);
 
-            console.log('🔄 Converted to array — total items:', rawEntries.length, '→ valid entries:', validEntries.length);
+            // Very lenient filter — keep anything that looks like an entry
+            const validEntries = rawEntries.filter(entry => 
+                entry && typeof entry === 'object' && 
+                (entry.dateObj || entry.timestamp || entry.stopTime || entry.startTime || entry.time)
+            );
 
-            // NeonovaCollector is static (as you reminded me)
+            console.log('✅ Valid entries after filter:', validEntries.length);
+
+            // Static collector
             const processed = NeonovaCollector.cleanEntries(validEntries);
 
-            console.log('🔧 cleanEntries finished — processed length:', processed.length);
+            const events = Array.isArray(processed) ? processed : (processed ? [processed] : []);
+
+            console.log('🔧 cleanEntries returned length:', events.length);
 
             const dailyModel = new NeonovaDailyDisconnectModel(
                 this.model.username,
                 this.model.friendlyName,
                 clickedDate,
-                processed
+                events
             );
 
             console.log('✅ Daily model created with', dailyModel.events.length, 'events');
@@ -75,7 +77,6 @@ class NeonovaReportController {
 
         } catch (err) {
             console.error('❌ Daily detail failed:', err);
-            alert('Could not load daily details. Check console.');
         }
     }
     
