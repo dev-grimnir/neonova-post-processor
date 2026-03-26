@@ -43,8 +43,7 @@ class NeonovaReportController {
             console.log('📦 submitSearch returned document');
 
             // Run through collector (same as main report)
-            const collector = new NeonovaCollector();
-            const processed = collector.process(searchDoc);   // ← use whatever method your main report uses here
+            const processed = NeonovaCollector.processEntries(searchDoc);
 
             console.log('🔧 Collector finished — events:', processed.events ? processed.events.length : 'N/A');
 
