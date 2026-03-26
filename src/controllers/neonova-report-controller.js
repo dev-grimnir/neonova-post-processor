@@ -14,7 +14,8 @@ class NeonovaReportController {
     }
 
     async openDailyDisconnectDetail(clickedDate) {
-        console.log("NeonovaReportController.openDailyDisconnectDetail() -> START");
+        console.log('🚀 openDailyDisconnectDetail START for date:', clickedDate);
+
         try {
             const startDate = new Date(clickedDate);
             startDate.setHours(0, 0, 0, 0);
@@ -22,7 +23,6 @@ class NeonovaReportController {
             const endDate = new Date(clickedDate);
             endDate.setHours(23, 59, 59, 999);
 
-            // Use the exact method you specified — no changes to HTTPController
             const overrides = {
                 syear:  startDate.getFullYear().toString(),
                 smonth: (startDate.getMonth() + 1).toString().padStart(2, '0'),
@@ -32,30 +32,36 @@ class NeonovaReportController {
                 eday:   endDate.getDate().toString().padStart(2, '0')
             };
 
+            console.log('📡 Calling paginateReportLogs with overrides:', overrides);
+
             const searchDoc = await NeonovaHTTPController.paginateReportLogs(
                 this.model.username,
                 overrides
             );
 
-            // Run through collector (exactly like the main report)
-            const collector = new NeonovaCollector();
-            const processed = collector.process(searchDoc);   // adjust method name if your main report uses something else (e.g. processDailyLogs)
+            console.log('📦 paginateReportLogs returned:', searchDoc ? 'document object' : 'null/undefined');
 
-            // Pure data model
+            const collector = new NeonovaCollector();
+            const processed = collector.process(searchDoc);   // ← change to collector.processDailyLogs if that's what the main report uses
+
+            console.log('🔧 Collector processed result:', processed);
+            console.log('🔑 Has .events?', !!processed.events);
+            console.log('🔑 Events length:', processed.events ? processed.events.length : 'N/A');
+
             const dailyModel = new NeonovaDailyDisconnectModel(
                 this.model.username,
                 this.model.friendlyName,
                 clickedDate,
-                processed.events || processed   // adjust based on your collector's output shape
+                processed.events || processed   // fallback in case collector returns array directly
             );
 
-            // Launch the EKG modal (report stays open behind it)
+            console.log('✅ Daily model created with', dailyModel.events.length, 'events');
+
             const dailyView = new NeonovaDailyDisconnectView(this, dailyModel);
             dailyView.show();
 
         } catch (err) {
-            console.error('Daily detail failed:', err);
-            alert('Could not load daily connection details. Check console.');
+            console.error('❌ Daily detail failed:', err);
         }
     }
     
