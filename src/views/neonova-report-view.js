@@ -156,6 +156,18 @@ class NeonovaReportView extends NeonovaBaseModalView {
             options: { ...commonOptions }
         });
 
+        dailyChartInstance.canvas.addEventListener('click', (e) => {
+            const points = dailyChartInstance.getElementsAtEventForMode(e, 'nearest', { intersect: true }, false);
+            if (points.length === 0) return;
+
+            const index = points[0].index;
+            const clickedDate = this.metrics.dailyDates?.[index];   // ← must exist in your metrics
+
+            if (clickedDate) {
+                this.controller.openDailyDisconnectDetail(clickedDate);
+            }
+        });
+
         // Rolling 7-day chart (line with legend)
         new Chart(document.getElementById('rollingChart'), {
             type: 'line',
