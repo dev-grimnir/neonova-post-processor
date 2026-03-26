@@ -178,6 +178,7 @@ class NeonovaHTTPController {
      **************************************************************************/
 
     static async safeFetch(url, options = {}) {
+        console.log("NeonovaHTTPController.safeFetch -> Search URL: " + url);
         const defaultOptions = {
             credentials: 'include',
             cache: 'no-cache',
