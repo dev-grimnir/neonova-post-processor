@@ -90,10 +90,8 @@ class NeonovaReportView extends NeonovaBaseModalView {
 
         const commonOptions = {
             responsive: true,
-            maintainAspectRatio: false,           // keep this false for modal flexibility
-            layout: {
-                padding: { left: 12, right: 30, top: 10, bottom: 10 }   // extra right padding for tooltip
-            },
+            maintainAspectRatio: false,
+            layout: { padding: { left: 12, right: 30, top: 10, bottom: 10 } },
             plugins: {
                 tooltip: {
                     mode: 'index',
@@ -104,46 +102,28 @@ class NeonovaReportView extends NeonovaBaseModalView {
                     bodyColor: '#e5e7eb',
                     borderColor: accentColor,
                     borderWidth: 1,
-                    padding: 12,
-                    caretPadding: 10,
-                    // This helps prevent layout shifts during tooltip display
-                    callbacks: {
-                        label: (context) => `${context.parsed.y}`
-                    }
+                    padding: 12
                 },
                 legend: { display: false }
             },
             scales: {
-                y: { 
-                    beginAtZero: true,
-                    grid: { color: '#27272a' }
-                },
-                x: {
-                    grid: { color: '#27272a' }
-                }
-            },
-            // Force stable sizing — critical for hover stability
-            animation: {
-                duration: 0   // disable animation on hover updates if needed
+                y: { beginAtZero: true, grid: { color: '#27272a' } },
+                x: { grid: { color: '#27272a' } }
             }
         };
 
-        // Hourly chart (bar)
+        // Hourly chart
         new Chart(document.getElementById('hourlyChart'), {
             type: 'bar',
             data: {
                 labels: Array.from({length: 24}, (_, i) => `${i}:00`),
-                datasets: [{ 
-                    label: 'Disconnects', 
-                    data: this.metrics.hourlyDisconnects || Array(24).fill(0), 
-                    backgroundColor: accentColor 
-                }]
+                datasets: [{ label: 'Disconnects', data: this.metrics.hourlyDisconnects || Array(24).fill(0), backgroundColor: accentColor }]
             },
             options: { ...commonOptions }
         });
 
-        // Daily chart (bar)
-        new Chart(document.getElementById('dailyChart'), {
+        // Daily chart (clickable) — this is the only one we need the instance for
+        const dailyChartInstance = new Chart(document.getElementById('dailyChart'), {
             type: 'bar',
             data: {
                 labels: this.metrics.dailyLabels || [],
@@ -156,19 +136,7 @@ class NeonovaReportView extends NeonovaBaseModalView {
             options: { ...commonOptions }
         });
 
-        dailyChartInstance.canvas.addEventListener('click', (e) => {
-            const points = dailyChartInstance.getElementsAtEventForMode(e, 'nearest', { intersect: true }, false);
-            if (points.length === 0) return;
-
-            const index = points[0].index;
-            const clickedDate = this.metrics.dailyDates?.[index];   // ← must exist in your metrics
-
-            if (clickedDate) {
-                this.controller.openDailyDisconnectDetail(clickedDate);
-            }
-        });
-
-        // Rolling 7-day chart (line with legend)
+        // Rolling chart
         new Chart(document.getElementById('rollingChart'), {
             type: 'line',
             data: {
@@ -190,19 +158,24 @@ class NeonovaReportView extends NeonovaBaseModalView {
                 ...commonOptions,
                 plugins: {
                     ...commonOptions.plugins,
-                    legend: {
-                        display: true,
-                        position: 'top',
-                        labels: { color: '#e5e7eb', boxWidth: 12, padding: 15 }
-                    }
+                    legend: { display: true, position: 'top', labels: { color: '#e5e7eb', boxWidth: 12 } }
                 },
                 scales: {
                     ...commonOptions.scales,
-                    x: {
-                        ...commonOptions.scales.x,
-                        ticks: { maxRotation: 45, minRotation: 45 }
-                    }
+                    x: { ticks: { maxRotation: 45, minRotation: 45 } }
                 }
+            }
+        });
+
+        dailyChartInstance.canvas.addEventListener('click', (e) => {
+            const points = dailyChartInstance.getElementsAtEventForMode(e, 'nearest', { intersect: true }, false);
+            if (points.length === 0) return;
+
+            const index = points[0].index;
+            const clickedDate = this.metrics.dailyDates?.[index];
+
+            if (clickedDate) {
+                this.controller.openDailyDisconnectDetail(clickedDate);
             }
         });
     }
