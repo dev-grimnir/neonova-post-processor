@@ -13,45 +13,34 @@ class NeonovaReportController {
         this.view.show();
     }
 
-    async openDailyDisconnectDetail(dateStr) {   // now expects "2026-03-22" string
+    async openDailyDisconnectDetail(dateStr) {   // dateStr like "2026-03-22"
         console.log('🚀 openDailyDisconnectDetail START for dateStr:', dateStr);
 
         try {
-            // Parse the clean YYYY-MM-DD string
+            // Parse the clean date string
             const [year, month, day] = dateStr.split('-').map(Number);
 
-            const overrides = {
-                syear:  year.toString(),
-                smonth: month.toString().padStart(2, '0'),
-                sday:   day.toString().padStart(2, '0'),
-                eyear:  year.toString(),
-                emonth: month.toString().padStart(2, '0'),
-                eday:   day.toString().padStart(2, '0')
-            };
+            const startDate = new Date(year, month - 1, day, 0, 0, 0);   // 00:00:00
+            const endDate   = new Date(year, month - 1, day, 23, 59, 59); // 23:59:59
 
-            console.log('📡 Clean overrides sent to paginateReportLogs:', overrides);
+            console.log('📅 Using startDate:', startDate.toISOString(), 'endDate:', endDate.toISOString());
 
-            const searchDoc = await NeonovaHTTPController.paginateReportLogs(
+            // Call the battle-tested method with proper Date objects
+            const entries = await NeonovaHTTPController.paginateReportLogs(
                 this.model.username,
-                overrides
+                startDate,
+                endDate
+                // No onProgress or signal for now (keep it simple)
             );
 
-            console.log('📦 paginateReportLogs returned type:', typeof searchDoc);
+            console.log('📦 paginateReportLogs returned', entries ? entries.length : 0, 'entries');
 
-            // Robust extraction
-            let rawEntries = [];
-            if (searchDoc instanceof Map) rawEntries = Array.from(searchDoc.values());
-            else if (Array.isArray(searchDoc)) rawEntries = searchDoc;
-            else if (searchDoc && typeof searchDoc === 'object') rawEntries = Object.values(searchDoc);
+            // Pass directly to cleanEntries (static class)
+            const processed = NeonovaCollector.cleanEntries(entries || []);
 
-            console.log('🔄 rawEntries length:', rawEntries.length);
-
-            const validEntries = rawEntries.filter(entry => entry && typeof entry === 'object');
-
-            const processed = NeonovaCollector.cleanEntries(validEntries);
             const events = Array.isArray(processed) ? processed : [];
 
-            console.log('✅ events length:', events.length);
+            console.log('✅ After cleanEntries — events length:', events.length);
 
             const dailyModel = new NeonovaDailyDisconnectModel(
                 this.model.username,
@@ -60,11 +49,14 @@ class NeonovaReportController {
                 events
             );
 
+            console.log('✅ Daily model created — launching view');
+
             const dailyView = new NeonovaDailyDisconnectView(this, dailyModel);
             dailyView.show();
 
         } catch (err) {
             console.error('❌ Daily detail failed:', err);
+            alert('Could not load daily details. Check console.');
         }
     }
     
