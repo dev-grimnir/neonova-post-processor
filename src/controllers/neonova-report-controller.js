@@ -14,33 +14,32 @@ class NeonovaReportController {
     }
 
     async openDailyDisconnectDetail(dateStr) {   // dateStr like "2026-03-22"
-        console.log('🚀 openDailyDisconnectDetail START for dateStr:', dateStr);
+        console.log('NeonovaReportController.openDailyDisconnectDetail() -> START for date:', dateStr);
 
         try {
-            // Parse the clean date string
+            // Parse the date string (YYYY-MM-DD)
             const [year, month, day] = dateStr.split('-').map(Number);
 
-            const startDate = new Date(year, month - 1, day, 0, 0, 0);   // 00:00:00
-            const endDate   = new Date(year, month - 1, day, 23, 59, 59); // 23:59:59
+            const startDate = new Date(year, month - 1, day);
+            const endDate   = new Date(year, month - 1, day);
 
-            console.log('📅 Using startDate:', startDate.toISOString(), 'endDate:', endDate.toISOString());
-
-            // Call the battle-tested method with proper Date objects
+            // Use the NEW paginateReportLogs with full day hour/minute support
             const entries = await NeonovaHTTPController.paginateReportLogs(
                 this.model.username,
-                startDate,
-                endDate
-                // No onProgress or signal for now (keep it simple)
+                startDate,      // startDate
+                endDate,        // endDate (same day)
+                0,              // startHour
+                0,              // startMinute  → 00:00
+                23,             // endHour
+                59              // endMinute    → 23:59
+                // onProgress and signal left as undefined (defaults)
             );
 
-            console.log('📦 paginateReportLogs returned', entries ? entries.length : 0, 'entries');
+            console.log(`paginateReportLogs returned ${entries ? entries.length : 0} entries for ${dateStr}`);
 
-            // Pass directly to cleanEntries (static class)
+            // Existing processing (unchanged)
             const processed = NeonovaCollector.cleanEntries(entries || []);
-
             const events = Array.isArray(processed) ? processed : [];
-
-            console.log('✅ After cleanEntries — events length:', events.length);
 
             const dailyModel = new NeonovaDailyDisconnectModel(
                 this.model.username,
@@ -49,14 +48,12 @@ class NeonovaReportController {
                 events
             );
 
-            console.log('✅ Daily model created — launching view');
-
             const dailyView = new NeonovaDailyDisconnectView(this, dailyModel);
             dailyView.show();
 
         } catch (err) {
-            console.error('❌ Daily detail failed:', err);
-            alert('Could not load daily details. Check console.');
+            console.error('Daily detail failed:', err);
+            alert('Could not load daily connection details. Check console for details.');
         }
     }
     
