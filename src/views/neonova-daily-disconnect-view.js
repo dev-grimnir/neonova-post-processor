@@ -103,33 +103,22 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
 
         if (!this.model.events || this.model.events.length === 0) return;
 
-        const labels = [];
-        const dataPoints = [];
-
-        this.model.events.forEach(event => {
-            const timeStr = event.dateObj 
-                ? event.dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                : '??:??';
-            
-            labels.push(timeStr);
-            // +1 = connected (above center line), -1 = disconnected (below center line)
-            dataPoints.push(event.status === 'connected' || event.status === 'Start' ? 1 : -1);
-        });
+        const dataPoints = this.model.events.map(event => ({
+            x: event.dateObj,                                   // real timestamp for correct width
+            y: (event.status === 'connected' || event.status === 'Start') ? 1 : -1
+        }));
 
         new Chart(ctx, {
             type: 'line',
             data: {
-                labels: labels,
                 datasets: [{
                     label: 'Modem Status',
                     data: dataPoints,
                     borderWidth: 3,
                     stepped: 'after',
                     tension: 0,
-                    fill: 'origin',                    // ← fills to the center line
-                    backgroundColor: (context) => {
-                        return context.raw > 0 ? '#10b98144' : '#ef444444';
-                    },
+                    fill: 'origin',                    // fills to the center line
+                    backgroundColor: (ctx) => ctx.raw.y > 0 ? '#10b98144' : '#ef444444',
                     borderColor: '#10b981',
                     pointRadius: 0,
                     segment: {
@@ -144,22 +133,29 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
                     legend: { display: false } 
                 },
                 scales: {
-                    y: { 
-                        display: true,
-                        min: -1.2,
-                        max: 1.2,
-                        ticks: { display: false },
-                        grid: { color: '#27272a' }
-                    },
-                    x: { 
+                    x: {
+                        type: 'time',                      // ← this makes width = real duration
+                        time: {
+                            unit: 'minute',
+                            displayFormats: {
+                                minute: 'HH:mm'
+                            }
+                        },
                         grid: { color: '#27272a', lineWidth: 1 },
                         ticks: { 
                             color: '#64748b', 
                             maxRotation: 45,
                             minRotation: 45,
                             autoSkip: true,
-                            maxTicksLimit: 18
+                            maxTicksLimit: 20
                         }
+                    },
+                    y: { 
+                        display: true,
+                        min: -1.2,
+                        max: 1.2,
+                        ticks: { display: false },
+                        grid: { color: '#27272a' }
                     }
                 },
                 layout: { 
