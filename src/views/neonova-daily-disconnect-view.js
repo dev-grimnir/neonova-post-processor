@@ -103,27 +103,30 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
 
         if (!this.model.events || this.model.events.length === 0) return;
 
-        const dataPoints = this.model.events.map(event => ({
-            x: event.dateObj,                                   // real timestamp for correct width
-            y: (event.status === 'connected' || event.status === 'Start') ? 1 : -1
-        }));
+        const labels = [];
+        const dataPoints = [];
+
+        this.model.events.forEach(event => {
+            const timeStr = event.dateObj 
+                ? event.dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : '??:??';
+            
+            labels.push(timeStr);
+            dataPoints.push(event.status === 'connected' || event.status === 'Start' ? 1 : -1);
+        });
 
         new Chart(ctx, {
-            type: 'line',
+            type: 'bar',
             data: {
+                labels: labels,
                 datasets: [{
                     label: 'Modem Status',
                     data: dataPoints,
-                    borderWidth: 3,
-                    stepped: 'after',
-                    tension: 0,
-                    fill: 'origin',                    // fills to the center line
-                    backgroundColor: (ctx) => ctx.raw.y > 0 ? '#10b98144' : '#ef444444',
-                    borderColor: '#10b981',
-                    pointRadius: 0,
-                    segment: {
-                        borderColor: (ctx) => (ctx.p0.parsed.y < 0 ? '#ef4444' : '#10b981')
-                    }
+                    backgroundColor: (ctx) => ctx.raw > 0 ? '#10b98188' : '#ef444488',
+                    borderColor: (ctx) => ctx.raw > 0 ? '#10b981' : '#ef4444',
+                    borderWidth: 2,
+                    barPercentage: 1.0,      // makes bars touch each other
+                    categoryPercentage: 1.0  // removes gaps between bars
                 }]
             },
             options: {
@@ -133,38 +136,31 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
                     legend: { display: false } 
                 },
                 scales: {
-                    x: {
-                        type: 'time',                      // ← this makes width = real duration
-                        time: {
-                            unit: 'minute',
-                            displayFormats: {
-                                minute: 'HH:mm'
-                            }
-                        },
-                        grid: { color: '#27272a', lineWidth: 1 },
-                        ticks: { 
-                            color: '#64748b', 
-                            maxRotation: 45,
-                            minRotation: 45,
-                            autoSkip: true,
-                            maxTicksLimit: 20
-                        }
-                    },
                     y: { 
                         display: true,
                         min: -1.2,
                         max: 1.2,
                         ticks: { display: false },
                         grid: { color: '#27272a' }
+                    },
+                    x: { 
+                        grid: { color: '#27272a', lineWidth: 1 },
+                        ticks: { 
+                            color: '#64748b', 
+                            maxRotation: 45,
+                            minRotation: 45,
+                            autoSkip: true,
+                            maxTicksLimit: 18
+                        }
                     }
                 },
                 layout: { 
-                    padding: { right: 40, left: 20, top: 20 } 
+                    padding: { right: 40, left: 20, top: 30 } 
                 }
             }
         });
     }
-
+    
     attachListeners() {
         console.log('DailyDisconnectView: attaching listeners');
         if (!this.modal) return;
