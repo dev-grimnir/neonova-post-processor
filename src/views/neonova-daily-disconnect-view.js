@@ -84,7 +84,7 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
         const dayStart = new Date(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate(), 0, 0, 0);
         const dayEnd   = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
     
-        // Step 1: Collapse to real status-change periods only
+        // Step 1: Collapse to real status-change periods
         const rawPeriods = [];
         let i = 0;
         while (i < sortedEvents.length) {
@@ -111,29 +111,29 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
             rawPeriods.push({ x: dayEnd.getTime(), y: lastY });
         }
     
-        // Step 2: MERGE SHORT GLITCHES (this is what finally makes it useful)
-        // Any flip shorter than 2 minutes is ignored — the previous status continues.
-        // This turns rapid on/off noise into long, clean green/red bars exactly as you described.
-        const MIN_DURATION_MS = 2 * 60 * 1000;   // ← change to 5*60*1000 if you want stricter filtering
+        // Step 2: Merge short glitches (< 2 minutes)
+        const MIN_DURATION_MS = 2 * 60 * 1000;
         const chartData = [];
         let k = 0;
-        while (k < rawPeriods.length - 1) {      // last point is the dayEnd extension
+        while (k < rawPeriods.length - 1) {
             const current = rawPeriods[k];
-            const next    = rawPeriods[k + 1];
+            const next = rawPeriods[k + 1];
             const duration = next.x - current.x;
     
             if (duration < MIN_DURATION_MS && chartData.length > 0) {
-                // short glitch → skip it, previous bar continues
-                k++;
+                k++; // ignore glitch
                 continue;
             }
     
             chartData.push(current);
             k++;
         }
-        // Add the final midnight point
-        if (rawPeriods.length > 0) {
-            chartData.push(rawPeriods[rawPeriods.length - 1]);
+        if (rawPeriods.length > 0) chartData.push(rawPeriods[rawPeriods.length - 1]);
+    
+        // Step 3: FIX #1 — Add midnight start point so the LEFT side is never empty
+        if (chartData.length > 0) {
+            const firstY = chartData[0].y;
+            chartData.unshift({ x: dayStart.getTime(), y: firstY });
         }
     
         console.log(`✅ Collapsed ${this.model.events.length} raw events → ${rawPeriods.length} periods → ${chartData.length} final bars (short glitches < 2 min ignored)`);
@@ -144,19 +144,32 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
         this._ekgChartInstance = new Chart(canvas, {
             type: 'line',
             data: {
-                datasets: [{
-                    label: 'Modem Status',
-                    data: chartData,
-                    borderWidth: 5,
-                    stepped: 'after',
-                    tension: 0,
-                    fill: 'origin',
-                    pointRadius: 0,
-                    segment: {
-                        borderColor: (ctx) => (ctx.p0.parsed.y < 0 ? '#ef4444' : '#10b981'),
-                        backgroundColor: (ctx) => (ctx.p0.parsed.y < 0 ? '#ef444488' : '#10b98188')
+                datasets: [
+                    // GREEN = Connected (always above centerline)
+                    {
+                        label: 'Connected',
+                        data: chartData.map(pt => ({ x: pt.x, y: pt.y > 0 ? pt.y : null })),
+                        borderColor: '#10b981',
+                        backgroundColor: '#10b98188',
+                        borderWidth: 5,
+                        stepped: 'after',
+                        tension: 0,
+                        fill: 'origin',
+                        pointRadius: 0
+                    },
+                    // RED = Disconnected (always below centerline)
+                    {
+                        label: 'Disconnected',
+                        data: chartData.map(pt => ({ x: pt.x, y: pt.y < 0 ? pt.y : null })),
+                        borderColor: '#ef4444',
+                        backgroundColor: '#ef444488',
+                        borderWidth: 5,
+                        stepped: 'after',
+                        tension: 0,
+                        fill: 'origin',
+                        pointRadius: 0
                     }
-                }]
+                ]
             },
             options: {
                 responsive: true,
