@@ -123,21 +123,14 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
                     label: 'Connection Status',
                     data: dataPoints,
                     borderWidth: 3,
-                    stepped: 'after',           // important: hold value until next change
+                    stepped: 'after',
                     tension: 0,
-                    fill: true,                 // ← this makes it show duration
-                    backgroundColor: (ctx) => {
-                        return ctx.parsed.y === 1 
-                            ? '#10b98133'   // semi-transparent green = connected
-                            : '#ef444433';  // semi-transparent red   = disconnected
-                    },
-                    borderColor: (ctx) => {
-                        return ctx.parsed.y === 1 
-                            ? '#10b981' 
-                            : '#ef4444';
-                    },
+                    fill: true,
+                    backgroundColor: '#10b98133',   // default green (overridden per segment)
+                    borderColor: '#10b981',
                     segment: {
-                        borderColor: (ctx) => (ctx.p0.parsed.y === 0 ? '#ef4444' : '#10b981')
+                        borderColor: (ctx) => (ctx.p0.parsed.y === 0 ? '#ef4444' : '#10b981'),
+                        backgroundColor: (ctx) => (ctx.p0.parsed.y === 0 ? '#ef444433' : '#10b98133')
                     }
                 }]
             },
@@ -160,7 +153,7 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
                             maxRotation: 45,
                             minRotation: 45,
                             autoSkip: true,
-                            maxTicksLimit: 24   // limit to roughly hourly labels so it's readable
+                            maxTicksLimit: 24
                         }
                     }
                 },
