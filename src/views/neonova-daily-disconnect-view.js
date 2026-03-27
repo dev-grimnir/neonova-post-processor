@@ -84,8 +84,8 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
         const dayStart = new Date(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate(), 0, 0, 0);
         const dayEnd   = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
     
-        // Build collapsed periods with status info
-        const chartData = [];
+        // Build collapsed periods
+        const rawPeriods = [];
         let i = 0;
         while (i < sortedEvents.length) {
             const startTime = sortedEvents[i].dateObj.getTime();
@@ -97,89 +97,106 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
                 j++;
             }
     
-            chartData.push({
-                x: startTime,
-                y: isConnected ? 1 : -1,
-                isConnected: isConnected
-            });
-    
+            rawPeriods.push({ x: startTime, isConnected });
             i = j;
         }
     
         // Extend last bar to midnight
-        if (chartData.length > 0) {
-            chartData.push({
-                x: dayEnd.getTime(),
-                y: chartData[chartData.length - 1].y,
-                isConnected: chartData[chartData.length - 1].isConnected
+        if (rawPeriods.length > 0) {
+            rawPeriods.push({ 
+                x: dayEnd.getTime(), 
+                isConnected: rawPeriods[rawPeriods.length - 1].isConnected 
             });
         }
     
         // Merge short glitches (< 2 min)
         const MIN_DURATION_MS = 2 * 60 * 1000;
-        const finalData = [];
+        const chartData = [];
         let k = 0;
-        while (k < chartData.length - 1) {
-            const current = chartData[k];
-            const next = chartData[k + 1];
-            if ((next.x - current.x) < MIN_DURATION_MS && finalData.length > 0) {
+        while (k < rawPeriods.length - 1) {
+            const current = rawPeriods[k];
+            const next = rawPeriods[k + 1];
+            if ((next.x - current.x) < MIN_DURATION_MS && chartData.length > 0) {
                 k++;
                 continue;
             }
-            finalData.push(current);
+            chartData.push(current);
             k++;
         }
-        if (chartData.length > 0) finalData.push(chartData[chartData.length - 1]);
+        if (rawPeriods.length > 0) chartData.push(rawPeriods[rawPeriods.length - 1]);
     
         // Force full coverage from midnight
-        if (finalData.length > 0) {
-            finalData.unshift({
-                x: dayStart.getTime(),
-                y: finalData[0].y,
-                isConnected: finalData[0].isConnected
+        if (chartData.length > 0) {
+            chartData.unshift({ 
+                x: dayStart.getTime(), 
+                isConnected: chartData[0].isConnected 
             });
         }
     
-        console.log(`✅ Collapsed ${this.model.events.length} raw events → ${finalData.length} final bars`);
+        console.log(`✅ Collapsed ${this.model.events.length} raw events → ${chartData.length} final bars`);
     
         if (this._ekgChartInstance) this._ekgChartInstance.destroy();
+    
+        // Build data for two separate datasets (prevents tooltip overlap)
+        const connectedData = chartData.map(pt => ({ 
+            x: pt.x, 
+            y: pt.isConnected ? 1 : null 
+        }));
+    
+        const disconnectedData = chartData.map(pt => ({ 
+            x: pt.x, 
+            y: !pt.isConnected ? -1 : null 
+        }));
     
         this._ekgChartInstance = new Chart(canvas, {
             type: 'line',
             data: {
-                datasets: [{
-                    label: 'Modem Status',
-                    data: finalData,
-                    borderWidth: 1,
-                    stepped: 'after',
-                    tension: 0,
-                    fill: 'origin',
-                    pointRadius: 0,
-                    borderColor: (ctx) => (ctx.raw && ctx.raw.isConnected) ? '#10b981' : '#ef4444',
-                    backgroundColor: (ctx) => (ctx.raw && ctx.raw.isConnected) ? '#10b98188' : '#ef444488'
-                }]
+                datasets: [
+                    {
+                        label: 'Connected',
+                        data: connectedData,
+                        borderColor: '#10b981',
+                        backgroundColor: '#10b98188',
+                        borderWidth: 1,
+                        stepped: 'after',
+                        tension: 0,
+                        fill: 'origin',
+                        pointRadius: 0
+                    },
+                    {
+                        label: 'Disconnected',
+                        data: disconnectedData,
+                        borderColor: '#ef4444',
+                        backgroundColor: '#ef444488',
+                        borderWidth: 1,
+                        stepped: 'after',
+                        tension: 0,
+                        fill: 'origin',
+                        pointRadius: 0
+                    }
+                ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: {
+                    intersect: true,
+                    mode: 'nearest'
+                },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                        intersect: true,
-                        mode: 'nearest',
                         callbacks: {
                             label: (context) => {
-                                const raw = context.raw;
-                                if (!raw || raw.isConnected === undefined) return '';
-    
-                                const isConnected = raw.isConnected;
+                                const isConnected = context.dataset.label === 'Connected';
                                 const currentX = context.parsed.x;
     
-                                // Find start of current bar
+                                // Find start of this bar
                                 let startX = dayStart.getTime();
-                                for (let idx = 0; idx < finalData.length; idx++) {
-                                    if (finalData[idx].x >= currentX) {
-                                        if (idx > 0) startX = finalData[idx - 1].x;
+                                const dataArr = context.dataset.data;
+                                for (let idx = 0; idx < dataArr.length; idx++) {
+                                    if (dataArr[idx].x >= currentX) {
+                                        if (idx > 0) startX = dataArr[idx - 1].x;
                                         break;
                                     }
                                 }
