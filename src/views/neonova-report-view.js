@@ -139,27 +139,16 @@ class NeonovaReportView extends NeonovaBaseModalView {
 
         dailyCanvas.style.cursor = 'pointer';
         dailyCanvas.addEventListener('click', (e) => {
-            console.log('🔥 Daily bar click detected!');
-
-            const points = dailyChartInstance.getElementsAtEventForMode(e, 'nearest', { intersect: true }, false);
-            if (points.length === 0) return;
-
-            const index = points[0].index;
             const label = this.metrics.dailyLabels?.[index];
-
             if (!label) return;
 
-            // Convert label to clean YYYY-MM-DD string
             let dateStr = label;
             if (label.includes('/')) {
-                // Handle "3/22/2026" format
                 const parts = label.split('/');
                 dateStr = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
             }
 
-            console.log('Clicked label:', label, '→ clean dateStr:', dateStr);
-
-            this.controller.openDailyDisconnectDetail(dateStr);   // ← pass string, not Date
+            this.controller.openDailyDisconnectDetail(dateStr);
         });
 
         // Rolling chart
