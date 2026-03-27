@@ -111,15 +111,6 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
             rawPeriods.push({ x: dayEnd.getTime(), y: lastY });
         }
     
-        // Step 2: Merge short glitches (< 2 minutes)
-        const MIN_DURATION_MS = 2 * 60 * 1000;
-        const chartData = [];
-        let k = 0;
-        while (k < rawPeriods.length - 1) {
-            const current = rawPeriods[k];
-            const next    = rawPeriods[k + 1];
-            const duration = next.x - current.x;
-    
         // Step 2: NO merging — show every status change (even short ones)
         const chartData = [...rawPeriods];   // just copy the periods as-is
     
