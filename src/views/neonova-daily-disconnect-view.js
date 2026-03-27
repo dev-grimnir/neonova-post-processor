@@ -64,64 +64,78 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
     }
 
     initEKGChart() {
+        console.log('initEKGChart called — events count:', this.model.events ? this.model.events.length : 0);
+
         const ctx = document.getElementById('ekgChart');
-        if (!ctx) return;
-
-        const labels = [];
-        const durations = [];
-        const colors = [];
-
-        for (let i = 0; i < this.model.events.length - 1; i++) {
-            const start = this.model.events[i].dateObj.getTime();
-            const end   = this.model.events[i + 1].dateObj.getTime();
-            const minutes = Math.max(1, Math.round((end - start) / 60000));
-
-            const isConnected = this.model.events[i].status === 'connected' || this.model.events[i].status === 'Start';
-
-            labels.push(this.model.events[i].dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-            durations.push(isConnected ? minutes : -minutes);
-            colors.push(isConnected ? '#10b98188' : '#ef444488');
+        if (!ctx) {
+            console.error('EKG canvas #ekgChart not found!');
+            return;
         }
 
+        if (!this.model.events || this.model.events.length < 2) return;
+
+        const labels = [];
+        const dataPoints = [];
+
+        this.model.events.forEach(event => {
+            const timeStr = event.dateObj 
+                ? event.dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : '??:??';
+
+            labels.push(timeStr);
+            // +1 = above center line (connected), -1 = below center line (disconnected)
+            dataPoints.push(event.status === 'connected' || event.status === 'Start' ? 1 : -1);
+        });
+
         new Chart(ctx, {
-            type: 'bar',
+            type: 'line',
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Duration (minutes)',
-                    data: durations,
-                    backgroundColor: colors,
-                    borderColor: '#ffffff22',
-                    borderWidth: 1,
-                    barThickness: 28
+                    label: 'Modem Status',
+                    data: dataPoints,
+                    borderWidth: 3,
+                    stepped: 'after',           // holds value until next change
+                    tension: 0,
+                    fill: 'origin',             // fills to the horizontal center line
+                    backgroundColor: (ctx) => (ctx.raw > 0 ? '#10b98188' : '#ef444488'),
+                    borderColor: '#10b981',
+                    pointRadius: 0,
+                    segment: {
+                        borderColor: (ctx) => (ctx.p0.parsed.y < 0 ? '#ef4444' : '#10b981')
+                    }
                 }]
             },
             options: {
-                indexAxis: 'y',                    // ← THIS MAKES IT HORIZONTAL
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: {
-                        position: 'center',
-                        min: -180,
-                        max: 180,
-                        grid: { color: '#27272a' },
-                        ticks: { 
-                            color: '#64748b',
-                            callback: v => Math.abs(v) + 'm'
-                        }
+                    y: { 
+                        display: true,
+                        min: -1.2,
+                        max: 1.2,
+                        ticks: { display: false },
+                        grid: { color: '#27272a' }
                     },
-                    y: {
-                        grid: { color: '#27272a' },
-                        ticks: { color: '#64748b' }
+                    x: { 
+                        grid: { color: '#27272a', lineWidth: 1 },
+                        ticks: { 
+                            color: '#64748b', 
+                            maxRotation: 45,
+                            minRotation: 45,
+                            autoSkip: true,
+                            maxTicksLimit: 18
+                        }
                     }
                 },
-                layout: { padding: { left: 20, right: 40, top: 20, bottom: 20 } }
+                layout: { 
+                    padding: { right: 40, left: 20, top: 30 } 
+                }
             }
         });
     }
-
+    
     attachListeners() {
         const closeBtn = this.modal.querySelector('#close-daily-btn');
         const modalEl  = this.modal.querySelector('#daily-modal');
