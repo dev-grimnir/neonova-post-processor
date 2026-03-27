@@ -74,6 +74,7 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
     
         if (!this.model.events || this.model.events.length < 2) return;
     
+        // Sort events
         const sortedEvents = [...this.model.events].sort((a, b) => 
             (a.dateObj || new Date(0)) - (b.dateObj || new Date(0))
         );
@@ -84,11 +85,11 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
         const dayStart = new Date(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate(), 0, 0, 0);
         const dayEnd   = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
     
-        // Build collapsed periods
-        const rawPeriods = [];
+        // Build clean status periods
+        const periods = [];
         let i = 0;
         while (i < sortedEvents.length) {
-            const startTime = sortedEvents[i].dateObj.getTime();
+            const start = sortedEvents[i].dateObj.getTime();
             const isConnected = (sortedEvents[i].status === 'connected' || sortedEvents[i].status === 'Start');
     
             let j = i + 1;
@@ -97,35 +98,35 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
                 j++;
             }
     
-            rawPeriods.push({ x: startTime, isConnected });
+            periods.push({ x: start, isConnected: isConnected });
             i = j;
         }
     
-        // Extend last bar to midnight
-        if (rawPeriods.length > 0) {
-            rawPeriods.push({ 
+        // Extend last period to midnight
+        if (periods.length > 0) {
+            periods.push({ 
                 x: dayEnd.getTime(), 
-                isConnected: rawPeriods[rawPeriods.length - 1].isConnected 
+                isConnected: periods[periods.length - 1].isConnected 
             });
         }
     
-        // Merge short glitches (< 2 min)
-        const MIN_DURATION_MS = 2 * 60 * 1000;
+        // Remove short glitches (< 2 minutes)
+        const MIN_DURATION = 2 * 60 * 1000;
         const chartData = [];
         let k = 0;
-        while (k < rawPeriods.length - 1) {
-            const current = rawPeriods[k];
-            const next = rawPeriods[k + 1];
-            if ((next.x - current.x) < MIN_DURATION_MS && chartData.length > 0) {
+        while (k < periods.length - 1) {
+            const curr = periods[k];
+            const next = periods[k + 1];
+            if ((next.x - curr.x) < MIN_DURATION && chartData.length > 0) {
                 k++;
                 continue;
             }
-            chartData.push(current);
+            chartData.push(curr);
             k++;
         }
-        if (rawPeriods.length > 0) chartData.push(rawPeriods[rawPeriods.length - 1]);
+        if (periods.length > 0) chartData.push(periods[periods.length - 1]);
     
-        // Force full coverage from midnight
+        // Force full day coverage (no dead space)
         if (chartData.length > 0) {
             chartData.unshift({ 
                 x: dayStart.getTime(), 
@@ -137,80 +138,54 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
     
         if (this._ekgChartInstance) this._ekgChartInstance.destroy();
     
-        // Build data for two separate datasets (prevents tooltip overlap)
-        const connectedData = chartData.map(pt => ({ 
-            x: pt.x, 
-            y: pt.isConnected ? 1 : null 
-        }));
-    
-        const disconnectedData = chartData.map(pt => ({ 
-            x: pt.x, 
-            y: !pt.isConnected ? -1 : null 
-        }));
-    
         this._ekgChartInstance = new Chart(canvas, {
             type: 'line',
             data: {
-                datasets: [
-                    {
-                        label: 'Connected',
-                        data: connectedData,
-                        borderColor: '#10b981',
-                        backgroundColor: '#10b98188',
-                        borderWidth: 1,
-                        stepped: 'after',
-                        tension: 0,
-                        fill: 'origin',
-                        pointRadius: 0
-                    },
-                    {
-                        label: 'Disconnected',
-                        data: disconnectedData,
-                        borderColor: '#ef4444',
-                        backgroundColor: '#ef444488',
-                        borderWidth: 1,
-                        stepped: 'after',
-                        tension: 0,
-                        fill: 'origin',
-                        pointRadius: 0
-                    }
-                ]
+                datasets: [{
+                    label: 'Modem Status',
+                    data: chartData.map(p => ({ x: p.x, y: p.isConnected ? 1 : -1 })),
+                    borderWidth: 1,
+                    stepped: 'after',
+                    tension: 0,
+                    fill: 'origin',
+                    pointRadius: 0,
+                    borderColor: (ctx) => ctx.raw && ctx.raw.isConnected ? '#10b981' : '#ef4444',
+                    backgroundColor: (ctx) => ctx.raw && ctx.raw.isConnected ? '#10b98188' : '#ef444488'
+                }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                interaction: {
-                    intersect: true,
-                    mode: 'nearest'
-                },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
+                        intersect: true,
+                        mode: 'nearest',
                         callbacks: {
                             label: (context) => {
-                                const isConnected = context.dataset.label === 'Connected';
+                                const raw = context.raw;
+                                if (!raw) return '';
+    
+                                const isConnected = raw.isConnected !== undefined ? raw.isConnected : (context.parsed.y > 0);
                                 const currentX = context.parsed.x;
     
-                                // Find start of this bar
+                                // Find start of this segment
                                 let startX = dayStart.getTime();
-                                const dataArr = context.dataset.data;
-                                for (let idx = 0; idx < dataArr.length; idx++) {
-                                    if (dataArr[idx].x >= currentX) {
-                                        if (idx > 0) startX = dataArr[idx - 1].x;
+                                const data = context.dataset.data;
+                                for (let idx = 0; idx < data.length; idx++) {
+                                    if (data[idx].x >= currentX) {
+                                        if (idx > 0) startX = data[idx - 1].x;
                                         break;
                                     }
                                 }
     
-                                const startDate = new Date(startX);
-                                const endDate = new Date(currentX);
+                                const startStr = new Date(startX).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                                const endStr   = new Date(currentX).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     
-                                const startStr = startDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-                                const endStr = endDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    
-                                const durationMs = currentX - startX;
-                                const hours = Math.floor(durationMs / 3600000);
-                                const minutes = Math.floor((durationMs % 3600000) / 60000);
-                                const durationStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                                const durMs = currentX - startX;
+                                const hours = Math.floor(durMs / 3600000);
+                                const mins  = Math.floor((durMs % 3600000) / 60000);
+                                const durationStr = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
     
                                 const status = isConnected ? 'Connected' : 'Disconnected';
     
