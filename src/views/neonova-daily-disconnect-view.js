@@ -33,48 +33,30 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
         `;
 
         super.createModal(modalHTML).then(() => {
-            console.log('DailyDisconnectView: createModal Promise RESOLVED → calling render()');
             this.render();
             this.attachListeners();
-        }).catch(err => {
-            console.error('DailyDisconnectView: createModal Promise REJECTED:', err);
-        });
+        }).catch(err => console.error('Modal creation failed:', err));
     }
 
     render() {
-        console.log('DailyDisconnectView.render() started');
-
-        if (!this.modal) {
-            console.error('Daily view: this.modal is null in render()');
-            return;
-        }
-
         const content = this.modal.querySelector('#daily-content');
-        if (!content) {
-            console.error('#daily-content not found in render()');
-            return;
-        }
+        if (!content) return;
 
-        console.log('DailyDisconnectView: populating #daily-content');
         content.innerHTML = this.generateEKGHTML();
 
-        if (!this.model.events || this.model.events.length === 0) {
-            content.innerHTML += `
-                <div class="text-center text-zinc-400 py-20 text-lg">
-                    No connection events found for this day.
-                </div>`;
+        if (!this.model.events || this.model.events.length < 2) {
+            content.innerHTML += `<div class="text-center text-zinc-400 py-20 text-lg">No events found.</div>`;
             return;
         }
 
-        console.log(`Rendering chart with ${this.model.events.length} events`);
         requestAnimationFrame(() => this.initEKGChart());
     }
 
     generateEKGHTML() {
         return `
             <div class="max-w-6xl mx-auto">
-                <h1 class="text-5xl font-bold text-white text-center tracking-tight mb-10">Connection Status – ${this.model.getDateString ? this.model.getDateString() : ''}</h1>
-                <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8 h-[520px]">
+                <h1 class="text-5xl font-bold text-white text-center tracking-tight mb-8">Connection Status – ${this.model.getDateString ? this.model.getDateString() : ''}</h1>
+                <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8" style="height: 620px;">
                     <canvas id="ekgChart" class="w-full h-full"></canvas>
                 </div>
             </div>
@@ -82,15 +64,8 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
     }
 
     initEKGChart() {
-        console.log('initEKGChart called — events count:', this.model.events ? this.model.events.length : 0);
-
         const ctx = document.getElementById('ekgChart');
-        if (!ctx) {
-            console.error('EKG canvas #ekgChart not found!');
-            return;
-        }
-
-        if (!this.model.events || this.model.events.length < 2) return;
+        if (!ctx) return;
 
         const labels = [];
         const durations = [];
@@ -122,7 +97,7 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
                 }]
             },
             options: {
-                indexAxis: 'y',                    // horizontal bars
+                indexAxis: 'y',                    // ← THIS MAKES IT HORIZONTAL
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
@@ -138,21 +113,16 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
                         }
                     },
                     y: {
-                        grid: { color: '#27272a', lineWidth: 1 },
+                        grid: { color: '#27272a' },
                         ticks: { color: '#64748b' }
                     }
                 },
-                layout: { 
-                    padding: { left: 20, right: 40, top: 20, bottom: 20 } 
-                }
+                layout: { padding: { left: 20, right: 40, top: 20, bottom: 20 } }
             }
         });
     }
 
     attachListeners() {
-        console.log('DailyDisconnectView: attaching listeners');
-        if (!this.modal) return;
-
         const closeBtn = this.modal.querySelector('#close-daily-btn');
         const modalEl  = this.modal.querySelector('#daily-modal');
 
