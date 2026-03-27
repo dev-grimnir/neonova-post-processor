@@ -32,16 +32,22 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
             </div>
         `;
 
-        // Create the modal first
-        super.createModal(modalHTML).then(() => {
-            this.render();
-            this.attachListeners();
-        }).catch(err => {
-            console.error('Failed to show daily modal:', err);
-        });
+        console.log('DailyDisconnectView: calling super.createModal...');
+
+        super.createModal(modalHTML)
+            .then(() => {
+                console.log('DailyDisconnectView: createModal Promise RESOLVED → calling render()');
+                this.render();
+                this.attachListeners();
+            })
+            .catch(err => {
+                console.error('DailyDisconnectView: createModal Promise REJECTED:', err);
+            });
     }
 
     render() {
+        console.log('DailyDisconnectView.render() started');
+
         if (!this.modal) {
             console.error('Daily view: this.modal is null in render()');
             return;
@@ -53,9 +59,11 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
             return;
         }
 
+        console.log('DailyDisconnectView: populating #daily-content');
         content.innerHTML = this.generateEKGHTML();
 
         if (!this.model.events || this.model.events.length === 0) {
+            console.log('No events → showing empty message');
             content.innerHTML += `
                 <div class="text-center text-zinc-400 py-20 text-lg">
                     No connection events found for this day.
@@ -63,7 +71,7 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
             return;
         }
 
-        // Defer chart initialization
+        console.log(`Rendering chart with ${this.model.events.length} events`);
         requestAnimationFrame(() => this.initEKGChart());
     }
 
@@ -71,7 +79,6 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
         return `
             <div class="max-w-6xl mx-auto">
                 <h1 class="text-5xl font-bold text-white text-center tracking-tight mb-10">Connection Status – ${this.model.getDateString ? this.model.getDateString() : ''}</h1>
-                
                 <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8">
                     <canvas id="ekgChart" class="w-full h-[520px]"></canvas>
                 </div>
@@ -94,10 +101,7 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
             return;
         }
 
-        if (!this.model.events || this.model.events.length === 0) {
-            console.warn('No events for chart');
-            return;
-        }
+        if (!this.model.events || this.model.events.length === 0) return;
 
         const labels = [];
         const dataPoints = [];
@@ -143,6 +147,7 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
     }
 
     attachListeners() {
+        console.log('DailyDisconnectView: attaching listeners');
         if (!this.modal) return;
 
         const closeBtn = this.modal.querySelector('#close-daily-btn');
