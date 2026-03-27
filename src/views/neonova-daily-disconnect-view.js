@@ -25,19 +25,19 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
                         </button>
                     </div>
                     
-                    <!-- Content Area -->
+                    <!-- Content -->
                     <div id="daily-content" class="flex-1 overflow-y-auto p-8 bg-[#18181b]">
                     </div>
                 </div>
             </div>
         `;
 
-        // Create modal and wait for DOM to be ready
+        // Create the modal first
         super.createModal(modalHTML).then(() => {
             this.render();
             this.attachListeners();
         }).catch(err => {
-            console.error('Failed to create daily modal:', err);
+            console.error('Failed to show daily modal:', err);
         });
     }
 
@@ -63,7 +63,7 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
             return;
         }
 
-        // Give the browser time to parse the canvas before Chart.js runs
+        // Defer chart initialization
         requestAnimationFrame(() => this.initEKGChart());
     }
 
@@ -95,7 +95,7 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
         }
 
         if (!this.model.events || this.model.events.length === 0) {
-            console.warn('No events available for chart');
+            console.warn('No events for chart');
             return;
         }
 
@@ -129,26 +129,15 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { 
-                    legend: { display: false } 
-                },
+                plugins: { legend: { display: false } },
                 scales: {
-                    y: { 
-                        display: false, 
-                        min: -0.1, 
-                        max: 1.1 
-                    },
+                    y: { display: false, min: -0.1, max: 1.1 },
                     x: { 
                         grid: { color: '#27272a', lineWidth: 1 },
-                        ticks: { 
-                            color: '#64748b', 
-                            maxRotation: 45 
-                        }
+                        ticks: { color: '#64748b', maxRotation: 45 }
                     }
                 },
-                layout: { 
-                    padding: { right: 30 } 
-                }
+                layout: { padding: { right: 30 } }
             }
         });
     }
@@ -159,14 +148,9 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
         const closeBtn = this.modal.querySelector('#close-daily-btn');
         const modalEl  = this.modal.querySelector('#daily-modal');
 
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => this.hide());
-        }
-
-        if (modalEl) {
-            modalEl.addEventListener('click', e => {
-                if (e.target === modalEl) this.hide();
-            });
-        }
+        closeBtn?.addEventListener('click', () => this.hide());
+        modalEl?.addEventListener('click', e => {
+            if (e.target === modalEl) this.hide();
+        });
     }
 }
