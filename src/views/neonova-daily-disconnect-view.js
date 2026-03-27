@@ -120,17 +120,17 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Connection Status',
+                    label: 'Modem Status',
                     data: dataPoints,
-                    borderWidth: 3,
+                    borderWidth: 2,
                     stepped: 'after',
                     tension: 0,
-                    fill: true,
-                    backgroundColor: '#10b98133',   // default green (overridden per segment)
+                    fill: true,                    // This is what creates the solid blocks
+                    backgroundColor: '#10b98133',  // Green fill = connected
                     borderColor: '#10b981',
+                    pointRadius: 0,
                     segment: {
-                        borderColor: (ctx) => (ctx.p0.parsed.y === 0 ? '#ef4444' : '#10b981'),
-                        backgroundColor: (ctx) => (ctx.p0.parsed.y === 0 ? '#ef444433' : '#10b98133')
+                        borderColor: (ctx) => (ctx.p0.parsed.y === 0 ? '#ef4444' : '#10b981')
                     }
                 }]
             },
@@ -153,12 +153,12 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
                             maxRotation: 45,
                             minRotation: 45,
                             autoSkip: true,
-                            maxTicksLimit: 24
+                            maxTicksLimit: 20
                         }
                     }
                 },
                 layout: { 
-                    padding: { right: 30, left: 10 } 
+                    padding: { right: 40, left: 20 } 
                 }
             }
         });
