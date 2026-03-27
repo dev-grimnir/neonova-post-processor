@@ -120,15 +120,8 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
             const next    = rawPeriods[k + 1];
             const duration = next.x - current.x;
     
-            if (duration < MIN_DURATION_MS && chartData.length > 0) {
-                k++;
-                continue;
-            }
-    
-            chartData.push(current);
-            k++;
-        }
-        if (rawPeriods.length > 0) chartData.push(rawPeriods[rawPeriods.length - 1]);
+        // Step 2: NO merging — show every status change (even short ones)
+        const chartData = [...rawPeriods];   // just copy the periods as-is
     
         // Step 3: Force full-day coverage (no dead zones)
         if (chartData.length > 0) {
