@@ -4,39 +4,43 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
         this.model = model;
     }
 
-    show() {
-        console.log('📋 DailyDisconnectView.show() called');
-        const modalHTML = `
-            <div id="daily-modal" class="fixed inset-0 bg-black/85 flex items-center justify-center z-[10001] opacity-0 transition-opacity duration-400">
-                <div class="bg-[#18181b] border border-[#27272a] rounded-3xl w-[1280px] max-w-[96vw] max-h-[96vh] overflow-hidden shadow-2xl flex flex-col transform scale-95 transition-all duration-500">
-                    <div class="px-8 py-6 border-b border-[#27272a] bg-[#09090b] flex-shrink-0 flex items-center justify-between">
-                        <div>
-                            <div class="text-emerald-400 text-xs font-mono tracking-widest">${this.model.friendlyName}</div>
-                            <div class="text-3xl font-semibold text-white mt-1">${this.model.getDateString()}</div>
-                        </div>
-                        <button id="close-daily-btn" class="px-6 py-2.5 text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-white rounded-2xl flex items-center gap-2 transition">
-                            <i class="fas fa-times"></i> Close
-                        </button>
-                    </div>
-                    <div id="daily-content" class="flex-1 overflow-y-auto p-8 bg-[#18181b]">
-                    </div>
-                </div>
-            </div>
-        `;
+        show() {
+        console.log('DailyDisconnectView.show() called');
+
+        const modalHTML = `... your existing modalHTML here (same as before) ...`;
 
         super.createModal(modalHTML);
-        this.onModalReady();
+
+        // Wait until the modal is truly ready
+        this.waitForModalReady(() => {
+            this.render();
+            this.attachListeners();
+        });
     }
 
-    onModalReady() {
-        this.render();
-        this.attachListeners();
+    waitForModalReady(callback) {
+        if (this.modalReady) {
+            callback();
+            return;
+        }
+
+        const checkInterval = setInterval(() => {
+            if (this.modalReady) {
+                clearInterval(checkInterval);
+                callback();
+            }
+        }, 5);   // check every 5ms – very fast, but safe
     }
 
     render() {
+        if (!this.modal || !this.modalReady) {
+            console.error('NeonovaDailyDisconnectView.render(): modal not ready yet');
+            return;
+        }
+
         const content = this.modal.querySelector('#daily-content');
         if (!content) {
-            console.error('❌ #daily-content not found');
+            console.error('#daily-content not found');
             return;
         }
 
@@ -52,6 +56,18 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
         }
 
         requestAnimationFrame(() => this.initEKGChart());
+    }
+
+    attachListeners() {
+        if (!this.modal || !this.modalReady) return;
+
+        const closeBtn = this.modal.querySelector('#close-daily-btn');
+        const modalEl  = this.modal.querySelector('#daily-modal');
+
+        closeBtn?.addEventListener('click', () => this.hide());
+        modalEl?.addEventListener('click', e => {
+            if (e.target === modalEl) this.hide();
+        });
     }
 
     generateEKGHTML() {
@@ -121,12 +137,5 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
                 layout: { padding: { right: 30 } }
             }
         });
-    }
-
-    attachListeners() {
-        const closeBtn = this.modal.querySelector('#close-daily-btn');
-        const modalEl  = this.modal.querySelector('#daily-modal');
-        closeBtn?.addEventListener('click', () => this.hide());
-        modalEl?.addEventListener('click', e => { if (e.target === modalEl) this.hide(); });
     }
 }
