@@ -120,8 +120,8 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
             data: {
                 labels: labels,
                 datasets: [
+                    // 1. Thin colored line (border only)
                     {
-                        // Invisible line just for the border
                         label: 'Status Line',
                         data: dataPoints,
                         borderWidth: 3,
@@ -131,17 +131,15 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
                         borderColor: '#10b981',
                         pointRadius: 0
                     },
+                    // 2. Solid fill dataset (this is what creates the colored blocks)
                     {
-                        // This dataset creates the actual filled blocks
                         label: 'Duration Fill',
                         data: dataPoints,
                         borderWidth: 0,
                         stepped: 'after',
                         tension: 0,
                         fill: true,
-                        backgroundColor: (context) => {
-                            return context.raw === 1 ? '#10b98144' : '#ef444444';
-                        },
+                        backgroundColor: '#10b98144',   // green = connected
                         pointRadius: 0
                     }
                 ]
