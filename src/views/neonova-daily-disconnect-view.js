@@ -112,21 +112,27 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
                 : '??:??';
             
             labels.push(timeStr);
+            // +1 = above center line (connected), -1 = below center line (disconnected)
             dataPoints.push(event.status === 'connected' || event.status === 'Start' ? 1 : -1);
         });
 
         new Chart(ctx, {
-            type: 'bar',
+            type: 'line',
             data: {
                 labels: labels,
                 datasets: [{
                     label: 'Modem Status',
                     data: dataPoints,
-                    backgroundColor: (ctx) => ctx.raw > 0 ? '#10b98188' : '#ef444488',
-                    borderColor: (ctx) => ctx.raw > 0 ? '#10b981' : '#ef4444',
-                    borderWidth: 2,
-                    barPercentage: 1.0,      // makes bars touch each other
-                    categoryPercentage: 1.0  // removes gaps between bars
+                    borderWidth: 3,
+                    stepped: 'after',
+                    tension: 0,
+                    fill: 'origin',                    // fills to the center line
+                    backgroundColor: (context) => context.raw > 0 ? '#10b98188' : '#ef444488',
+                    borderColor: '#10b981',
+                    pointRadius: 0,
+                    segment: {
+                        borderColor: (ctx) => (ctx.p0.parsed.y < 0 ? '#ef4444' : '#10b981')
+                    }
                 }]
             },
             options: {
