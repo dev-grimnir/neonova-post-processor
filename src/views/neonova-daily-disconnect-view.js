@@ -63,7 +63,7 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
         `;
     }
 
-    initEKGChart() {
+   initEKGChart() {
         console.log('initEKGChart called — events count:', this.model.events ? this.model.events.length : 0);
     
         const canvas = document.getElementById('ekgChart');
@@ -74,7 +74,6 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
     
         if (!this.model.events || this.model.events.length < 2) return;
     
-        // Sort events chronologically
         const sortedEvents = [...this.model.events].sort((a, b) => 
             (a.dateObj || new Date(0)) - (b.dateObj || new Date(0))
         );
@@ -85,7 +84,7 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
         const dayStart = new Date(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate(), 0, 0, 0);
         const dayEnd   = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
     
-        // Step 1: Collapse to real status-change periods only (long stable periods = one wide bar)
+        // Step 1: Collapse to real status-change periods only
         const rawPeriods = [];
         let i = 0;
         while (i < sortedEvents.length) {
@@ -112,8 +111,8 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
             rawPeriods.push({ x: dayEnd.getTime(), y: lastY });
         }
     
-        // Step 2: Merge short glitches (< 2 minutes) so we get clean, useful bars
-        const MIN_DURATION_MS = 2 * 60 * 1000;   // change to 5*60*1000 if you want even fewer bars
+        // Step 2: Merge short glitches (< 2 minutes) — keeps bars clean and useful
+        const MIN_DURATION_MS = 2 * 60 * 1000;
         const chartData = [];
         let k = 0;
         while (k < rawPeriods.length - 1) {
@@ -122,7 +121,7 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
             const duration = next.x - current.x;
     
             if (duration < MIN_DURATION_MS && chartData.length > 0) {
-                k++;   // ignore short glitch — previous status continues
+                k++; // ignore glitch
                 continue;
             }
     
@@ -131,7 +130,7 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
         }
         if (rawPeriods.length > 0) chartData.push(rawPeriods[rawPeriods.length - 1]);
     
-        // Step 3: Force full-day coverage (midnight → midnight) so there are NEVER dead zones
+        // Step 3: Force full-day coverage (midnight → midnight) — NO dead zones ever
         if (chartData.length > 0) {
             const firstY = chartData[0].y;
             chartData.unshift({ x: dayStart.getTime(), y: firstY });
@@ -145,19 +144,32 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
         this._ekgChartInstance = new Chart(canvas, {
             type: 'line',
             data: {
-                datasets: [{
-                    label: 'Modem Status',
-                    data: chartData,
-                    borderWidth: 5,
-                    stepped: 'after',          // rectangular bars that hold value until next change
-                    tension: 0,
-                    fill: 'origin',            // fills solidly to the center line
-                    pointRadius: 0,
-                    segment: {
-                        borderColor: (ctx) => (ctx.p0.parsed.y < 0 ? '#ef4444' : '#10b981'),
-                        backgroundColor: (ctx) => (ctx.p0.parsed.y < 0 ? '#ef444488' : '#10b98188')
+                datasets: [
+                    // GREEN = Connected → always above centerline
+                    {
+                        label: 'Connected',
+                        data: chartData.map(pt => ({ x: pt.x, y: pt.y > 0 ? 1 : null })),
+                        borderColor: '#10b981',
+                        backgroundColor: '#10b98188',
+                        borderWidth: 5,
+                        stepped: 'after',
+                        tension: 0,
+                        fill: 'origin',
+                        pointRadius: 0
+                    },
+                    // RED = Disconnected → always below centerline
+                    {
+                        label: 'Disconnected',
+                        data: chartData.map(pt => ({ x: pt.x, y: pt.y < 0 ? -1 : null })),
+                        borderColor: '#ef4444',
+                        backgroundColor: '#ef444488',
+                        borderWidth: 5,
+                        stepped: 'after',
+                        tension: 0,
+                        fill: 'origin',
+                        pointRadius: 0
                     }
-                }]
+                ]
             },
             options: {
                 responsive: true,
@@ -189,7 +201,7 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
                         ticks: { display: false },
                         grid: {
                             color: (ctx) => ctx.tick.value === 0 ? '#a3a3a3' : '#27272a',
-                            lineWidth: (ctx) => ctx.tick.value === 0 ? 4 : 1.5   // thick EKG centerline
+                            lineWidth: (ctx) => ctx.tick.value === 0 ? 4 : 1.5
                         }
                     }
                 },
