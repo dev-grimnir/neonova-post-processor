@@ -145,20 +145,21 @@ class NeonovaReportView extends NeonovaBaseModalView {
             if (points.length === 0) return;
 
             const index = points[0].index;
-            let clickedDate = this.metrics.dailyDates?.[index];
+            const label = this.metrics.dailyLabels?.[index];
 
-            // Fallback: parse the label string into a Date if dailyDates doesn't exist yet
-            if (!clickedDate && this.metrics.dailyLabels?.[index]) {
-                const label = this.metrics.dailyLabels[index];
-                clickedDate = new Date(label);   // works if label is "2026-03-15", "Mar 15 2026", etc.
-                console.log('Parsed date from label:', label, '→', clickedDate);
+            if (!label) return;
+
+            // Convert label to clean YYYY-MM-DD string
+            let dateStr = label;
+            if (label.includes('/')) {
+                // Handle "3/22/2026" format
+                const parts = label.split('/');
+                dateStr = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
             }
 
-            console.log('Clicked index:', index, '→ Date:', clickedDate);
+            console.log('Clicked label:', label, '→ clean dateStr:', dateStr);
 
-            if (clickedDate) {
-                this.controller.openDailyDisconnectDetail(clickedDate);
-            }
+            this.controller.openDailyDisconnectDetail(dateStr);   // ← pass string, not Date
         });
 
         // Rolling chart
