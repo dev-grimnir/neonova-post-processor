@@ -176,8 +176,9 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                        intersect: true,
-                        mode: 'nearest',
+                        enabled: true,
+                        intersect: false,        // important: allow tooltip even if not exactly on point
+                        mode: 'index',           // use x-axis position instead of nearest point
                         position: 'nearest',
                         callbacks: {
                             label: (context) => {
@@ -187,7 +188,7 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
                                 const currentX = context.parsed.x;
                                 const datasetData = context.dataset.data;
 
-                                // Find the start of this bar (previous data point)
+                                // Find start of this bar
                                 let startX = dayStart.getTime();
                                 for (let idx = 0; idx < datasetData.length; idx++) {
                                     if (datasetData[idx].x >= currentX) {
