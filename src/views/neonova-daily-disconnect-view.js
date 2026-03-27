@@ -75,6 +75,17 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
         requestAnimationFrame(() => this.initEKGChart());
     }
 
+    generateEKGHTML() {
+        return `
+            <div class="max-w-6xl mx-auto">
+                <h1 class="text-5xl font-bold text-white text-center tracking-tight mb-10">Connection Status – ${this.model.getDateString ? this.model.getDateString() : ''}</h1>
+                <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8 h-[520px]">
+                    <canvas id="ekgChart" class="w-full h-full"></canvas>
+                </div>
+            </div>
+        `;
+    }
+
     initEKGChart() {
         console.log('initEKGChart called — events count:', this.model.events ? this.model.events.length : 0);
 
