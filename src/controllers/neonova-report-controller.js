@@ -38,7 +38,7 @@ class NeonovaReportController {
             console.log(`paginateReportLogs returned ${entries ? entries.length : 0} entries for ${dateStr}`);
 
             // Existing processing (unchanged)
-            const processed = NeonovaCollector.cleanEntries(entries || []);
+            const result = NeonovaCollector.cleanEntries(entries || []);
             const events = result.cleanedEntries || [];
             console.log(`cleanEntries returned ${events.length} cleaned events (ignored ${result.ignored || 0})`);
 
