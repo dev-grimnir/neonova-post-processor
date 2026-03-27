@@ -64,7 +64,6 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
     }
 
     initEKGChart() {
-        //v1.1
         console.log('initEKGChart called — events count:', this.model.events ? this.model.events.length : 0);
     
         const canvas = document.getElementById('ekgChart');
@@ -85,11 +84,11 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
         const dayStart = new Date(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate(), 0, 0, 0);
         const dayEnd   = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
     
-        // Build periods
-        const periods = [];
+        // Step 1: Collapse to real status-change periods
+        const rawPeriods = [];
         let i = 0;
         while (i < sortedEvents.length) {
-            const start = sortedEvents[i].dateObj.getTime();
+            const startTime = sortedEvents[i].dateObj.getTime();
             const isConnected = (sortedEvents[i].status === 'connected' || sortedEvents[i].status === 'Start');
     
             let j = i + 1;
@@ -98,56 +97,78 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
                 j++;
             }
     
-            periods.push({ x: start, isConnected });
+            rawPeriods.push({
+                x: startTime,
+                y: isConnected ? 1 : -1
+            });
+    
             i = j;
         }
     
-        // Extend last bar to midnight
-        if (periods.length > 0) {
-            periods.push({ x: dayEnd.getTime(), isConnected: periods[periods.length - 1].isConnected });
+        // Extend final bar to midnight
+        if (rawPeriods.length > 0) {
+            const lastY = rawPeriods[rawPeriods.length - 1].y;
+            rawPeriods.push({ x: dayEnd.getTime(), y: lastY });
         }
     
-        // Merge short glitches (< 2 min)
-        const MIN_DURATION = 2 * 60 * 1000;
+        // Step 2: Merge short glitches (< 2 minutes)
+        const MIN_DURATION_MS = 2 * 60 * 1000;
         const chartData = [];
         let k = 0;
-        while (k < periods.length - 1) {
-            const curr = periods[k];
-            const next = periods[k + 1];
-            if ((next.x - curr.x) < MIN_DURATION && chartData.length > 0) {
+        while (k < rawPeriods.length - 1) {
+            const current = rawPeriods[k];
+            const next    = rawPeriods[k + 1];
+            const duration = next.x - current.x;
+    
+            if (duration < MIN_DURATION_MS && chartData.length > 0) {
                 k++;
                 continue;
             }
-            chartData.push(curr);
+    
+            chartData.push(current);
             k++;
         }
-        if (periods.length > 0) chartData.push(periods[periods.length - 1]);
+        if (rawPeriods.length > 0) chartData.push(rawPeriods[rawPeriods.length - 1]);
     
-        // Force full day coverage
+        // Step 3: Force full-day coverage (no dead zones)
         if (chartData.length > 0) {
-            chartData.unshift({ x: dayStart.getTime(), isConnected: chartData[0].isConnected });
+            const firstY = chartData[0].y;
+            chartData.unshift({ x: dayStart.getTime(), y: firstY });
         }
     
-        console.log(`✅ Collapsed ${this.model.events.length} raw events → ${chartData.length} final bars`);
+        console.log(`✅ Collapsed ${this.model.events.length} raw events → ${rawPeriods.length} periods → ${chartData.length} final bars (short glitches < 2 min ignored)`);
     
         if (this._ekgChartInstance) this._ekgChartInstance.destroy();
     
         this._ekgChartInstance = new Chart(canvas, {
             type: 'line',
             data: {
-                datasets: [{
-                    label: 'Modem Status',
-                    data: chartData.map(p => ({ x: p.x, y: p.isConnected ? 1 : -1 })),
-                    borderWidth: 1,
-                    stepped: 'after',
-                    tension: 0,
-                    fill: 'origin',
-                    pointRadius: 0,
-                    segment: {
-                        borderColor: (ctx) => (ctx.p0.raw && ctx.p0.raw.isConnected) ? '#10b981' : '#ef4444',
-                        backgroundColor: (ctx) => (ctx.p0.raw && ctx.p0.raw.isConnected) ? '#10b98188' : '#ef444488'
+                datasets: [
+                    // GREEN = Connected (always above centerline)
+                    {
+                        label: 'Connected',
+                        data: chartData.map(pt => ({ x: pt.x, y: pt.y > 0 ? 1 : 0 })),
+                        borderColor: '#10b981',
+                        backgroundColor: '#10b98188',
+                        borderWidth: 1,           // ← THIN AS POSSIBLE (this was the confusing thick line)
+                        stepped: 'after',
+                        tension: 0,
+                        fill: 'origin',
+                        pointRadius: 0
+                    },
+                    // RED = Disconnected (always below centerline)
+                    {
+                        label: 'Disconnected',
+                        data: chartData.map(pt => ({ x: pt.x, y: pt.y < 0 ? -1 : 0 })),
+                        borderColor: '#ef4444',
+                        backgroundColor: '#ef444488',
+                        borderWidth: 1,           // ← THIN AS POSSIBLE
+                        stepped: 'after',
+                        tension: 0,
+                        fill: 'origin',
+                        pointRadius: 0
                     }
-                }]
+                ]
             },
             options: {
                 responsive: true,
@@ -155,37 +176,9 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                        intersect: true,
-                        mode: 'nearest',
                         callbacks: {
-                            label: (context) => {
-                                const raw = context.raw;
-                                if (!raw) return '';
-    
-                                const isConnected = raw.isConnected;
-                                const currentX = context.parsed.x;
-    
-                                let startX = dayStart.getTime();
-                                const data = context.dataset.data;
-                                for (let idx = 0; idx < data.length; idx++) {
-                                    if (data[idx].x >= currentX) {
-                                        if (idx > 0) startX = data[idx - 1].x;
-                                        break;
-                                    }
-                                }
-    
-                                const startStr = new Date(startX).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-                                const endStr = new Date(currentX).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    
-                                const durMs = currentX - startX;
-                                const hours = Math.floor(durMs / 3600000);
-                                const mins = Math.floor((durMs % 3600000) / 60000);
-                                const durationStr = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-    
-                                const status = isConnected ? 'Connected' : 'Disconnected';
-    
-                                return `${status} - ${startStr} - ${endStr} = Duration: ${durationStr}`;
-                            }
+                            title: (items) => new Date(items[0].parsed.x).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+                            label: (ctx) => ctx.parsed.y !== 0 ? (ctx.parsed.y > 0 ? '✅ Connected' : '❌ Disconnected') : ''
                         }
                     }
                 },
