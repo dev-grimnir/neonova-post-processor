@@ -65,58 +65,82 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
 
     initEKGChart() {
         console.log('initEKGChart called — events count:', this.model.events ? this.model.events.length : 0);
-
-        const ctx = document.getElementById('ekgChart');
-        if (!ctx) {
+    
+        const canvas = document.getElementById('ekgChart');
+        if (!canvas) {
             console.error('EKG canvas #ekgChart not found!');
             return;
         }
-
-        if (!this.model.events || this.model.events.length < 2) return;
-
+    
+        if (!this.model.events || this.model.events.length < 2) {
+            // Optional: you could draw a static "no data" message on the canvas if you want
+            return;
+        }
+    
         const labels = [];
         const dataPoints = [];
-
-        this.model.events.forEach(event => {
+    
+        // Ensure events are sorted by time (just in case the model doesn't guarantee it)
+        const sortedEvents = [...this.model.events].sort((a, b) => 
+            (a.dateObj || new Date(0)) - (b.dateObj || new Date(0))
+        );
+    
+        sortedEvents.forEach(event => {
             const timeStr = event.dateObj 
                 ? event.dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 : '??:??';
-
+    
             labels.push(timeStr);
-            // +1 = above center line (connected), -1 = below center line (disconnected)
+            // +1 = connected (green bar above center), -1 = disconnected (red bar below center)
             dataPoints.push(event.status === 'connected' || event.status === 'Start' ? 1 : -1);
         });
-
-        new Chart(ctx, {
+    
+        // Destroy any previous chart instance on this canvas (prevents duplicate charts if show() is called again)
+        if (this._ekgChartInstance) {
+            this._ekgChartInstance.destroy();
+        }
+    
+        this._ekgChartInstance = new Chart(canvas, {
             type: 'line',
             data: {
                 labels: labels,
                 datasets: [{
                     label: 'Modem Status',
                     data: dataPoints,
-                    borderWidth: 3,
-                    stepped: 'after',           // holds value until next change
-                    tension: 0,
-                    fill: 'origin',             // fills to the horizontal center line
-                    backgroundColor: (ctx) => (ctx.raw > 0 ? '#10b98188' : '#ef444488'),
-                    borderColor: '#10b981',
+                    borderWidth: 4,                    // thicker "top" of the bar
+                    stepped: 'after',                  // holds value until next change → rectangular blocks
+                    tension: 0,                        // sharp corners
+                    fill: 'origin',                    // fills from the line down/up to the horizontal center line (y=0)
                     pointRadius: 0,
                     segment: {
-                        borderColor: (ctx) => (ctx.p0.parsed.y < 0 ? '#ef4444' : '#10b981')
+                        borderColor: (ctx) => (ctx.p0.parsed.y < 0 ? '#ef4444' : '#10b981'),
+                        backgroundColor: (ctx) => (ctx.p0.parsed.y < 0 ? '#ef444488' : '#10b98188')
                     }
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
+                plugins: { 
+                    legend: { display: false },
+                    // Optional tooltip that shows exact time + status
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => ctx.parsed.y > 0 ? 'Connected' : 'Disconnected'
+                        }
+                    }
+                },
                 scales: {
                     y: { 
                         display: true,
                         min: -1.2,
                         max: 1.2,
                         ticks: { display: false },
-                        grid: { color: '#27272a' }
+                        grid: {
+                            color: (context) => context.tick.value === 0 ? '#a3a3a3' : '#27272a',
+                            lineWidth: (context) => context.tick.value === 0 ? 4 : 1.5,
+                            drawOnChartArea: true
+                        }
                     },
                     x: { 
                         grid: { color: '#27272a', lineWidth: 1 },
@@ -130,7 +154,7 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
                     }
                 },
                 layout: { 
-                    padding: { right: 40, left: 20, top: 30 } 
+                    padding: { right: 40, left: 20, top: 30, bottom: 10 } 
                 }
             }
         });
