@@ -1,6 +1,7 @@
-class BaseNeonovaView extends EventTarget{
+class BaseNeonovaView extends EventTarget {
     constructor(container = null) {
         super();
+
         this.theme = {
             accent: 'emerald',
             accentColor: '#34d399',
@@ -9,12 +10,14 @@ class BaseNeonovaView extends EventTarget{
         this.accent = 'emerald';
         this.accentColor = 'emerald-500';
 
+        // Container handling (for views that need a specific DOM element)
         if (container) {
-            this.container = container;        // ← for report/progress views
+            this.container = container;
         } else {
             this.panel = this.createPanelContainer();
         }
 
+        // Load Tailwind if needed, but DO NOT auto-call render()
         this.ensureTailwind();
     }
 
@@ -30,6 +33,24 @@ class BaseNeonovaView extends EventTarget{
         document.head.appendChild(s);
     }
 
+    /**
+     * NO-OP by default.
+     * Child classes should call this.render() themselves when they are ready
+     * (usually inside their own show() method).
+     */
+    onTailwindReady() {
+        // Intentionally empty. Parent no longer forces rendering.
+    }
+
+    /**
+     * Base render is now safe and empty.
+     * Child classes must implement their own render() logic.
+     */
+    render() {
+        // Default: do nothing. Subclasses override this.
+        console.warn(`[BaseNeonovaView] render() called on ${this.constructor.name} but not overridden`);
+    }
+
     createPanelContainer() {
         const panel = document.createElement('div');
         panel.style.cssText = `
@@ -43,22 +64,15 @@ class BaseNeonovaView extends EventTarget{
         return panel;
     }
 
-    onTailwindReady() {
-        this.render();   // subclass will override render()
+    show() {
+        if (this.panel) this.panel.style.display = 'block';
     }
 
-    render() {
-        if (!this.panel) return;
-        this.panel.innerHTML = "";
-        this.renderContent();
+    hide() {
+        if (this.panel) this.panel.style.display = 'none';
     }
 
-    renderContent() {
-        this.panel.innerHTML = '<div class="p-8 text-center text-zinc-400">Loading...</div>';
+    $(sel) {
+        return this.panel ? this.panel.querySelector(sel) : null;
     }
-
-    show()  { this.panel.style.display = 'block'; }
-    hide()  { this.panel.style.display = 'none'; }
-
-    $(sel)  { return this.panel.querySelector(sel); }
 }
