@@ -163,17 +163,17 @@ class NeonovaDailyDisconnectView extends NeonovaBaseModalView {
                         intersect: true,
                         mode: 'nearest',
                         callbacks: {
-                            // Remove the annoying timestamp title completely
-                            title: () => '',
+                            title: () => '',   // remove the annoying number
                             label: (context) => {
                                 if (context.parsed.y === 0) return '';
 
                                 const isConnected = context.parsed.y > 0;
                                 const currentX = context.parsed.x;
-                                const datasetData = context.dataset.data;
 
                                 // Find start of this bar
-                                let startX = dayStart.getTime();
+                                let startX = dayStart.getTime();   // dayStart is now accessible
+                                const datasetData = context.dataset.data;
+
                                 for (let idx = 0; idx < datasetData.length; idx++) {
                                     if (datasetData[idx].x >= currentX) {
                                         if (idx > 0) startX = datasetData[idx - 1].x;
