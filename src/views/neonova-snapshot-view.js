@@ -39,7 +39,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
     this.#uptimePercent = Number(uptimePercent) || 0;
     this.#snapshotDate = new Date(snapshotDate);
   
-    // Clear loading state before rendering
+    // Clear any previous content (including old spinner)
     this.#container.innerHTML = '';
     console.log('🔵 [SnapshotView] data stored, calling #renderChart');
     this.#renderChart();
@@ -59,46 +59,44 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
     super.hide(); // inherited from NeonovaBaseModalView – hides the modal
   }
 
-  #renderChart() {
-    console.log('🔵 [SnapshotView] #renderChart START');
-    // Header (date + uptime)
-    const formattedDate = this.#snapshotDate.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+#renderChart() {
+  console.log('🔵 [SnapshotView] #renderChart START');
 
-    let header = this.#container.querySelector('.neonova-snapshot-header');
-    if (!header) {
-      header = document.createElement('div');
-      header.className = 'neonova-snapshot-header';
-      header.style.cssText = 'margin-bottom:12px;font-weight:600;font-size:17px;color:#111;';
-      this.#container.prepend(header);
-    }
-    header.innerHTML = `${formattedDate} – <span style="color:#10b981;">${this.#uptimePercent}% uptime</span>`;
-    console.log('🔵 [SnapshotView] header created');
-    // Canvas (create once)
-    let canvas = this.#container.querySelector('canvas');
+  // Header
+  const formattedDate = this.#snapshotDate.toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+
+  let header = this.#container.querySelector('.neonova-snapshot-header');
+  if (!header) {
+    header = document.createElement('div');
+    header.className = 'neonova-snapshot-header';
+    header.style.cssText = 'margin-bottom:12px;font-weight:600;font-size:17px;color:#111;';
+    this.#container.appendChild(header);   // use appendChild instead of prepend after clear
+  }
+  header.innerHTML = `${formattedDate} – <span style="color:#10b981;">${this.#uptimePercent}% uptime</span>`;
+  console.log('🔵 [SnapshotView] header created');
+
+  // Canvas
+  let canvas = this.#container.querySelector('canvas');
+  if (!canvas) {
+    canvas = document.createElement('canvas');
     canvas.style.width = '100%';
-    canvas.style.height = '380px';
-    if (!canvas) {
-      canvas = document.createElement('canvas');
-      this.#container.appendChild(canvas);
-    }
+    canvas.style.height = '420px';        // good height for the EKG
+    this.#container.appendChild(canvas);
+  }
 
-    const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d');
 
-    // Destroy previous chart if any
-    if (this.#chart) {
-      this.#chart.destroy();
-      this.#chart = null;
-    }
+  if (this.#chart) {
+    this.#chart.destroy();
+    this.#chart = null;
+  }
 
-    console.log('🔵 [SnapshotView] canvas ready, building datasets');
+  console.log('🔵 [SnapshotView] canvas ready, building datasets');
 
-    // Build Chart.js datasets from the single periodsList (one source of truth)
-    const { labels, connectedData, disconnectedData, centerData, startOfDay, endOfDay } = this.#buildDatasetsFromPeriods();
+  const { labels, connectedData, disconnectedData, centerData } = this.#buildDatasetsFromPeriods();
+  console.log('🔵 [SnapshotView] datasets built, labels length:', labels.length);
     console.log('🔵 [SnapshotView] datasets built, labels length:', labels.length);
     this.#chart = new Chart(ctx, {
       type: 'line',
