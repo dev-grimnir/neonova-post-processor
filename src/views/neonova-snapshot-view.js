@@ -97,26 +97,24 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
 
   const { dataPoints, startOfDay, endOfDay } = this.#buildDatasetsFromPeriods();
 
+const { dataPoints, startOfDay, endOfDay } = this.#buildDatasetsFromPeriods();
+
 this.#chart = new Chart(ctx, {
   type: 'line',
   data: {
-    datasets: [
-      {
-        label: 'Connection Status',
-        data: dataPoints,
-        borderColor: 'transparent',
-        backgroundColor: (context) => {
-          return context.raw.y > 0 
-            ? 'rgba(16, 185, 129, 0.85)'   // green above the line
-            : 'rgba(239, 68, 68, 0.85)';   // red below the line
-        },
-        fill: 'origin',
-        stepped: 'after',
-        borderWidth: 0,
-        pointRadius: 0,
-        tension: 0
-      }
-    ]
+    datasets: [{
+      label: 'Connection Status',
+      data: dataPoints,
+      borderColor: 'transparent',
+      backgroundColor: (context) => context.raw.y > 0 
+        ? 'rgba(16, 185, 129, 0.85)'   // green = connected (above line)
+        : 'rgba(239, 68, 68, 0.85)',   // red = disconnected (below line)
+      fill: 'origin',
+      stepped: 'after',
+      borderWidth: 0,
+      pointRadius: 0,
+      tension: 0
+    }]
   },
   options: {
     responsive: true,
@@ -124,11 +122,6 @@ this.#chart = new Chart(ctx, {
     scales: {
       x: {
         type: 'category',
-        grid: { color: '#e5e7eb', lineWidth: 1 },
-        ticks: { maxRotation: 0, autoSkipPadding: 15 }
-      },
-        min: startOfDay,
-        max: endOfDay,
         grid: { color: '#e5e7eb', lineWidth: 1 },
         ticks: { maxRotation: 0, autoSkipPadding: 15 }
       },
@@ -168,8 +161,9 @@ this.#chart = new Chart(ctx, {
         }
       }
     }
-  });
-}
+  }
+});
+  }
   
 
   #buildDatasetsFromPeriods() {
