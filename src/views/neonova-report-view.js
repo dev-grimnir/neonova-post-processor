@@ -83,7 +83,7 @@ class NeonovaReportView extends NeonovaBaseModalView {
             </details>`;
     }
 
-    initCharts() {
+    async initCharts() {
         const accentColor = this.accent === 'emerald' ? '#10b981' :
                            this.accent === 'blue' ? '#3b82f6' :
                            this.accent === 'violet' ? '#8b5cf6' : '#10b981';
@@ -137,7 +137,6 @@ class NeonovaReportView extends NeonovaBaseModalView {
             options: { ...commonOptions }
         });
 
-            // Inside initCharts() — replace the dailyCanvas click listener with this:
             dailyCanvas.style.cursor = 'pointer';
             dailyCanvas.addEventListener('click', (e) => {
                 const chart = Chart.getChart(dailyCanvas);
