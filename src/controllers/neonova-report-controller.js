@@ -19,7 +19,8 @@ class NeonovaReportController {
    * Just call this from any row click, date link, or "View EKG" button.
    */
     async showSnapshotForDate(snapshotDate, username, friendlyName = 'Modem') {
-      // Create the full-screen modal wrapper FIRST
+      console.log('🔵 [ReportController] showSnapshotForDate called for', snapshotDate);
+    
       const modalContainer = document.createElement('div');
       modalContainer.style.cssText = `
         position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
@@ -27,21 +28,19 @@ class NeonovaReportController {
         display: flex; align-items: center; justify-content: center;
       `;
     
-      // Instantiate controller (it creates the view internally)
+      console.log('🔵 [ReportController] modalContainer created');
+    
       const snapshotController = new NeonovaSnapshotController(modalContainer);
+      console.log('🔵 [ReportController] snapshotController instantiated');
     
-      // ADD TO DOM BEFORE we call loadForDate / setData / show()
       document.body.appendChild(modalContainer);
+      console.log('🔵 [ReportController] modalContainer appended to DOM');
     
-      // Now load the data – this will render the header + chart inside the container
-      await snapshotController.loadForDate(snapshotDate, username, friendlyName);
-    
-      // Close handler (click outside = close)
-      modalContainer.addEventListener('click', (e) => {
-        if (e.target === modalContainer) {
-          modalContainer.remove();
-          snapshotController.hide();
-        }
-      });
+      try {
+        await snapshotController.loadForDate(snapshotDate, username, friendlyName);
+        console.log('✅ [ReportController] loadForDate completed successfully');
+      } catch (err) {
+        console.error('❌ [ReportController] loadForDate failed:', err);
+      }
     } 
 }
