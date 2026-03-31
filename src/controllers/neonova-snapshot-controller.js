@@ -35,6 +35,11 @@ class NeonovaSnapshotController {
     const cleanedBlob = NeonovaCollector.cleanEntries(rawRadiusData);
     const cleanedEvents = cleanedBlob.cleanedEntries;
 
+    console.log('🔍 CLEANED EVENT SHAPE:', cleanedEvents.length > 0 ? Object.keys(cleanedEvents[0]) : 'empty');
+    if (cleanedEvents.length > 0) {
+      console.log('🔍 First cleaned event full object:', cleanedEvents[0]);
+    }
+
     console.log('🔵 [SnapshotController] cleanedEvents length:', cleanedEvents?.length);
     
     // 3. Create pure model
