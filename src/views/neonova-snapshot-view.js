@@ -104,9 +104,13 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
           label: 'Connection Status',
           data: dataPoints,
           borderColor: 'transparent',
-          backgroundColor: (context) => context.raw.y > 0 
-            ? 'rgba(16, 185, 129, 0.85)'   // green = connected (above line)
-            : 'rgba(239, 68, 68, 0.85)',   // red = disconnected (below line)
+          backgroundColor: (context) => {
+          // context.raw exists for real data points; fallback for legend/internal calls
+          const y = context.raw?.y ?? context.parsed?.y ?? 1;
+          return y > 0 
+            ? 'rgba(16, 185, 129, 0.85)'   // connected (green)
+            : 'rgba(239, 68, 68, 0.85)';   // disconnected (red)
+          },
           fill: 'origin',
           stepped: 'after',
           borderWidth: 0,
@@ -115,13 +119,24 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         }]
       },
       options: {
+        interaction: {
+        intersect: false,
+        mode: 'index'
+        },
         responsive: true,
         maintainAspectRatio: false,
         scales: {
           x: {
             type: 'category',
             grid: { color: '#e5e7eb', lineWidth: 1 },
-            ticks: { maxRotation: 0, autoSkipPadding: 15 }
+            ticks: { 
+              maxRotation: 45,     // or 0 if you prefer horizontal
+              autoSkip: true,
+              autoSkipPadding: 20,
+              callback: function(value) {
+                return value; // already nice time strings
+              }
+            }
           },
           y: {
             min: -1.2,
@@ -146,15 +161,19 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
             callbacks: {
               title: () => '',
               label: (context) => {
-                const period = this.#periodsList[context.dataIndex];
-                if (!period) return '';
-
-                const status = period.connected ? 'Connected' : 'Disconnected';
+                // Try to map back to the nearest period by index (approximate is fine for tooltip)
+                let periodIndex = Math.floor(context.dataIndex / 1); // adjust if needed
+                if (periodIndex >= this.#periodsList.length) periodIndex = this.#periodsList.length - 1;
+                
+                const period = this.#periodsList[periodIndex];
+                if (!period) return 'No data';
+              
+                const status = period.connected ? '✅ Connected' : '❌ Disconnected';
                 const startStr = period.start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
                 const endStr = period.end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
                 const durationStr = this.#formatDuration(period.duration);
-
-                return `${status} - ${startStr} - ${endStr} = Duration: ${durationStr}`;
+              
+                return `${status} • ${startStr} – ${endStr} (${durationStr})`;
               }
             }
           }
@@ -165,29 +184,40 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
 
   #buildDatasetsFromPeriods() {
     const dataPoints = [];
+    
+    if (this.#periodsList.length === 0) {
+      return { dataPoints: [], startOfDay: null, endOfDay: null };
+    }
   
-    this.#periodsList.forEach(period => {
-      const y = period.connected ? 1 : -1;
-      dataPoints.push({ x: period.start, y: y });
-      dataPoints.push({ x: period.end,   y: y });
+    const y = (connected) => connected ? 1 : -1;
+  
+    // Start at midnight with the initial state (from your analyzer logic)
+    const firstPeriod = this.#periodsList[0];
+    dataPoints.push({ 
+      x: firstPeriod.start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }), 
+      y: y(firstPeriod.connected) 
     });
   
-    // Close the chart at the end of the day
-    const lastPeriod = this.#periodsList[this.#periodsList.length - 1];
-    if (lastPeriod) {
-      dataPoints.push({ x: lastPeriod.end, y: lastPeriod.connected ? 1 : -1 });
+    // Add transition points (end of one = start of next)
+    for (let i = 0; i < this.#periodsList.length; i++) {
+      const period = this.#periodsList[i];
+      const timeStr = period.end.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit', 
+        hour12: true 
+      });
+      
+      dataPoints.push({ x: timeStr, y: y(period.connected) });
     }
+  
+    // No extra duplicate push at the end — the last period.end already covers midnight-ish
   
     const startOfDay = new Date(this.#snapshotDate);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(startOfDay);
     endOfDay.setDate(endOfDay.getDate() + 1);
   
-    return {
-      dataPoints,
-      startOfDay,
-      endOfDay
-    };
+    return { dataPoints, startOfDay, endOfDay };
   }
 
   #formatDuration(ms) {
