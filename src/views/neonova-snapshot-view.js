@@ -59,112 +59,109 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
     super.hide(); // inherited from NeonovaBaseModalView – hides the modal
   }
 
-#renderChart() {
-  console.log('🔵 [SnapshotView] #renderChart START');
+  #renderChart() {
+    console.log('🔵 [SnapshotView] #renderChart START');
 
-  // Header
-  const formattedDate = this.#snapshotDate.toLocaleDateString('en-US', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-  });
+    // Header
+    const formattedDate = this.#snapshotDate.toLocaleDateString('en-US', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
 
-  let header = this.#container.querySelector('.neonova-snapshot-header');
-  if (!header) {
-    header = document.createElement('div');
-    header.className = 'neonova-snapshot-header';
-    header.style.cssText = 'margin-bottom:12px;font-weight:600;font-size:17px;color:#111;';
-    this.#container.appendChild(header);   // use appendChild instead of prepend after clear
-  }
-  header.innerHTML = `${formattedDate} – <span style="color:#10b981;">${this.#uptimePercent}% uptime</span>`;
-  console.log('🔵 [SnapshotView] header created');
+    let header = this.#container.querySelector('.neonova-snapshot-header');
+    if (!header) {
+      header = document.createElement('div');
+      header.className = 'neonova-snapshot-header';
+      header.style.cssText = 'margin-bottom:12px;font-weight:600;font-size:17px;color:#111;';
+      this.#container.appendChild(header);   // use appendChild instead of prepend after clear
+    }
+    header.innerHTML = `${formattedDate} – <span style="color:#10b981;">${this.#uptimePercent}% uptime</span>`;
+    console.log('🔵 [SnapshotView] header created');
 
-  // Canvas
-  let canvas = this.#container.querySelector('canvas');
-  if (!canvas) {
-    canvas = document.createElement('canvas');
-    canvas.style.width = '100%';
-    canvas.style.height = '420px';        // good height for the EKG
-    this.#container.appendChild(canvas);
-  }
+    // Canvas
+    let canvas = this.#container.querySelector('canvas');
+    if (!canvas) {
+      canvas = document.createElement('canvas');
+      canvas.style.width = '100%';
+      canvas.style.height = '420px';        // good height for the EKG
+      this.#container.appendChild(canvas);
+    }
 
-  const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d');
 
-  if (this.#chart) {
-    this.#chart.destroy();
-    this.#chart = null;
-  }
+    if (this.#chart) {
+      this.#chart.destroy();
+      this.#chart = null;
+    }
 
-  console.log('🔵 [SnapshotView] canvas ready, building datasets');
+    console.log('🔵 [SnapshotView] canvas ready, building datasets');
 
-  const { dataPoints, startOfDay, endOfDay } = this.#buildDatasetsFromPeriods();
+    const { dataPoints, startOfDay, endOfDay } = this.#buildDatasetsFromPeriods();
 
-const { dataPoints, startOfDay, endOfDay } = this.#buildDatasetsFromPeriods();
-
-this.#chart = new Chart(ctx, {
-  type: 'line',
-  data: {
-    datasets: [{
-      label: 'Connection Status',
-      data: dataPoints,
-      borderColor: 'transparent',
-      backgroundColor: (context) => context.raw.y > 0 
-        ? 'rgba(16, 185, 129, 0.85)'   // green = connected (above line)
-        : 'rgba(239, 68, 68, 0.85)',   // red = disconnected (below line)
-      fill: 'origin',
-      stepped: 'after',
-      borderWidth: 0,
-      pointRadius: 0,
-      tension: 0
-    }]
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      x: {
-        type: 'category',
-        grid: { color: '#e5e7eb', lineWidth: 1 },
-        ticks: { maxRotation: 0, autoSkipPadding: 15 }
+    this.#chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        datasets: [{
+          label: 'Connection Status',
+          data: dataPoints,
+          borderColor: 'transparent',
+          backgroundColor: (context) => context.raw.y > 0 
+            ? 'rgba(16, 185, 129, 0.85)'   // green = connected (above line)
+            : 'rgba(239, 68, 68, 0.85)',   // red = disconnected (below line)
+          fill: 'origin',
+          stepped: 'after',
+          borderWidth: 0,
+          pointRadius: 0,
+          tension: 0
+        }]
       },
-      y: {
-        min: -1.2,
-        max: 1.2,
-        display: false,
-        grid: { display: false }
-      }
-    },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        enabled: true,
-        mode: 'nearest',
-        intersect: false,
-        backgroundColor: '#111827',
-        titleColor: '#fff',
-        bodyColor: '#fff',
-        borderColor: '#374151',
-        borderWidth: 1,
-        padding: 12,
-        displayColors: false,
-        callbacks: {
-          title: () => '',
-          label: (context) => {
-            const period = this.#periodsList[context.dataIndex];
-            if (!period) return '';
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            type: 'category',
+            grid: { color: '#e5e7eb', lineWidth: 1 },
+            ticks: { maxRotation: 0, autoSkipPadding: 15 }
+          },
+          y: {
+            min: -1.2,
+            max: 1.2,
+            display: false,
+            grid: { display: false }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            enabled: true,
+            mode: 'nearest',
+            intersect: false,
+            backgroundColor: '#111827',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            borderColor: '#374151',
+            borderWidth: 1,
+            padding: 12,
+            displayColors: false,
+            callbacks: {
+              title: () => '',
+              label: (context) => {
+                const period = this.#periodsList[context.dataIndex];
+                if (!period) return '';
 
-            const status = period.connected ? 'Connected' : 'Disconnected';
-            const startStr = period.start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-            const endStr = period.end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-            const durationStr = this.#formatDuration(period.duration);
+                const status = period.connected ? 'Connected' : 'Disconnected';
+                const startStr = period.start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                const endStr = period.end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                const durationStr = this.#formatDuration(period.duration);
 
-            return `${status} - ${startStr} - ${endStr} = Duration: ${durationStr}`;
+                return `${status} - ${startStr} - ${endStr} = Duration: ${durationStr}`;
+              }
+            }
           }
         }
       }
-    }
+    });
   }
-});
-  }
-  
 
   #buildDatasetsFromPeriods() {
     const dataPoints = [];
