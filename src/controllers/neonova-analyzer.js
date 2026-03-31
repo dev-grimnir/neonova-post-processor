@@ -5,60 +5,48 @@ class NeonovaAnalyzer {
     // Add this static method to the existing NeonovaAnalyzer class
     // src/controllers/NeonovaAnalyzer.js
     // =============================================
-    
     static computeSnapshotPeriods(cleanedEvents, requestedStart, requestedEnd) {
       const start = new Date(requestedStart);
-      start.setHours(0, 0, 0, 0);           // force midnight
+      start.setHours(0, 0, 0, 0);
     
       const end = new Date(requestedEnd);
-      end.setHours(0, 0, 0, 0);             // force next midnight
+      end.setHours(0, 0, 0, 0);
+      end.setDate(end.getDate() + 1);   // next midnight
     
-      // Normalize and sort events (cleanedEntries already deduped by Collector)
-      let events = (cleanedEvents || [])
+      const events = (cleanedEvents || [])
         .map(e => ({
           time: new Date(e.timestamp),
           connected: !!e.connected
         }))
-        .filter(e => !isNaN(e.time.getTime()))
+        .filter(e => !isNaN(e.time.getTime()) && e.time >= start && e.time < end)
         .sort((a, b) => a.time - b.time);
     
-      // Edge case: no events at all → full day disconnected (default state)
-      if (!events.length) {
-        return [{
-          start: new Date(start),
-          end: new Date(end),
-          connected: false,
-          duration: end.getTime() - start.getTime()
-        }];
-      }
-    
-      // Force full 24h coverage with proper wrapping (your exact requirement)
       const periods = [];
+    
       let currentTime = new Date(start);
-      let currentState = false; // default at midnight
+      let currentState = false;   // default at midnight
     
-      // First log entry determines state from midnight until its timestamp
-      const firstEvent = events[0];
-      if (firstEvent.time >= start && firstEvent.time < end) {
-        // State from midnight → first event = whatever the first log says
-        currentState = firstEvent.connected;
-    
-        periods.push({
-          start: new Date(currentTime),
-          end: new Date(firstEvent.time),
-          connected: currentState,
-          duration: firstEvent.time.getTime() - currentTime.getTime()
-        });
-    
-        currentTime = new Date(firstEvent.time);
-        events.shift(); // consume first event
+      // If there are events, the very first event sets the state from midnight onward
+      if (events.length > 0) {
+        const first = events[0];
+        if (first.time > start) {
+          periods.push({
+            start: new Date(currentTime),
+            end: new Date(first.time),
+            connected: currentState,
+            duration: first.time.getTime() - currentTime.getTime()
+          });
+          currentTime = new Date(first.time);
+          currentState = first.connected;
+        } else {
+          currentState = first.connected;   // first event is exactly at/after midnight
+          currentTime = new Date(first.time);
+        }
+        events.shift();   // consume first event
       }
     
-      // Process every remaining raw event (no merging, every flip shown)
+      // Process every remaining event (this is what was missing)
       for (const event of events) {
-        if (event.time < start || event.time >= end) continue;
-    
-        // Close previous period
         periods.push({
           start: new Date(currentTime),
           end: new Date(event.time),
@@ -66,12 +54,11 @@ class NeonovaAnalyzer {
           duration: event.time.getTime() - currentTime.getTime()
         });
     
-        // Switch state
         currentState = event.connected;
         currentTime = new Date(event.time);
       }
     
-      // Final period from last event (or midnight) to end of day
+      // Final segment to end of day
       periods.push({
         start: new Date(currentTime),
         end: new Date(end),
@@ -79,8 +66,21 @@ class NeonovaAnalyzer {
         duration: end.getTime() - currentTime.getTime()
       });
     
+      // Edge case: no events at all
+      if (periods.length === 0) {
+        periods.push({
+          start: new Date(start),
+          end: new Date(end),
+          connected: false,
+          duration: end.getTime() - start.getTime()
+        });
+      }
+    
+      console.log('✅ computeSnapshotPeriods finished with', periods.length, 'periods');
       return periods;
-    }
+    }    
+
+    
     /**
      * PUBLIC API — SIGNATURE NOW EXTENDED (but fully backward-compatible)
      * @param {Array|Object} cleanedEntries
