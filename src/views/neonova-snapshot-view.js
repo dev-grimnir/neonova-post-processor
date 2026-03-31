@@ -200,13 +200,39 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
   }
 
   #buildDatasetsFromPeriods() {
-    const labels = this.#periodsList.map(p => 
-      p.start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-    );
+    if (this.#periodsList.length === 0) {
+      return { labels: [], connectedData: [], disconnectedData: [], centerData: [] };
+    }
   
-    const connectedData = this.#periodsList.map(p => p.connected ? 1 : 0);
-    const disconnectedData = this.#periodsList.map(p => p.connected ? 0 : -1);
-    const centerData = this.#periodsList.map(() => 0);
+    // Build one entry per period with proper duration weighting
+    const labels = [];
+    const connectedData = [];
+    const disconnectedData = [];
+    const centerData = [];
+  
+    this.#periodsList.forEach((period, index) => {
+      const label = period.start.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+  
+      labels.push(label);
+      connectedData.push(period.connected ? 1 : 0);
+      disconnectedData.push(period.connected ? 0 : -1);
+      centerData.push(0);
+    });
+  
+    // Add the final point to close the last period
+    const lastPeriod = this.#periodsList[this.#periodsList.length - 1];
+    labels.push(lastPeriod.end.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    }));
+    connectedData.push(lastPeriod.connected ? 1 : 0);
+    disconnectedData.push(lastPeriod.connected ? 0 : -1);
+    centerData.push(0);
   
     return { labels, connectedData, disconnectedData, centerData };
   }
