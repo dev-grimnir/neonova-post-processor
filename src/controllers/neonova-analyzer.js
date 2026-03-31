@@ -10,7 +10,6 @@ class NeonovaAnalyzer {
       console.log('🔍 [Analyzer] computeSnapshotPeriods START');
       console.log('🔍 [Analyzer] cleanedEvents length:', cleanedEvents?.length || 0);
     
-      // Pure local midnight — no timezone handling
       const start = new Date(requestedStart);
       start.setHours(0, 0, 0, 0);
       console.log('🔍 [Analyzer] startOfDay:', start.toLocaleString());
@@ -19,36 +18,21 @@ class NeonovaAnalyzer {
       end.setDate(end.getDate() + 1);
       console.log('🔍 [Analyzer] endOfDay:', end.toLocaleString());
     
-      // Only validity check — no range filter, no timezone math
-      // Diagnostic map — tell us the exact format
+      // Use the ACTUAL fields from NeonovaCollector: 'date' and 'status'
       const events = (cleanedEvents || [])
-        .map(e => {
-          const rawTs = e.timestamp;
-          console.log('🔍 Raw timestamp from cleanedEvents:', rawTs, ' (type:', typeof rawTs, ')');
-
-          let ts = rawTs;
-          if (typeof ts === 'string') {
-            ts = ts.replace(' ', 'T');
-            console.log('🔍 After replace(" ", "T") →', ts);
-          }
-
-          const parsed = new Date(ts);
-          console.log('🔍 new Date() result →', parsed, ' (valid:', !isNaN(parsed.getTime()), ')');
-
-          return {
-            time: parsed,
-            connected: !!e.connected,
-            originalTimestamp: rawTs
-          };
-        })
+        .map(e => ({
+          time: new Date(e.date),           // ← use e.date (milliseconds)
+          connected: e.status === 'Start',  // ← 'Start' = connected, 'Stop' = disconnected
+          originalTimestamp: e.date
+        }))
         .filter(e => !isNaN(e.time.getTime()))
         .sort((a, b) => a.time - b.time);
     
       console.log('🔍 [Analyzer] valid events after sort:', events.length);
     
       if (events.length > 0) {
-        console.log('🔍 [Analyzer] First event:', events[0].originalTimestamp, '→', events[0].connected ? 'CONNECTED' : 'DISCONNECTED');
-        console.log('🔍 [Analyzer] Last event :', events[events.length-1].originalTimestamp, '→', events[events.length-1].connected ? 'CONNECTED' : 'DISCONNECTED');
+        console.log('🔍 [Analyzer] First event:', new Date(events[0].originalTimestamp).toLocaleString(), '→', events[0].connected ? 'CONNECTED' : 'DISCONNECTED');
+        console.log('🔍 [Analyzer] Last event :', new Date(events[events.length-1].originalTimestamp).toLocaleString(), '→', events[events.length-1].connected ? 'CONNECTED' : 'DISCONNECTED');
       }
     
       const periods = [];
@@ -79,7 +63,7 @@ class NeonovaAnalyzer {
       console.log('🔍 [Analyzer] Processing remaining', events.length, 'events...');
       for (let i = 0; i < events.length; i++) {
         const event = events[i];
-        console.log(`🔍 [Analyzer] Event #${i+1} → ${event.originalTimestamp} | ${event.connected ? 'CONNECTED' : 'DISCONNECTED'}`);
+        console.log(`🔍 [Analyzer] Event #${i+1} → ${new Date(event.originalTimestamp).toLocaleString()} | ${event.connected ? 'CONNECTED' : 'DISCONNECTED'}`);
     
         periods.push({
           start: new Date(currentTime),
