@@ -19,37 +19,21 @@ class NeonovaReportController {
    * Just call this from any row click, date link, or "View EKG" button.
    */
     async showSnapshotForDate(snapshotDate, username, friendlyName = 'Modem') {
-      console.log('🔵 [ReportController] showSnapshotForDate called for', snapshotDate);
-    
       const modalContainer = document.createElement('div');
       modalContainer.style.cssText = `
-        position: fixed; 
-        top: 0; left: 0; 
-        width: 100%; height: 100%; 
-        z-index: 99999; 
-        background: rgba(0,0,0,0.75); 
-        display: flex; 
-        align-items: center; 
-        justify-content: center;
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        z-index: 99999; background: rgba(0,0,0,0.8);
+        display: flex; align-items: center; justify-content: center;
       `;
     
       const snapshotController = new NeonovaSnapshotController(modalContainer);
-    
       document.body.appendChild(modalContainer);
-      console.log('🔵 [ReportController] modalContainer appended to DOM');
     
       await snapshotController.loadForDate(snapshotDate, username, friendlyName);
     
-      // Force visibility in case base modal does nothing
-      modalContainer.style.display = 'flex';
-    
       // Click outside to close
       modalContainer.addEventListener('click', (e) => {
-        if (e.target === modalContainer) {
-          modalContainer.remove();
-        }
+        if (e.target === modalContainer) modalContainer.remove();
       });
-    
-      console.log('✅ [ReportController] showSnapshotForDate completed');
     }
 }
