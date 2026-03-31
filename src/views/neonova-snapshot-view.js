@@ -116,13 +116,10 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         maintainAspectRatio: false,
         scales: {
           x: {
-            type: 'time',
-            time: { unit: 'minute', displayFormats: { minute: 'HH:mm' } },
-            min: startOfDay,
-            max: endOfDay,
+            type: 'category',                // ← new
             grid: { color: '#e5e7eb', lineWidth: 1 },
             ticks: { maxRotation: 0, autoSkipPadding: 15 }
-          },
+          }
           y: {
             min: -1.2,
             max: 1.2,
@@ -147,10 +144,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
               title: () => '',
               label: (context) => {
                 if (context.dataset.label === 'Center Line') return '';
-                const xValue = context.parsed.x;
-                const period = this.#periodsList.find(
-                  p => xValue >= p.start.getTime() && xValue < p.end.getTime()
-                );
+                const period = this.#periodsList[context.dataIndex];
                 if (!period) return context.dataset.label;
 
                 const status = period.connected ? 'Connected' : 'Disconnected';
@@ -176,28 +170,15 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
   }
 
   #buildDatasetsFromPeriods() {
-    const startOfDay = new Date(this.#snapshotDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(startOfDay.getTime() + 86400000);
-
-    // Convert single periodsList into the minimal points needed for Chart.js
-    const chartPoints = [];
-    for (const period of this.#periodsList) {
-      chartPoints.push({ time: period.start, connected: period.connected });
-    }
-    // Ensure final point at midnight
-    if (chartPoints.length > 0) {
-      chartPoints.push({ time: endOfDay, connected: chartPoints[chartPoints.length - 1].connected });
-    } else {
-      chartPoints.push({ time: startOfDay, connected: false });
-      chartPoints.push({ time: endOfDay, connected: false });
-    }
-
-    const connectedData = chartPoints.map(p => ({ x: p.time, y: p.connected ? 1 : 0 }));
-    const disconnectedData = chartPoints.map(p => ({ x: p.time, y: p.connected ? 0 : -1 }));
-    const centerData = chartPoints.map(p => ({ x: p.time, y: 0 }));
-
-    return { connectedData, disconnectedData, centerData, startOfDay, endOfDay };
+    const labels = this.#periodsList.map(p => 
+      p.start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    );
+  
+    const connectedData = this.#periodsList.map(p => p.connected ? 1 : 0);
+    const disconnectedData = this.#periodsList.map(p => p.connected ? 0 : -1);
+    const centerData = this.#periodsList.map(() => 0);
+  
+    return { labels, connectedData, disconnectedData, centerData };
   }
 
   #formatDuration(ms) {
