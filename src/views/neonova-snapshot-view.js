@@ -43,7 +43,13 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
   }
 
   show() {
-    super.show(); // inherited from NeonovaBaseModalView – shows the modal
+    super.show();
+    console.log('🔵 [SnapshotView] show() called — calling super.show()');
+    // Force visibility
+    if (this.#container && this.#container.parentNode) {
+      this.#container.parentNode.style.display = 'flex';
+      console.log('🔵 [SnapshotView] forced parent display:flex');
+    }
   }
 
   hide() {
