@@ -72,7 +72,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
     }
 
     // Build Chart.js datasets from the single periodsList (one source of truth)
-    const { connectedData, disconnectedData, centerData, startOfDay, endOfDay } = this.#buildDatasetsFromPeriods();
+    const { labels, connectedData, disconnectedData, centerData, startOfDay, endOfDay } = this.#buildDatasetsFromPeriods();
 
     this.#chart = new Chart(ctx, {
       type: 'line',
