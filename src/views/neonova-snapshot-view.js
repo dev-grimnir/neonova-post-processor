@@ -56,10 +56,26 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
   show() {
     super.show();
     console.log('🔵 [SnapshotView] show() called — calling super.show()');
-    // Force visibility
+
+    // === FULLSCREEN MODAL ===
     if (this.#container && this.#container.parentNode) {
-      this.#container.parentNode.style.display = 'flex';
-      console.log('🔵 [SnapshotView] forced parent display:flex');
+      const modal = this.#container.parentNode;
+      modal.style.cssText = `
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        max-width: none !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        background: #111827 !important;
+        z-index: 99999 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+      `;
+      console.log('🔵 [SnapshotView] modal forced FULLSCREEN');
     }
   }
 
@@ -89,8 +105,11 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
     let canvas = this.#container.querySelector('canvas');
     if (!canvas) {
       canvas = document.createElement('canvas');
-      canvas.style.width = '100%';
-      canvas.style.height = '420px';        // good height for the EKG
+      canvas.style.cssText = `
+        width: 100% !important;
+        height: calc(100vh - 110px) !important;   /* leaves room for header + padding */
+        display: block;
+      `;
       this.#container.appendChild(canvas);
     }
 
@@ -196,6 +215,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         }
       }
     });
+    this.#chart.update();
     console.log('🔵 [SnapshotView] chart instantiated successfully with', dataPoints.length, 'points');
   }
 
