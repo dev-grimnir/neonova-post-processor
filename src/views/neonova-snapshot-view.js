@@ -128,13 +128,21 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         scales: {
           x: {
             type: 'category',
-            grid: { color: '#e5e7eb', lineWidth: 1 },
-            ticks: { 
-              maxRotation: 45,     // or 0 if you prefer horizontal
+            grid: { color: '#374151', lineWidth: 1 },
+            ticks: {
+              maxRotation: 45,
               autoSkip: true,
-              autoSkipPadding: 20,
-              callback: function(value) {
-                return value; // already nice time strings
+              autoSkipPadding: 15,
+              font: { size: 11 },
+              color: '#9ca3af',
+              // Pretty 12-hour labels while keeping perfect chronological order
+              callback: function(val) {
+                if (typeof val !== 'number') return val;
+                const h = Math.floor(val / 60);
+                const m = val % 60;
+                const hh = h % 12 || 12;
+                const ampm = h < 12 ? 'AM' : 'PM';
+                return `${hh}:${m.toString().padStart(2, '0')} ${ampm}`;
               }
             }
           },
@@ -184,40 +192,26 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
 
   #buildDatasetsFromPeriods() {
     const dataPoints = [];
-    
+  
     if (this.#periodsList.length === 0) {
-      return { dataPoints: [], startOfDay: null, endOfDay: null };
+      return { dataPoints };
     }
+  
+    // Use minutes-since-midnight as x-value → guaranteed correct order on category scale
+    const minutesSinceMidnight = (date) => {
+      return date.getHours() * 60 + date.getMinutes();
+    };
   
     const y = (connected) => connected ? 1 : -1;
   
-    // Start at midnight with the initial state (from your analyzer logic)
-    const firstPeriod = this.#periodsList[0];
-    dataPoints.push({ 
-      x: firstPeriod.start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }), 
-      y: y(firstPeriod.connected) 
+    this.#periodsList.forEach((period) => {
+      dataPoints.push({
+        x: minutesSinceMidnight(period.start),
+        y: y(period.connected)
+      });
     });
   
-    // Add transition points (end of one = start of next)
-    for (let i = 0; i < this.#periodsList.length; i++) {
-      const period = this.#periodsList[i];
-      const timeStr = period.end.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit', 
-        hour12: true 
-      });
-      
-      dataPoints.push({ x: timeStr, y: y(period.connected) });
-    }
-  
-    // No extra duplicate push at the end — the last period.end already covers midnight-ish
-  
-    const startOfDay = new Date(this.#snapshotDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(startOfDay);
-    endOfDay.setDate(endOfDay.getDate() + 1);
-  
-    return { dataPoints, startOfDay, endOfDay };
+    return { dataPoints };
   }
 
   #formatDuration(ms) {
