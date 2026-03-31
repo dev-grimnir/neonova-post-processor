@@ -23,10 +23,11 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
    * View builds EVERYTHING (header + Chart.js) from this list only.
    */
   setData(periodsList, uptimePercent, snapshotDate) {
+    console.log('🔵 [SnapshotView] setData called with', periodsList?.length, 'periods');
     this.#periodsList = Array.isArray(periodsList) ? periodsList : [];
     this.#uptimePercent = Number(uptimePercent) || 0;
     this.#snapshotDate = new Date(snapshotDate);
-
+    console.log('🔵 [SnapshotView] data stored, calling #renderChart');
     this.#renderChart();
   }
 
@@ -39,6 +40,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
   }
 
   #renderChart() {
+    console.log('🔵 [SnapshotView] #renderChart START');
     // Header (date + uptime)
     const formattedDate = this.#snapshotDate.toLocaleDateString('en-US', {
       weekday: 'long',
@@ -55,7 +57,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
       this.#container.prepend(header);
     }
     header.innerHTML = `${formattedDate} – <span style="color:#10b981;">${this.#uptimePercent}% uptime</span>`;
-
+    console.log('🔵 [SnapshotView] header created');
     // Canvas (create once)
     let canvas = this.#container.querySelector('canvas');
     if (!canvas) {
@@ -71,9 +73,11 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
       this.#chart = null;
     }
 
+    console.log('🔵 [SnapshotView] canvas ready, building datasets');
+
     // Build Chart.js datasets from the single periodsList (one source of truth)
     const { labels, connectedData, disconnectedData, centerData, startOfDay, endOfDay } = this.#buildDatasetsFromPeriods();
-
+    console.log('🔵 [SnapshotView] datasets built, labels length:', labels.length);
     this.#chart = new Chart(ctx, {
       type: 'line',
       data: {
@@ -168,6 +172,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         }
       }
     });
+    console.log('✅ [SnapshotView] new Chart() created successfully');
   }
 
   #buildDatasetsFromPeriods() {
