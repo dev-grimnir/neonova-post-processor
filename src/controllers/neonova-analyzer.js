@@ -5,31 +5,32 @@ class NeonovaAnalyzer {
     // =============================================
     // NeonovaAnalyzer.computeSnapshotPeriods
     // REPLACE YOUR ENTIRE METHOD WITH THIS VERSION
-    // =============================================
-    
+    // =============================================    
     static computeSnapshotPeriods(cleanedEvents, requestedStart, requestedEnd) {
       console.log('🔍 [Analyzer] computeSnapshotPeriods START');
       console.log('🔍 [Analyzer] cleanedEvents length:', cleanedEvents?.length || 0);
     
+      // Pure local midnight — no timezone handling
       const start = new Date(requestedStart);
       start.setHours(0, 0, 0, 0);
-      console.log('🔍 [Analyzer] startOfDay (local midnight):', start.toLocaleString());
+      console.log('🔍 [Analyzer] startOfDay:', start.toLocaleString());
     
       const end = new Date(start);
       end.setDate(end.getDate() + 1);
-      console.log('🔍 [Analyzer] endOfDay (local midnight):', end.toLocaleString());
+      console.log('🔍 [Analyzer] endOfDay:', end.toLocaleString());
     
-      // Normalize events – REMOVE the timezone-killing filter
+      // Only validity check — no range filter, no timezone math
       const events = (cleanedEvents || [])
         .map(e => ({
           time: new Date(e.timestamp),
           connected: !!e.connected,
           originalTimestamp: e.timestamp
         }))
-        .filter(e => !isNaN(e.time.getTime()))   // only valid dates, no range filter
+        .filter(e => !isNaN(e.time.getTime()))
         .sort((a, b) => a.time - b.time);
     
       console.log('🔍 [Analyzer] valid events after sort:', events.length);
+    
       if (events.length > 0) {
         console.log('🔍 [Analyzer] First event:', events[0].originalTimestamp, '→', events[0].connected ? 'CONNECTED' : 'DISCONNECTED');
         console.log('🔍 [Analyzer] Last event :', events[events.length-1].originalTimestamp, '→', events[events.length-1].connected ? 'CONNECTED' : 'DISCONNECTED');
