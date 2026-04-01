@@ -38,26 +38,26 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
     this.#periodsList = Array.isArray(periodsList) ? periodsList : [];
     this.#uptimePercent = Number(uptimePercent) || 0;
     this.#snapshotDate = new Date(snapshotDate);
-  
-    // Clear any previous content (including old spinner)
+
+    // ONLY store data and clear — DO NOT render yet
     this.#container.innerHTML = '';
     this.#container.style.cssText = `
       display: flex;
       flex-direction: column;
       width: 100%;
       height: 100%;
-      padding: 16px;
+      padding: 20px;
       box-sizing: border-box;
+      background: #111827;
     `;
-    console.log('🔵 [SnapshotView] data stored, calling #renderChart');
-    this.#renderChart();
+    console.log('🔵 [SnapshotView] data stored — waiting for show() to render chart');
   }
 
   show() {
     super.show();
     console.log('🔵 [SnapshotView] show() called — calling super.show()');
 
-    // === FULLSCREEN MODAL ===
+    // === FORCE FULLSCREEN FIRST (this must happen before rendering) ===
     if (this.#container && this.#container.parentNode) {
       const modal = this.#container.parentNode;
       modal.style.cssText = `
@@ -68,6 +68,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         height: 100vh !important;
         max-width: none !important;
         margin: 0 !important;
+        padding: 0 !important;
         border-radius: 0 !important;
         background: #111827 !important;
         z-index: 99999 !important;
@@ -77,16 +78,27 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
       `;
       console.log('🔵 [SnapshotView] modal forced FULLSCREEN');
     }
+
+    // NOW render the chart (modal is already full size)
+    if (this.#periodsList?.length > 0) {
+      this.#renderChart();
+    } else {
+      console.warn('⚠️ [SnapshotView] No periodsList yet — cannot render');
+    }
   }
 
   hide() {
     super.hide(); // inherited from NeonovaBaseModalView – hides the modal
+    if (this.#chart) {
+      this.#chart.destroy();
+      this.#chart = null;
+    }
   }
 
   #renderChart() {
     console.log('🔵 [SnapshotView] #renderChart START');
 
-    // Header
+    // Header (white text for dark fullscreen background)
     const formattedDate = this.#snapshotDate.toLocaleDateString('en-US', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
@@ -95,19 +107,19 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
     if (!header) {
       header = document.createElement('div');
       header.className = 'neonova-snapshot-header';
-      header.style.cssText = 'margin-bottom:12px;font-weight:600;font-size:17px;color:#111;';
-      this.#container.appendChild(header);   // use appendChild instead of prepend after clear
+      header.style.cssText = 'margin-bottom:16px;font-weight:600;font-size:18px;color:#fff;';
+      this.#container.appendChild(header);
     }
     header.innerHTML = `${formattedDate} – <span style="color:#10b981;">${this.#uptimePercent}% uptime</span>`;
     console.log('🔵 [SnapshotView] header created');
 
-    // Canvas
+    // Canvas - full remaining height
     let canvas = this.#container.querySelector('canvas');
     if (!canvas) {
       canvas = document.createElement('canvas');
       canvas.style.cssText = `
         width: 100% !important;
-        height: calc(100vh - 110px) !important;   /* leaves room for header + padding */
+        height: calc(100vh - 90px) !important;
         display: block;
       `;
       this.#container.appendChild(canvas);
@@ -122,7 +134,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
 
     console.log('🔵 [SnapshotView] canvas ready, building datasets');
 
-    const { dataPoints, startOfDay, endOfDay } = this.#buildDatasetsFromPeriods();
+    const { dataPoints } = this.#buildDatasetsFromPeriods();
 
     this.#chart = new Chart(ctx, {
       type: 'line',
@@ -132,11 +144,10 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
           data: dataPoints,
           borderColor: 'transparent',
           backgroundColor: (context) => {
-          // context.raw exists for real data points; fallback for legend/internal calls
-          const y = context.raw?.y ?? context.parsed?.y ?? 1;
-          return y > 0 
-            ? 'rgba(16, 185, 129, 0.85)'   // connected (green)
-            : 'rgba(239, 68, 68, 0.85)';   // disconnected (red)
+            const y = context.raw?.y ?? context.parsed?.y ?? 1;
+            return y > 0 
+              ? 'rgba(16, 185, 129, 0.85)'
+              : 'rgba(239, 68, 68, 0.85)';
           },
           fill: 'origin',
           stepped: 'after',
@@ -146,10 +157,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         }]
       },
       options: {
-        interaction: {
-        intersect: false,
-        mode: 'index'
-        },
+        interaction: { intersect: false, mode: 'index' },
         responsive: true,
         maintainAspectRatio: false,
         scales: {
@@ -162,7 +170,6 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
               autoSkipPadding: 15,
               font: { size: 11 },
               color: '#9ca3af',
-              // Convert minutes back to nice 12-hour time
               callback: function(val) {
                 if (typeof val !== 'number') return val;
                 const h = Math.floor(val / 60);
@@ -196,18 +203,16 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
             callbacks: {
               title: () => '',
               label: (context) => {
-                // Try to map back to the nearest period by index (approximate is fine for tooltip)
-                let periodIndex = Math.floor(context.dataIndex / 1); // adjust if needed
+                let periodIndex = Math.floor(context.dataIndex);
                 if (periodIndex >= this.#periodsList.length) periodIndex = this.#periodsList.length - 1;
-                
                 const period = this.#periodsList[periodIndex];
                 if (!period) return 'No data';
-              
+
                 const status = period.connected ? '✅ Connected' : '❌ Disconnected';
                 const startStr = period.start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
                 const endStr = period.end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
                 const durationStr = this.#formatDuration(period.duration);
-              
+
                 return `${status} • ${startStr} – ${endStr} (${durationStr})`;
               }
             }
@@ -215,38 +220,27 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         }
       }
     });
+
     this.#chart.update();
     console.log('🔵 [SnapshotView] chart instantiated successfully with', dataPoints.length, 'points');
   }
 
   #buildDatasetsFromPeriods() {
     const dataPoints = [];
-  
-    if (this.#periodsList.length === 0) {
-      return { dataPoints };
-    }
-  
+    if (this.#periodsList.length === 0) return { dataPoints };
+
     const minutesSinceMidnight = (date) => date.getHours() * 60 + date.getMinutes();
-  
     const y = (connected) => connected ? 1 : -1;
-  
+
     this.#periodsList.forEach((period) => {
-      dataPoints.push({
-        x: minutesSinceMidnight(period.start),
-        y: y(period.connected)
-      });
+      dataPoints.push({ x: minutesSinceMidnight(period.start), y: y(period.connected) });
     });
-  
-    // Extend the LAST period all the way to midnight (right edge of chart)
+
     const lastPeriod = this.#periodsList[this.#periodsList.length - 1];
     if (lastPeriod) {
-      const nextMidnightMinutes = 24 * 60; // 1440 = midnight next day
-      dataPoints.push({
-        x: nextMidnightMinutes,
-        y: y(lastPeriod.connected)
-      });
+      dataPoints.push({ x: 24 * 60, y: y(lastPeriod.connected) });
     }
-  
+
     return { dataPoints };
   }
 
