@@ -29,7 +29,18 @@ class NeonovaHTTPController {
      * STATIC PRIVATE METHODS — declared first for Tampermonkey compatibility
      **************************************************************************/
 
-    static #buildPaginationParams(username, sDate, eDate, hitsPerPage, offset) {
+    static #buildPaginationParams(
+        username, 
+        sDate, 
+        eDate, 
+        hitsPerPage, 
+        offset,
+        // New parameters (can be null)
+        startHour = null,
+        startMinute = null,
+        endHour = null,
+        endMinute = null) {
+        
         const params = new URLSearchParams({
             acctsearch: '2',
             sd: 'fairpoint.net',
@@ -38,11 +49,16 @@ class NeonovaHTTPController {
             session: '',
             nasip: '',
             statusview: 'both',
+            
+            // Start date (always filled)
             syear: sDate.getFullYear().toString(),
             smonth: (sDate.getMonth() + 1).toString().padStart(2, '0'),
             sday: sDate.getDate().toString().padStart(2, '0'),
-            shour: '00',
-            smin: '00',
+            
+            // Start time - use provided values or default to 00:00
+            shour: (startHour !== null ? startHour : 0).toString().padStart(2, '0'),
+            smin:  (startMinute !== null ? startMinute : 0).toString().padStart(2, '0'),
+    
             order: 'date',
             hits: hitsPerPage.toString(),
             location: offset.toString(),
@@ -50,26 +66,30 @@ class NeonovaHTTPController {
             dump: ''
         });
     
-        // Critical change: if endDate is null or today, use blank end fields (server's "up to now")
+        // === End date handling (keep your critical logic) ===
         const now = new Date();
         const isToday = eDate.getFullYear() === now.getFullYear() &&
                         eDate.getMonth() === now.getMonth() &&
                         eDate.getDate() === now.getDate();
     
         if (!eDate || isToday) {
-            // Blank end = include everything up to the present moment
+            // Blank end fields = "up to now" (your original special case)
             params.append('eyear', '');
             params.append('emonth', '');
             params.append('eday', '');
             params.append('ehour', '');
             params.append('emin', '');
         } else {
-            // Explicit end date (for custom reports)
+            // Explicit end date → use provided endHour/endMinute or default to 23:59
             params.append('eyear', eDate.getFullYear().toString());
             params.append('emonth', (eDate.getMonth() + 1).toString().padStart(2, '0'));
             params.append('eday', eDate.getDate().toString().padStart(2, '0'));
-            params.append('ehour', '23');
-            params.append('emin', '59');
+            
+            const finalEndHour = (endHour !== null ? endHour : 23);
+            const finalEndMinute = (endMinute !== null ? endMinute : 59);
+            
+            params.append('ehour', finalEndHour.toString().padStart(2, '0'));
+            params.append('emin', finalEndMinute.toString().padStart(2, '0'));
         }
     
         return params;
@@ -178,6 +198,7 @@ class NeonovaHTTPController {
      **************************************************************************/
 
     static async safeFetch(url, options = {}) {
+        console.log("NeonovaHTTPController.safeFetch -> Search URL: " + url);
         const defaultOptions = {
             credentials: 'include',
             cache: 'no-cache',
@@ -262,144 +283,152 @@ class NeonovaHTTPController {
         return `https://admin.neonova.net/rat/index.php?${params.toString()}`;
     }
 
-
-/**
- * paginateReportLogs — now with:
- *   • Total count scraped from first page and passed to onProgress as 3rd arg
- *   • AbortSignal support for cancellation (pass as final argument)
- *   • Returns the entries array directly
- *   • Backward-compatible: old onProgress handlers ignoring the 3rd arg still work
- */
-static async paginateReportLogs(username, startDate = null, endDate = null, onProgress = null, signal = null) {
-    // Line 1: Log the start of the function with all input parameters.
-    // Purpose: Debugging — shows exactly what dates, username, and callbacks were passed in.
-    // If this log doesn't appear → the function never ran (caller error or crash before here).
-    // Lines 4–11: Legacy argument handling (backward compatibility for old callers).
-    // Purpose: Allows old code that called paginateReportLogs(username, onProgress) to still work.
-    // How it works: If the second argument is a function, assume it's onProgress and shift parameters.
-    // If startDate is a function → treat it as onProgress, set startDate/endDate/signal to defaults.
-    // If endDate is a function → same thing.
-    // This block is purely for compatibility — new callers should pass named params properly.
-    if (typeof startDate === 'function') {
-        onProgress = startDate;
-        startDate = null;
-        endDate = null;
-        signal = null;
-    } else if (typeof endDate === 'function') {
-        onProgress = endDate;
-        endDate = null;
-        signal = null;
-    }
-
-    // Line 13: Get current time once (used for default start/end dates).
-    // Purpose: Ensures consistent "now" reference throughout the function.
-    const now = new Date();
-
-    // Lines 14–15: Set default start date to beginning of current month if not provided.
-    // Purpose: If caller didn't give startDate, default to first day of month at 00:00.
-    // Why month start? Historical choice — most reports cover current billing cycle.
-    const sDate = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
-
-    // Line 16: Set default end date to right now if not provided.
-    // Purpose: If no endDate, include everything up to current moment.
-    const eDate = endDate ? new Date(endDate) : new Date(now);
-
-    // Line 18: Fixed page size — always request 100 entries per page.
-    // Purpose: Consistent pagination. 100 is a balance between speed and server load.
-    const hitsPerPage = 100;
-
-    // Line 19: Array to hold all parsed log entries from all pages.
-    // Purpose: Final output — accumulates every valid entry across pagination.
-    const entries = [];
-
-    // Line 20: Starting offset for pagination (0 = first page).
-    // Purpose: Increments by hitsPerPage each loop to fetch next chunk.
-    let offset = 0;
-
-    // Line 21: Page counter (starts at 1) — used for logging and progress callback.
-    let page = 1;
-
-    // Line 22: Total entry count (scraped from first page header) — used to know when to stop.
-    // Starts as null → set after first page.
-    let total = null;
-
-    // Line 26: Main pagination loop — keeps fetching until no more pages or total reached.
-    while (true) {
-        // Line 27: Build URL parameters for this page.
-        // Calls private helper #buildPaginationParams with current offset.
-        const params = this.#buildPaginationParams(username, sDate, eDate, hitsPerPage, offset);
-
-        // Line 28: Construct full URL by appending params to baseSearchUrl.
-        const url = this.#buildPageUrl(params);
-
-        // Line 30–37: Try to fetch the page HTML.
-        // Uses private #fetchPageHtml (which does fetch with credentials/no-cache).
-        // Catches AbortError separately (user cancelled) → returns partial results.
-        let html;
-        try {
-            html = await this.#fetchPageHtml(url, signal);
-        } catch (err) {
-            if (err.name === 'AbortError') {
-                // If aborted (e.g., user cancelled report), sort what we have and return early.
-                entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
-                return entries;
+    /**
+     * paginateReportLogs — now with:
+     *   • Total count scraped from first page and passed to onProgress as 3rd arg
+     *   • AbortSignal support for cancellation (pass as final argument)
+     *   • Returns the entries array directly
+     *   • Backward-compatible: old onProgress handlers ignoring the 3rd arg still work
+     */
+    static async paginateReportLogs(
+        username,
+        startDate = null,
+        endDate = null,
+        startHour = null,
+        startMinute = null,
+        endHour = null,
+        endMinute = null,
+        onProgress = null,
+        signal = null
+    ) {
+        // Legacy argument handling for backward compatibility
+        if (typeof startDate === 'function') {
+            onProgress = startDate;
+            startDate = endDate = null;
+            startHour = startMinute = endHour = endMinute = null;
+            signal = null;
+        } else if (typeof endDate === 'function') {
+            onProgress = endDate;
+            endDate = null;
+            startHour = startMinute = endHour = endMinute = null;
+            signal = null;
+        } else if (typeof startHour === 'function') {
+            onProgress = startHour;
+            startHour = startMinute = endHour = endMinute = null;
+            signal = null;
+        }
+    
+        const now = new Date();
+    
+        // Build start date + time
+        let sDate;
+        if (startDate) {
+            sDate = new Date(startDate);
+        } else {
+            sDate = new Date(now.getFullYear(), now.getMonth(), 1); // 1st of current month
+        }
+    
+        // Apply custom start hour/minute if provided
+        if (startHour !== null) {
+            sDate.setHours(
+                Number(startHour),
+                Number(startMinute ?? 0),
+                0,
+                0
+            );
+        } else if (!startDate) {
+            sDate.setHours(0, 0, 0, 0); // default to midnight for month start
+        }
+    
+        // Build end date + time
+        let eDate;
+        if (endDate) {
+            eDate = new Date(endDate);
+        } else {
+            eDate = new Date(now); // default to current time
+        }
+    
+        // Apply custom end hour/minute if provided
+        if (endHour !== null) {
+            eDate.setHours(
+                Number(endHour),
+                Number(endMinute ?? 59),
+                59,
+                999
+            );
+        }
+        // If no endHour provided and no endDate was given, eDate keeps current time
+    
+        const hitsPerPage = 100;
+        const entries = [];
+        let offset = 0;
+        let page = 1;
+        let total = null;
+    
+        while (true) {
+            // Pass the new time parameters to buildPaginationParams
+            const params = this.#buildPaginationParams(
+                username,
+                sDate,
+                eDate,
+                hitsPerPage,
+                offset,
+                startHour,
+                startMinute,
+                endHour,
+                endMinute
+            );
+    
+            const url = this.#buildPageUrl(params);
+            console.log("NeonovaHTTPController.paginateReportLogs() -> search URL: " + url);
+    
+            let html;
+            try {
+                html = await this.#fetchPageHtml(url, signal);
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    entries.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+                    return entries;
+                }
+                console.warn('Unexpected error fetching page:', err);
+                break;
             }
-            // Any other fetch error (network, timeout) → log and break loop.
-            console.warn('Unexpected error fetching page:', err);
-            break;
-        }
-
-        // Line 39–41: If fetch returned null (HTTP error), stop loop.
-        if (html === null) {
-            console.warn('[paginateReportLogs] HTTP error on page', page, '- stopping');
-            break; // HTTP error
-        }
-
-        // Line 43: Parse the HTML string into DOM document for querying.
-        const doc = new DOMParser().parseFromString(html, 'text/html');
-
-        // Lines 45–48: Extract total entry count ONLY from page 1.
-        // Uses private #extractTotalEntries — if it fails, total stays null.
-        if (page === 1 && total === null) {
-            total = this.#extractTotalEntries(doc);
-
-            if (total === null) {
-                return null;
+    
+            if (html === null) {
+                console.warn('[paginateReportLogs] HTTP error on page', page, '- stopping');
+                break;
             }
+    
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+    
+            if (page === 1 && total === null) {
+                total = this.#extractTotalEntries(doc);
+                if (total === null) {
+                    return null;
+                }
+            }
+    
+            const pageEntries = this.#parsePageRows(doc);
+            entries.push(...pageEntries);
+    
+            if (typeof onProgress === 'function') {
+                onProgress(entries.length, page, total);
+            }
+    
+            if (pageEntries.length < hitsPerPage) {
+                break;
+            }
+    
+            offset += hitsPerPage;
+            page++;
         }
-
-        // Line 50: Parse the rows from this page into LogEntry objects.
-        // Uses private #parsePageRows — returns array of entries for this page only.
-        const pageEntries = this.#parsePageRows(doc);
-
-        // Line 52: Append this page's entries to the master list.
-        entries.push(...pageEntries);
-
-        // Lines 54–56: Call progress callback if provided.
-        // Passes: total fetched so far, current page number, total count (or null).
-        if (typeof onProgress === 'function') {
-            onProgress(entries.length, page, total);
+    
+        if (entries.length > 0) {
+            const last = entries[entries.length - 1];
+            console.log(`Last entry: ${last.timestamp || ''} | status: ${last.status || ''}`);
         }
-
-        // Lines 58–64: Termination conditions.
-        // Stop if this page had fewer than hitsPerPage → last page.
-        if (pageEntries.length < hitsPerPage) {
-            break;
-        }
-
-        // Line 66–67: Prepare for next page.
-        offset += hitsPerPage;
-        page++;
-    }
-
-    // Line 71: Log the very last entry in the array (should be the newest if server returns newest-first).
-    if (entries.length > 0) {
-        entries[entries.length - 1].timestamp, entries[entries.length - 1].status;
-    }
-
-    // Line 75: Return the raw, unsorted entries array.
-    // Caller (e.g. getLatestEntry) can take entries[entries.length - 1] as newest.
-    return entries;
+    
+        return entries;
     }
 
     static async getLatestEntry(username, sinceDate = null) {

@@ -90,10 +90,8 @@ class NeonovaReportView extends NeonovaBaseModalView {
 
         const commonOptions = {
             responsive: true,
-            maintainAspectRatio: false,           // keep this false for modal flexibility
-            layout: {
-                padding: { left: 12, right: 30, top: 10, bottom: 10 }   // extra right padding for tooltip
-            },
+            maintainAspectRatio: false,
+            layout: { padding: { left: 12, right: 30, top: 10, bottom: 10 } },
             plugins: {
                 tooltip: {
                     mode: 'index',
@@ -104,46 +102,29 @@ class NeonovaReportView extends NeonovaBaseModalView {
                     bodyColor: '#e5e7eb',
                     borderColor: accentColor,
                     borderWidth: 1,
-                    padding: 12,
-                    caretPadding: 10,
-                    // This helps prevent layout shifts during tooltip display
-                    callbacks: {
-                        label: (context) => `${context.parsed.y}`
-                    }
+                    padding: 12
                 },
                 legend: { display: false }
             },
             scales: {
-                y: { 
-                    beginAtZero: true,
-                    grid: { color: '#27272a' }
-                },
-                x: {
-                    grid: { color: '#27272a' }
-                }
-            },
-            // Force stable sizing — critical for hover stability
-            animation: {
-                duration: 0   // disable animation on hover updates if needed
+                y: { beginAtZero: true, grid: { color: '#27272a' } },
+                x: { grid: { color: '#27272a' } }
             }
         };
 
-        // Hourly chart (bar)
+        // Hourly chart
         new Chart(document.getElementById('hourlyChart'), {
             type: 'bar',
             data: {
                 labels: Array.from({length: 24}, (_, i) => `${i}:00`),
-                datasets: [{ 
-                    label: 'Disconnects', 
-                    data: this.metrics.hourlyDisconnects || Array(24).fill(0), 
-                    backgroundColor: accentColor 
-                }]
+                datasets: [{ label: 'Disconnects', data: this.metrics.hourlyDisconnects || Array(24).fill(0), backgroundColor: accentColor }]
             },
             options: { ...commonOptions }
         });
 
-        // Daily chart (bar)
-        new Chart(document.getElementById('dailyChart'), {
+        // Daily chart (clickable drill-down)
+        const dailyCanvas = document.getElementById('dailyChart');
+        const dailyChartInstance = new Chart(dailyCanvas, {
             type: 'bar',
             data: {
                 labels: this.metrics.dailyLabels || [],
@@ -156,7 +137,34 @@ class NeonovaReportView extends NeonovaBaseModalView {
             options: { ...commonOptions }
         });
 
-        // Rolling 7-day chart (line with legend)
+            // Inside initCharts() — replace the dailyCanvas click listener with this:
+            dailyCanvas.style.cursor = 'pointer';
+            dailyCanvas.addEventListener('click', (e) => {
+                const chart = Chart.getChart(dailyCanvas);
+                if (!chart) return;
+        
+                const points = chart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, false);
+                if (points.length === 0) return;
+        
+                const index = points[0].index;
+                const label = this.metrics.dailyLabels?.[index];
+        
+                if (!label) return;
+        
+                let dateStr = label;
+        
+                // Convert MM/DD/YYYY or other formats to YYYY-MM-DD if needed
+                if (label.includes('/')) {
+                    const parts = label.split('/');
+                    // Assuming MM/DD/YYYY format from your metrics
+                    dateStr = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+                }
+        
+                console.log('Daily bar clicked → requesting details for:', dateStr);
+                this.controller.openDailyDisconnectDetail(dateStr);
+            });
+
+        // Rolling chart
         new Chart(document.getElementById('rollingChart'), {
             type: 'line',
             data: {
@@ -178,18 +186,11 @@ class NeonovaReportView extends NeonovaBaseModalView {
                 ...commonOptions,
                 plugins: {
                     ...commonOptions.plugins,
-                    legend: {
-                        display: true,
-                        position: 'top',
-                        labels: { color: '#e5e7eb', boxWidth: 12, padding: 15 }
-                    }
+                    legend: { display: true, position: 'top', labels: { color: '#e5e7eb', boxWidth: 12 } }
                 },
                 scales: {
                     ...commonOptions.scales,
-                    x: {
-                        ...commonOptions.scales.x,
-                        ticks: { maxRotation: 45, minRotation: 45 }
-                    }
+                    x: { ticks: { maxRotation: 45, minRotation: 45 } }
                 }
             }
         });
