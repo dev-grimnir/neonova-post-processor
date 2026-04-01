@@ -1,7 +1,6 @@
 // =============================================
 // NeonovaSnapshotView
 // Dumb UI container only – extends NeonovaBaseModalView
-// Receives single source of truth via setData() and controls all rendering
 // src/views/NeonovaSnapshotView.js
 // =============================================
 
@@ -28,18 +27,12 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
     `;
   }
 
-  /**
-   * Single source of truth from controller.
-   * periodsList = [{ start: Date, end: Date, connected: boolean, duration: number }, ...]
-   * View builds EVERYTHING (header + Chart.js) from this list only.
-   */
   setData(periodsList, uptimePercent, snapshotDate) {
     console.log('🔵 [SnapshotView] setData called with', periodsList?.length, 'periods');
     this.#periodsList = Array.isArray(periodsList) ? periodsList : [];
     this.#uptimePercent = Number(uptimePercent) || 0;
     this.#snapshotDate = new Date(snapshotDate);
 
-    // ONLY store data and clear — DO NOT render yet
     this.#container.innerHTML = '';
     this.#container.style.cssText = `
       display: flex;
@@ -50,55 +43,52 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
       box-sizing: border-box;
       background: #111827;
     `;
-    console.log('🔵 [SnapshotView] data stored — waiting for show() to render chart');
+
+    this.#renderChart();
   }
 
   show() {
     super.show();
-    console.log('🔵 [SnapshotView] show() called — calling super.show()');
+    console.log('🔵 [SnapshotView] show() called');
 
-    // === FORCE FULLSCREEN FIRST (this must happen before rendering) ===
+    // Make the modal BIG but not fullscreen (centered, easy to close)
     if (this.#container && this.#container.parentNode) {
       const modal = this.#container.parentNode;
       modal.style.cssText = `
         position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 100vw !important;
-        height: 100vh !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: 95vw !important;
+        height: 85vh !important;
         max-width: none !important;
+        max-height: none !important;
         margin: 0 !important;
         padding: 0 !important;
-        border-radius: 0 !important;
+        border-radius: 12px !important;
         background: #111827 !important;
         z-index: 99999 !important;
         display: flex !important;
         flex-direction: column !important;
         overflow: hidden !important;
+        box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.4) !important;
       `;
-      console.log('🔵 [SnapshotView] modal forced FULLSCREEN');
-    }
-
-    // NOW render the chart (modal is already full size)
-    if (this.#periodsList?.length > 0) {
-      this.#renderChart();
-    } else {
-      console.warn('⚠️ [SnapshotView] No periodsList yet — cannot render');
+      console.log('🔵 [SnapshotView] modal enlarged (95vw × 85vh)');
     }
   }
 
   hide() {
-    super.hide(); // inherited from NeonovaBaseModalView – hides the modal
     if (this.#chart) {
       this.#chart.destroy();
       this.#chart = null;
     }
+    super.hide();
   }
 
   #renderChart() {
     console.log('🔵 [SnapshotView] #renderChart START');
 
-    // Header (white text for dark fullscreen background)
+    // Header
     const formattedDate = this.#snapshotDate.toLocaleDateString('en-US', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
@@ -111,15 +101,14 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
       this.#container.appendChild(header);
     }
     header.innerHTML = `${formattedDate} – <span style="color:#10b981;">${this.#uptimePercent}% uptime</span>`;
-    console.log('🔵 [SnapshotView] header created');
 
-    // Canvas - full remaining height
+    // Canvas
     let canvas = this.#container.querySelector('canvas');
     if (!canvas) {
       canvas = document.createElement('canvas');
       canvas.style.cssText = `
         width: 100% !important;
-        height: calc(100vh - 90px) !important;
+        height: 520px !important;
         display: block;
       `;
       this.#container.appendChild(canvas);
@@ -132,8 +121,6 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
       this.#chart = null;
     }
 
-    console.log('🔵 [SnapshotView] canvas ready, building datasets');
-
     const { dataPoints } = this.#buildDatasetsFromPeriods();
 
     this.#chart = new Chart(ctx, {
@@ -145,9 +132,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
           borderColor: 'transparent',
           backgroundColor: (context) => {
             const y = context.raw?.y ?? context.parsed?.y ?? 1;
-            return y > 0 
-              ? 'rgba(16, 185, 129, 0.85)'
-              : 'rgba(239, 68, 68, 0.85)';
+            return y > 0 ? 'rgba(16, 185, 129, 0.85)' : 'rgba(239, 68, 68, 0.85)';
           },
           fill: 'origin',
           stepped: 'after',
@@ -180,12 +165,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
               }
             }
           },
-          y: {
-            min: -1.2,
-            max: 1.2,
-            display: false,
-            grid: { display: false }
-          }
+          y: { min: -1.2, max: 1.2, display: false, grid: { display: false } }
         },
         plugins: {
           legend: { display: false },
@@ -207,12 +187,10 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
                 if (periodIndex >= this.#periodsList.length) periodIndex = this.#periodsList.length - 1;
                 const period = this.#periodsList[periodIndex];
                 if (!period) return 'No data';
-
                 const status = period.connected ? '✅ Connected' : '❌ Disconnected';
                 const startStr = period.start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
                 const endStr = period.end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
                 const durationStr = this.#formatDuration(period.duration);
-
                 return `${status} • ${startStr} – ${endStr} (${durationStr})`;
               }
             }
