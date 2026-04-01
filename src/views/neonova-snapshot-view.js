@@ -73,7 +73,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
   #renderChart() {
     console.log('🔵 [SnapshotView] #renderChart START');
 
-    // Header (dark background friendly)
+    // Header
     const formattedDate = this.#snapshotDate.toLocaleDateString('en-US', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
@@ -86,7 +86,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
     }
     header.innerHTML = `${formattedDate} – <span style="color:#10b981;">${this.#uptimePercent}% uptime</span>`;
 
-    // Canvas with safe fixed height that fits the enlarged modal
+    // Canvas
     let canvas = this.#container.querySelector('canvas');
     if (!canvas) {
       canvas = document.createElement('canvas');
@@ -94,7 +94,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
       this.#container.appendChild(canvas);
     }
 
-    canvas.style.border = '4px solid lime';
+    canvas.style.border = '4px solid lime';  // keep for now
 
     const ctx = canvas.getContext('2d');
     if (this.#chart) this.#chart.destroy();
@@ -106,14 +106,16 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
       data: {
         datasets: [{
           data: dataPoints,
-          borderColor: 'transparent',
+          borderColor: '#10b981',        // <--- visible green line as fallback
+          borderWidth: 3,
           backgroundColor: (context) => {
             const y = context.raw?.y ?? context.parsed?.y ?? 1;
-            return y > 0 ? 'rgba(16, 185, 129, 0.85)' : 'rgba(239, 68, 68, 0.85)';
+            return y > 0 
+              ? 'rgba(16, 185, 129, 0.7)' 
+              : 'rgba(239, 68, 68, 0.7)';
           },
           fill: 'origin',
           stepped: 'after',
-          borderWidth: 0,
           pointRadius: 0,
           tension: 0
         }]
@@ -142,36 +144,16 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
               }
             }
           },
-          y: { min: -1.2, max: 1.2, display: false, grid: { display: false } }
+          y: { 
+            min: -1.2, 
+            max: 1.2, 
+            display: false, 
+            grid: { display: false } 
+          }
         },
         plugins: {
           legend: { display: false },
-          tooltip: {
-            enabled: true,
-            mode: 'nearest',
-            intersect: false,
-            backgroundColor: '#111827',
-            titleColor: '#fff',
-            bodyColor: '#fff',
-            borderColor: '#374151',
-            borderWidth: 1,
-            padding: 12,
-            displayColors: false,
-            callbacks: {
-              title: () => '',
-              label: (context) => {
-                let periodIndex = Math.floor(context.dataIndex);
-                if (periodIndex >= this.#periodsList.length) periodIndex = this.#periodsList.length - 1;
-                const period = this.#periodsList[periodIndex];
-                if (!period) return 'No data';
-                const status = period.connected ? '✅ Connected' : '❌ Disconnected';
-                const startStr = period.start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-                const endStr = period.end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-                const durationStr = this.#formatDuration(period.duration);
-                return `${status} • ${startStr} – ${endStr} (${durationStr})`;
-              }
-            }
-          }
+          tooltip: { /* your existing tooltip code */ }
         }
       }
     });
