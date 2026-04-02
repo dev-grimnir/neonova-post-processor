@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NovaSubscriber - Dashboard
 // @namespace    http://tampermonkey.net/
-// @version      29.72
+// @version      29.73
 // @description  Real-time customer modem connection dashboard (separate script)
 // @author       dev-grimnir
 // @match        https://admin.neonova.net/*
