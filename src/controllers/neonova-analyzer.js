@@ -125,10 +125,6 @@ static #computeLeadTime(normalized, requestedStart) {
         this.#processAllEntries(gapped.entries, counters);
         this.#calculateEndTime(counters, requestedEnd);
 
-        // === NEW: Gap handling using the dates the user actually requested ===
-        const leading = this.#determineLeadingConnectedTime(normalized.entries, requestedStart);
-        const trailing = this.#determineTrailingConnectedTime(normalized.entries, requestedEnd);
-
         const rawConnectedSec = counters.sessionSeconds.reduce((a, b) => a + b, 0) || 0;
         const totalConnectedSec = rawConnectedSec + leading.leadingConnectedSec + trailing.trailingConnectedSec;
         
