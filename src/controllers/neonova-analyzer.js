@@ -1,6 +1,34 @@
 class NeonovaAnalyzer {
 
     /**
+ * PRIVATE HELPER
+ * Normalizes the input argument so we always work with a clean array.
+ * Handles the legacy case where the caller passes the full stats object instead of just the array.
+ * Early logging for transparency. Returns empty array if nothing valid.
+ * @param {Array|Object} input - whatever was passed to computeMetrics
+ * @returns {{entries: Array}} normalized object
+ */
+static #normalizeInput(input) {
+    if (!input) {
+        return { entries: [], totalProcessed: 0, ignored: 0 };
+    }
+
+    if (Array.isArray(input)) {
+        return { entries: input, totalProcessed: input.length, ignored: 0 };
+    }
+
+    if (input.cleanedEntries !== undefined) {
+        return {
+            entries: input.cleanedEntries,
+            totalProcessed: input.totalProcessed || input.cleanedEntries.length,
+            ignored: input.ignored || 0
+        };
+    }
+
+    return { entries: [], totalProcessed: 0, ignored: 0 };
+}
+
+    /**
  * Handles the leading boundary gap for a requested analysis window.
  *
  * When the first real log entry occurs *after* the requestedStart timestamp,
@@ -173,34 +201,6 @@ static #computeLeadTime(normalized, requestedStart) {
     static #getSessionBonus(metricMin) {
         const metricHours = parseFloat(metricMin) / 60 || 0;
         return 25 * Math.tanh(metricHours / 6);
-    }
-
-    /**
-     * PRIVATE HELPER
-     * Normalizes the input argument so we always work with a clean array.
-     * Handles the legacy case where the caller passes the full stats object instead of just the array.
-     * Early logging for transparency. Returns empty array if nothing valid.
-     * @param {Array|Object} input - whatever was passed to computeMetrics
-     * @returns {{entries: Array}} normalized object
-     */
-    static #normalizeInput(input) {
-        if (!input) {
-            return { entries: [], totalProcessed: 0, ignored: 0 };
-        }
-
-        if (Array.isArray(input)) {
-            return { entries: input, totalProcessed: input.length, ignored: 0 };
-        }
-
-        if (input.cleanedEntries !== undefined) {
-            return {
-                entries: input.cleanedEntries,
-                totalProcessed: input.totalProcessed || input.cleanedEntries.length,
-                ignored: input.ignored || 0
-            };
-        }
-
-        return { entries: [], totalProcessed: 0, ignored: 0 };
     }
 
     /**
