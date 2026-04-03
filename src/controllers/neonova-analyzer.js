@@ -109,6 +109,12 @@ static #computeLeadTime(normalized, requestedStart) {
             }
         }
     }
+
+    static getEntries(cleanedEntries, requestedStart, requestedEnd) {
+        const normalized = this.#normalizeInput(cleanedEntries);
+        const gapped = this#computeLeadTime(normalized, requestedStart);
+        return gapped;
+    }
     
     /**
      * PUBLIC API — SIGNATURE NOW EXTENDED (but fully backward-compatible)
