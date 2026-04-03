@@ -1,4 +1,121 @@
 class NeonovaAnalyzer {
+
+    /**
+ * Handles the leading boundary gap for a requested analysis window.
+ *
+ * When the first real log entry occurs *after* the requestedStart timestamp,
+ * we have no prior knowledge of the modem's state. This method injects a
+ * single leading entry at the exact requestedStart time with the *opposite*
+ * status of the first real entry. This bootstraps the state machine correctly
+ * so the very first real transition is processed as a normal Start → Stop
+ * or Stop → Start.
+ *
+ * The trailing boundary is deliberately NOT handled here — we know the final
+ * state from the last real entry, so it will be credited/debited as a simple
+ * time delta later in the pipeline (no entry is ever injected at the end).
+ *
+ * Side effects:
+ *   - Mutates normalized.entries in place (adds at most one object at index 0).
+ *   - Does NOT touch totalProcessed, ignored, or any other counters.
+ *   - The injected entry is indistinguishable from any real log entry.
+ *
+ * @param {Object} normalized - Result of #normalizeInput (must contain .entries array)
+ * @param {Date} requestedStart - Required start of the analysis window
+ * @returns {Object|null} The (possibly mutated) normalized object, or null on error
+ * @throws {never} Errors are logged to console and null is returned (consistent
+ *                 with NeonovaHTTPController / NeonovaCollector pattern)
+ */
+static #computeLeadTime(normalized, requestedStart) {
+    // Enforce mandatory date (we made this required across the class)
+    if (!requestedStart || !(requestedStart instanceof Date) || isNaN(requestedStart.getTime())) {
+        console.error('NeonovaAnalyzer: requestedStart is required and must be a valid Date');
+        return null;
+    }
+
+    // Early no-data case (standard Neonova error pattern)
+    if (!normalized?.entries || normalized.entries.length === 0) {
+        console.error('NeonovaAnalyzer: no log entries found in the requested window');
+        return null;
+    }
+
+    const firstReal = normalized.entries[0];
+
+    // Zero-delta case: first real entry already lands exactly on requestedStart
+    // → nothing to inject, state machine can proceed as-is
+    if (firstReal.dateObj.getTime() === requestedStart.getTime()) {
+        return normalized;
+    }
+
+    // Leading gap exists → inject opposite-status entry at the exact boundary
+    const oppositeStatus = firstReal.status === 'Start' ? 'Stop' : 'Start';
+
+    const leadEntry = {
+        dateObj: new Date(requestedStart.getTime()), // exact copy of boundary timestamp
+        status: oppositeStatus
+    };
+
+    // Insert at the very front (mutates in place)
+    normalized.entries.unshift(leadEntry);
+
+    return normalized;
+}
+
+    /**
+     * Calculates the trailing boundary gap after all entries (plus any leading-gap injection)
+     * have been processed.
+     *
+     * - If final state is "up" → the gap is connected time; add it to sessionSeconds.
+     * - If final state is "down" → the gap is a disconnect duration. If that duration
+     *   is > 30 minutes (1800 seconds), record it in counters.longDisconnects exactly
+     *   like any other long outage (so the stability score's longOutagePenalty counts it).
+     *
+     * This is deliberately NOT done by injecting an entry (unlike the leading gap).
+     * We already know the final state, so a pure delta is sufficient and keeps the
+     * entries array clean.
+     *
+     * @param {Object} counters - counters object after #processAllEntries
+     * @param {Date} requestedEnd - required end of the analysis window
+     * @returns {void}
+     */
+    static #calculateEndTime(counters, requestedEnd) {
+        // Guard – requestedEnd is now mandatory across the class
+        if (!requestedEnd || !(requestedEnd instanceof Date) || isNaN(requestedEnd.getTime())) {
+            console.error('NeonovaAnalyzer: requestedEnd is required and must be a valid Date');
+            return;
+        }
+    
+        const endMs = requestedEnd.getTime();
+    
+        if (counters.currentState === 'up' && counters.lastDate) {
+            // Trailing gap = uptime
+            const durationSec = (endMs - counters.lastDate.getTime()) / 1000;
+            if (durationSec > 0) {
+                counters.sessionSeconds.push(durationSec);
+            }
+        } 
+        else if (counters.currentState === 'down' && counters.lastTransitionTime !== null) {
+            // Trailing gap = disconnect duration
+            const gapSec = (endMs - counters.lastTransitionTime) / 1000;
+    
+            if (gapSec > 0) {
+                // Record long outage if > 30 minutes (exactly as #processAllEntries does)
+                if (gapSec > 1800) {
+                    counters.longDisconnects.push({
+                        stopDate: new Date(counters.lastTransitionTime),
+                        startDate: new Date(endMs),           // virtual "end" of the window
+                        durationSec: gapSec
+                    });
+                }
+            }
+        }
+    }
+
+    static getEntries(cleanedEntries, requestedStart, requestedEnd) {
+        const normalized = this.#normalizeInput(cleanedEntries);
+        const gapped = this#computeLeadTime(normalized, requestedStart);
+        return gapped;
+    }
+    
     /**
      * PUBLIC API — SIGNATURE NOW EXTENDED (but fully backward-compatible)
      * @param {Array|Object} cleanedEntries
@@ -8,31 +125,13 @@ class NeonovaAnalyzer {
     static computeMetrics(cleanedEntries, requestedStart = null, requestedEnd = null) {
         const normalized = this.#normalizeInput(cleanedEntries);
 
-        if (requestedStart && requestedEnd) {
-            const startMs = requestedStart.getTime();
-            const endMs   = requestedEnd.getTime();
-            const beforeCount = normalized.entries.length;
-            
-            normalized.entries = normalized.entries.filter(e => {
-                const ts = e.dateObj.getTime();
-                return ts >= startMs && ts <= endMs;
-            });
-        }
-
-        if (normalized.entries.length === 0) {
-            return {};
-        }
-
+        // New leading-gap handler (only thing that ever touches the entries array for boundaries)
+        const gapped = this.#computeLeadTime(normalized, requestedStart);
         const counters = this.#initializeCounters();
-        this.#processAllEntries(normalized.entries, counters);
-        this.#handleFinalSessionIfOpen(counters);
+        this.#processAllEntries(gapped.entries, counters);
+        this.#calculateEndTime(counters, requestedEnd);
 
-        // === NEW: Gap handling using the dates the user actually requested ===
-        const leading = this.#determineLeadingConnectedTime(normalized.entries, requestedStart);
-        const trailing = this.#determineTrailingConnectedTime(normalized.entries, requestedEnd);
-
-        const rawConnectedSec = counters.sessionSeconds.reduce((a, b) => a + b, 0) || 0;
-        const totalConnectedSec = rawConnectedSec + leading.leadingConnectedSec + trailing.trailingConnectedSec;
+        const totalConnectedSec = counters.sessionSeconds.reduce((a, b) => a + b, 0) || 0;
         
         const uptimeMetrics = this.#computeUptimeMetrics(
             counters.sessionSeconds,
@@ -69,47 +168,6 @@ class NeonovaAnalyzer {
             totalResultsCounted: normalized.totalProcessed || 0,
             ignoredAsDuplicates: normalized.ignored || 0
         });
-    }
-
-    static #determineLeadingConnectedTime(entries, requestedStart) {
-
-        if (!requestedStart || entries.length === 0) {
-            return { leadingConnectedSec: 0 };
-        }
-
-        const rangeStartMs = requestedStart.getTime();
-        const firstMs = entries[0].dateObj.getTime();
-
-        if (firstMs <= rangeStartMs) {
-            return { leadingConnectedSec: 0 };
-        }
-
-        const gapSec = (firstMs - rangeStartMs) / 1000;
-
-        const credit = entries[0].status === "Stop"
-            ? gapSec
-            : 0;
-
-        return { leadingConnectedSec: credit };
-    }
-
-    static #determineTrailingConnectedTime(entries, requestedEnd) {
-        if (!requestedEnd || entries.length === 0) {
-            return { trailingConnectedSec: 0 };
-        }
-
-        const rangeEndMs = requestedEnd.getTime();
-        const lastMs = entries[entries.length - 1].dateObj.getTime();
-
-        if (lastMs >= rangeEndMs) {
-            return { trailingConnectedSec: 0 };
-        }
-
-        const gapSec = (rangeEndMs - lastMs) / 1000;
-
-        const credit = entries[entries.length - 1].status === "Stop" ? 0 : gapSec;
-
-        return { trailingConnectedSec: credit };
     }
     
     static #getSessionBonus(metricMin) {
@@ -227,19 +285,6 @@ class NeonovaAnalyzer {
                 }
             }
         });
-    }
-
-    /**
-     * PRIVATE HELPER
-     * Handles the edge case where the last entry left us in "up" state (no final Stop).
-     * Calculates and pushes the final open session duration.
-     * @param {Object} counters - updated in place
-     */
-    static #handleFinalSessionIfOpen(counters) {
-        if (counters.currentState === "up" && counters.lastTransitionTime !== null && counters.lastDate) {
-            const finalDuration = (counters.lastDate.getTime() - counters.lastTransitionTime) / 1000;
-            if (finalDuration > 0) counters.sessionSeconds.push(finalDuration);
-        }
     }
 
     /**
@@ -556,10 +601,6 @@ class NeonovaAnalyzer {
             ignoredAsDuplicates: ignoredAsDuplicates || 0
         };
     }
-
-    // ─────────────────────────────────────────────────────────────
-    // EXISTING HELPERS (unchanged — they were already clean)
-    // ─────────────────────────────────────────────────────────────
 
     static computeSessionBins(sessionSeconds) {
         const bins = [0, 0, 0, 0, 0];
