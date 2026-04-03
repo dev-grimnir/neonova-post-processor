@@ -73,51 +73,64 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
     }
 
     initSnapshotChart() {
+        console.log('initSnapshotChart called — events count:', this.model.events ? this.model.events.length : 0);
+    
         const canvas = document.getElementById('snapshotChart');
-        if (!canvas) return;
-
-        if (!this.model.events || this.model.events.length < 2) return;
-
+        if (!canvas) {
+            console.error('Snapshot canvas #snapshotChart not found!');
+            return;
+        }
+    
+        if (!this.model.events || this.model.events.length < 2) {
+            console.warn('Not enough events for snapshot chart');
+            return;
+        }
+    
+        // === CRITICAL: Wait for Chart.js to be available ===
+        if (typeof Chart === 'undefined') {
+            console.warn('Chart.js not loaded yet. Retrying in 100ms...');
+            setTimeout(() => this.initSnapshotChart(), 100);
+            return;
+        }
+    
+        // Rest of your chart code stays the same...
         const sortedEvents = [...this.model.events].sort((a, b) => 
             (a.dateObj || new Date(0)) - (b.dateObj || new Date(0))
         );
-
+    
         if (!sortedEvents[0]?.dateObj) return;
-
+    
         const startTime = this.model.startDate.getTime();
-        const endTime   = this.model.endDate.getTime() + 86399999; // end of day
-
-        // Reuse the same collapsing logic as daily view
+        const endTime   = this.model.endDate.getTime() + 86399999; // end of last day
+    
         const rawPeriods = [];
         let i = 0;
         while (i < sortedEvents.length) {
             const isConnected = (sortedEvents[i].status === 'Start' || sortedEvents[i].status === 'connected');
             const startMs = sortedEvents[i].dateObj.getTime();
-
+    
             let j = i + 1;
             while (j < sortedEvents.length && 
                    (sortedEvents[j].status === 'Start' || sortedEvents[j].status === 'connected') === isConnected) {
                 j++;
             }
-
+    
             rawPeriods.push({ x: startMs, y: isConnected ? 1 : -1 });
             i = j;
         }
-
-        // Extend to end of range
+    
         if (rawPeriods.length > 0) {
             rawPeriods.push({ x: endTime, y: rawPeriods[rawPeriods.length - 1].y });
         }
-
+    
         const chartData = [...rawPeriods];
-
-        // Force full coverage
+    
         if (chartData.length > 0) {
             chartData.unshift({ x: startTime, y: chartData[0].y });
         }
-
+    
         if (this._snapshotChartInstance) this._snapshotChartInstance.destroy();
-
+    
         this._snapshotChartInstance = new Chart(canvas, {
             type: 'line',
             data: {
@@ -151,18 +164,52 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
-                    tooltip: { /* reuse or simplify the daily tooltip logic here */ }
+                    tooltip: {
+                        enabled: true,
+                        intersect: false,
+                        mode: 'index',
+                        callbacks: {
+                            label: (context) => {
+                                if (context.parsed.y === 0) return '';
+                                const isConnected = context.parsed.y > 0;
+                                const currentX = context.parsed.x;
+                                const datasetData = context.dataset.data;
+    
+                                let startX = startTime;
+                                for (let idx = 0; idx < datasetData.length; idx++) {
+                                    if (datasetData[idx].x >= currentX) {
+                                        if (idx > 0) startX = datasetData[idx - 1].x;
+                                        break;
+                                    }
+                                }
+    
+                                const startStr = new Date(startX).toLocaleString([], { 
+                                    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
+                                });
+                                const endStr = new Date(currentX).toLocaleString([], { 
+                                    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
+                                });
+    
+                                const durMs = currentX - startX;
+                                const hours = Math.floor(durMs / 3600000);
+                                const mins = Math.floor((durMs % 3600000) / 60000);
+                                const durationStr = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+    
+                                return `${isConnected ? 'Connected' : 'Disconnected'} — ${startStr} to ${endStr} (${durationStr})`;
+                            }
+                        }
+                    }
                 },
                 scales: {
                     x: {
                         type: 'linear',
                         min: startTime,
                         max: endTime,
-                        grid: { color: '#27272a' },
+                        grid: { color: '#27272a', lineWidth: 1 },
                         ticks: {
                             color: '#64748b',
                             maxTicksLimit: 12,
-                            callback: (v) => new Date(v).toLocaleDateString('en-US', {month:'short', day:'numeric'})
+                            callback: (v) => new Date(v).toLocaleDateString([], {month:'short', day:'numeric'})
                         }
                     },
                     y: {
