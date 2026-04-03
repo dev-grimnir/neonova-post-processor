@@ -101,28 +101,16 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
             return;
         }
     
-        if (!this.model.events || this.model.events.length < 2) {
-            console.warn('Not enough events for snapshot chart');
-            return;
-        }
+        if (!this.model.events || this.model.events.length < 2) return;
     
-        // === CRITICAL: Wait for Chart.js to be available ===
-        if (typeof Chart === 'undefined') {
-            console.warn('Chart.js not loaded yet. Retrying in 100ms...');
-            setTimeout(() => this.initSnapshotChart(), 100);
-            return;
-        }
-    
-        // Rest of your chart code stays the same...
         const sortedEvents = [...this.model.events].sort((a, b) => 
             (a.dateObj || new Date(0)) - (b.dateObj || new Date(0))
         );
     
-        if (!sortedEvents[0]?.dateObj) return;
-    
         const startTime = this.model.startDate.getTime();
-        const endTime   = this.model.endDate.getTime() + 86399999; // end of last day
+        const endTime   = this.model.endDate.getTime() + 86399999; // end of the last day
     
+        // Build periods (same logic as daily view)
         const rawPeriods = [];
         let i = 0;
         while (i < sortedEvents.length) {
@@ -139,22 +127,24 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
             i = j;
         }
     
+        // Force full coverage
         if (rawPeriods.length > 0) {
-            rawPeriods.push({ x: endTime, y: rawPeriods[rawPeriods.length - 1].y });
+            rawPeriods.unshift({ x: startTime, y: rawPeriods[0].y });           // start of range
+            rawPeriods.push({ x: endTime, y: rawPeriods[rawPeriods.length - 1].y }); // end of range
+        } else {
+            rawPeriods.push({ x: startTime, y: 1 });
+            rawPeriods.push({ x: endTime, y: 1 });
         }
     
-        const chartData = [...rawPeriods];
+        const chartData = rawPeriods;
     
-        if (chartData.length > 0) {
-            chartData.unshift({ x: startTime, y: chartData[0].y });
-        }
+        if (this._snapshotChartInstance) this._snapshotChartInstance.destroy();
     
-        if (this.#snapshotChartInstance) this.#snapshotChartInstance.destroy();
-    
-        this.#snapshotChartInstance = new Chart(canvas, {
+        this._snapshotChartInstance = new Chart(canvas, {
             type: 'line',
             data: {
                 datasets: [
+                    // Green = Connected
                     {
                         label: 'Connected',
                         data: chartData.map(pt => ({ x: pt.x, y: pt.y > 0 ? 1 : 0 })),
@@ -166,6 +156,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
                         fill: 'origin',
                         pointRadius: 0
                     },
+                    // Red = Disconnected
                     {
                         label: 'Disconnected',
                         data: chartData.map(pt => ({ x: pt.x, y: pt.y < 0 ? -1 : 0 })),
@@ -182,44 +173,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        enabled: true,
-                        intersect: false,
-                        mode: 'index',
-                        callbacks: {
-                            label: (context) => {
-                                if (context.parsed.y === 0) return '';
-                                const isConnected = context.parsed.y > 0;
-                                const currentX = context.parsed.x;
-                                const datasetData = context.dataset.data;
-    
-                                let startX = startTime;
-                                for (let idx = 0; idx < datasetData.length; idx++) {
-                                    if (datasetData[idx].x >= currentX) {
-                                        if (idx > 0) startX = datasetData[idx - 1].x;
-                                        break;
-                                    }
-                                }
-    
-                                const startStr = new Date(startX).toLocaleString([], { 
-                                    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
-                                });
-                                const endStr = new Date(currentX).toLocaleString([], { 
-                                    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
-                                });
-    
-                                const durMs = currentX - startX;
-                                const hours = Math.floor(durMs / 3600000);
-                                const mins = Math.floor((durMs % 3600000) / 60000);
-                                const durationStr = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-    
-                                return `${isConnected ? 'Connected' : 'Disconnected'} — ${startStr} to ${endStr} (${durationStr})`;
-                            }
-                        }
-                    }
-                },
+                plugins: { legend: { display: false } },
                 scales: {
                     x: {
                         type: 'linear',
@@ -228,8 +182,11 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
                         grid: { color: '#27272a', lineWidth: 1 },
                         ticks: {
                             color: '#64748b',
-                            maxTicksLimit: 12,
-                            callback: (v) => new Date(v).toLocaleDateString([], {month:'short', day:'numeric'})
+                            maxTicksLimit: 5,
+                            callback: (v) => new Date(v).toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric' 
+                            })
                         }
                     },
                     y: {
@@ -245,6 +202,13 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
                 layout: { padding: { right: 40, left: 20, top: 30, bottom: 20 } }
             }
         });
+    
+        // Force resize after render
+        setTimeout(() => {
+            if (this._snapshotChartInstance) this._snapshotChartInstance.resize();
+        }, 100);
+    
+        console.log('Chart rendered with range:', new Date(startTime), '→', new Date(endTime));
     }
 
     attachListeners() {
