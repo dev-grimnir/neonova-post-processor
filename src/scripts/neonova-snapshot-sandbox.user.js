@@ -29,7 +29,7 @@
     }
 
     (async () => {
-        const dashboardController = new NeonovaDashboardController();  
+        const snapshot = new NeonovaSnapshotController(lucy99, linda, new Date(2026, 3, 1), new Date(2026, 4, 1));  
     })();
 })();
 
