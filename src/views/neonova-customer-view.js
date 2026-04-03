@@ -117,6 +117,14 @@ class NeonovaCustomerView extends BaseNeonovaView {
             }
         });
 
+        this.#tr.addEventListener('mouseenter', (e) => {
+            const statusDot = e.target.closest('span.w-2.h-2.rounded-full'); // targets the status dot
+            if (statusDot) {
+                e.stopPropagation(); // prevent row click from firing
+                this.#controller.open3DaySnapshot();
+            }
+        });
+
         // Commit on outside click
         const handleOutside = (e) => {
             if (this.#isEditing && !this.#tr.contains(e.target)) {
