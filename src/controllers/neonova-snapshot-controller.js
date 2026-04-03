@@ -1,0 +1,58 @@
+class NeonovaSnapshotController {
+    constructor(username, friendlyName, startDate, endDate) {
+        this.username = username;
+        this.friendlyName = friendlyName;
+        this.startDate = startDate instanceof Date ? startDate : new Date(startDate);
+        this.endDate   = endDate instanceof Date ? endDate : new Date(endDate);
+
+        this.model = null;
+        this.view = null;
+
+        this.loadAndShow();
+    }
+
+    async loadAndShow() {
+        try {
+            console.log(`Loading snapshot for ${this.username} from ${this.startDate.toISOString()} to ${this.endDate.toISOString()}`);
+
+            // 1. Fetch raw logs
+            const rawEntries = await NeonovaHTTPController.paginateReportLogs(
+                this.username,
+                this.startDate,
+                this.endDate,
+                0, 0, 23, 59
+            );
+
+            // 2. Clean entries
+            const cleanResult = NeonovaCollector.cleanEntries(rawEntries || []);
+            const cleaned = cleanResult.cleanedEntries || [];
+
+            // 3. Analyze with NeonovaAnalyzer (full metrics + events)
+            const analyzerResult = NeonovaAnalyzer.computeMetrics(cleaned, this.startDate, this.endDate);
+            // or if you prefer only getEntries + manual metrics:
+            // const entriesResult = NeonovaAnalyzer.getEntries(cleaned, this.startDate, this.endDate);
+            // then process further...
+
+            const events = analyzerResult?.entries || cleaned;
+            const metrics = analyzerResult?.metrics || {};
+
+            // 4. Create model (pure data)
+            this.model = new NeonovaSnapshotModel(
+                this.username,
+                this.friendlyName,
+                this.startDate,
+                this.endDate,
+                events,
+                metrics
+            );
+
+            // 5. Create and show view
+            this.view = new NeonovaSnapshotView(this, this.model);
+            this.view.show();
+
+        } catch (err) {
+            console.error('Failed to load snapshot:', err);
+            alert('Could not load connection snapshot. Check console.');
+        }
+    }
+}
