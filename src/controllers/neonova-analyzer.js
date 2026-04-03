@@ -112,7 +112,7 @@ static #computeLeadTime(normalized, requestedStart) {
 
     static getEntries(cleanedEntries, requestedStart, requestedEnd) {
         const normalized = this.#normalizeInput(cleanedEntries);
-        const gapped = this#computeLeadTime(normalized, requestedStart);
+        const gapped = this.#computeLeadTime(normalized, requestedStart);
         return gapped;
     }
     
