@@ -9,22 +9,11 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
     }
 
     show() {
-        console.log('=== NeonovaSnapshotView.show() START ===');
-
-        super.createModal(modalHTML).then(() => {
-            console.log('createModal resolved successfully. this.modal =', this.modal ? 'exists' : 'MISSING');
-            console.log('Modal outerHTML snippet:', this.modal ? this.modal.outerHTML.substring(0, 300) : 'no modal');
-            this.render();
-            this.attachListeners();
-        }).catch(err => console.error('Snapshot modal creation failed:', err));
-        
         if (this.#hasShown) return;
         this.#hasShown = true;
-
-        console.log('Creating modal with HTML length:', this.modalHTML ? this.modalHTML.length : 'no html var');
-
-        console.log('NeonovaSnapshotView.show() called');
-
+    
+        console.log('=== NeonovaSnapshotView.show() START ===');
+    
         const modalHTML = `
             <div id="snapshot-modal" class="fixed inset-0 bg-black/85 flex items-center justify-center z-[10001] opacity-0 transition-opacity duration-400">
                 <div class="bg-[#18181b] border border-[#27272a] rounded-3xl w-[1280px] max-w-[96vw] max-h-[96vh] overflow-hidden shadow-2xl flex flex-col transform scale-95 transition-all duration-500">
@@ -48,23 +37,39 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
                 </div>
             </div>
         `;
+    
+        // IMPORTANT: Call super.createModal FIRST, then render inside .then()
+        super.createModal(modalHTML).then(() => {
+            console.log('createModal resolved successfully. this.modal =', this.modal ? 'exists' : 'MISSING');
+    
+            this.render();
+            this.attachListeners();
+    
+            // Give the modal a moment to become visible before drawing the chart
+            setTimeout(() => {
+                this.initSnapshotChart();
+            }, 120);
+    
+        }).catch(err => {
+            console.error('Snapshot modal creation failed:', err);
+        });
     }
 
     render() {
         const content = this.modal.querySelector('#snapshot-content');
-        if (!content) return;
-
+        if (!content) {
+            console.error('snapshot-content element not found!');
+            return;
+        }
+    
         content.innerHTML = this.generateSnapshotHTML();
-
-        const debugEl = content.querySelector('#debug-info');
-        if (debugEl) debugEl.textContent = `Events: ${this.model.events?.length || 0} | Start: ${this.model.startDate} | End: ${this.model.endDate}`;
-        
+    
         if (!this.model.events || this.model.events.length < 2) {
             content.innerHTML += `<div class="text-center text-zinc-400 py-20 text-lg">No connection events found for this period.</div>`;
             return;
         }
-
-        requestAnimationFrame(() => this.initSnapshotChart());
+    
+        console.log('Snapshot content rendered with', this.model.events.length, 'events');
     }
 
     generateSnapshotHTML() {
