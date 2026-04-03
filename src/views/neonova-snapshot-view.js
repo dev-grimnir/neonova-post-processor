@@ -38,17 +38,22 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
             </div>
         `;
     
-        // IMPORTANT: Call super.createModal FIRST, then render inside .then()
         super.createModal(modalHTML).then(() => {
-            console.log('createModal resolved successfully. this.modal =', this.modal ? 'exists' : 'MISSING');
+            console.log('createModal resolved successfully');
     
             this.render();
             this.attachListeners();
     
-            // Give the modal a moment to become visible before drawing the chart
+            // Ensure modal is visible + give layout time before charting
+            const modalOverlay = this.modal.querySelector('#snapshot-modal');
+            if (modalOverlay) {
+                modalOverlay.style.opacity = '1';
+                modalOverlay.style.transform = 'scale(1)';
+            }
+    
             setTimeout(() => {
                 this.initSnapshotChart();
-            }, 120);
+            }, 150);
     
         }).catch(err => {
             console.error('Snapshot modal creation failed:', err);
@@ -56,9 +61,9 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
     }
 
     render() {
-        const content = this.modal.querySelector('#snapshot-content');
+        const content = this.modal?.querySelector('#snapshot-content');
         if (!content) {
-            console.error('snapshot-content element not found!');
+            console.error('#snapshot-content not found in modal!');
             return;
         }
     
@@ -66,10 +71,9 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
     
         if (!this.model.events || this.model.events.length < 2) {
             content.innerHTML += `<div class="text-center text-zinc-400 py-20 text-lg">No connection events found for this period.</div>`;
-            return;
+        } else {
+            console.log(`Rendered chart container with ${this.model.events.length} events`);
         }
-    
-        console.log('Snapshot content rendered with', this.model.events.length, 'events');
     }
 
     generateSnapshotHTML() {
@@ -77,16 +81,15 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         const height = Math.max(620, 500 + days * 20); // scale a bit for longer periods
 
         return `
-                <div class="max-w-6xl mx-auto">
-                    <h1 class="text-5xl font-bold text-white text-center tracking-tight mb-8">
-                        Connection Timeline – ${this.model.getDateRangeString()}
-                    </h1>
-                    <div id="chart-container" class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8" style="height: 620px;">
-                        <canvas id="snapshotChart" class="w-full h-full"></canvas>
-                    </div>
-                    <div id="debug-info" class="text-xs text-zinc-500 mt-4 text-center"></div>
+            <div class="max-w-6xl mx-auto">
+                <h1 class="text-5xl font-bold text-white text-center tracking-tight mb-8">
+                    Connection Timeline – ${this.model.getDateRangeString()}
+                </h1>
+                <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8" style="height: 620px; min-height: 620px;">
+                    <canvas id="snapshotChart" class="w-full h-full"></canvas>
                 </div>
-            `;
+            </div>
+        `;
     }
 
     initSnapshotChart() {
