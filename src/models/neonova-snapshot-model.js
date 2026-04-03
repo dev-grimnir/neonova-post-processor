@@ -7,7 +7,7 @@ class NeonovaSnapshotModel {
         this.events = events || [];   // Array of processed connection events
         this.metrics = metrics || {}; // uptimePercent, totalSeconds, disconnectSeconds, longDisconnects, etc.
 
-        console.log("SnapshotModel - events = " + this.events);
+        console.log("SnapshotModel - events = " + JSON.stringify(this.events));
         
     }
 
