@@ -117,10 +117,11 @@ class NeonovaCustomerView extends BaseNeonovaView {
             }
         });
 
-        const statusWidget = this.#tr.querySelector('span.inline-flex.items-center');
-        if (statusWidget) {
-            statusWidget.addEventListener('mouseenter', (e) => {
-                e.stopPropagation();           // prevent row click
+        const statusBadge = this.#tr.querySelector('span.inline-flex.items-center');
+        if (statusBadge) {
+            statusBadge.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();           // prevent row click / edit mode
                 this.#controller.open3DaySnapshot();
             });
         }
