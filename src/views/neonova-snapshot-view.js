@@ -1,4 +1,6 @@
 class NeonovaSnapshotView extends NeonovaBaseModalView {
+    #hasShown = null;
+    #snapshotChartInstance = null;
     constructor(controller, model) {
         super(controller);
         this.model = model;
