@@ -9,6 +9,7 @@
 // @run-at       document-end
 // @updateURL    https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/scripts/neonova-snapshot-sandbox.user.js
 // @downloadURL  https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/scripts/neonova-snapshot-sandbox.user.js
+// @require https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/views/base-neonova-view.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/views/neonova-base-modal-view.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-post-processor/dev/src/views/neonova-snapshot-view.js
