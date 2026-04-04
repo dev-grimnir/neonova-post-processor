@@ -28,8 +28,6 @@ class NeonovaSnapshotModel {
     }
 
     getUptimePercent() {
-        return this.metrics.uptimePercent != null 
-            ? Math.round(this.metrics.uptimePercent * 100) / 100 
-            : 0;
+        return this.metrics.percentConnected
     }
 }
