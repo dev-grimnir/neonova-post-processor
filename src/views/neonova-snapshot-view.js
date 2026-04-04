@@ -133,12 +133,12 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         const startTime = this.model.startDate.getTime();
         const endTime   = this.model.endDate.getTime() + 86399999;
         
-        let i = 0;
-        while (i < sortedEvents.length) {
+        let z = 0;
+        while (z < sortedEvents.length) {
             const isConnected = (sortedEvents[i].status === 'Start' || sortedEvents[i].status === 'connected');
             const startMs = sortedEvents[i].dateObj.getTime();
         
-            let j = i + 1;
+            let j = z + 1;
             while (j < sortedEvents.length && 
                    (sortedEvents[j].status === 'Start' || sortedEvents[j].status === 'connected') === isConnected) {
                 j++;
@@ -150,7 +150,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         
             rawPeriods.push({ x: startMs, y: isConnected ? 1 : -1 });
             rawPeriods.push({ x: endMs,   y: isConnected ? 1 : -1 });
-            i = j;
+            z = j;
         }
     
         if (this.#snapshotChartInstance) this.#snapshotChartInstance.destroy();
