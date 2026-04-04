@@ -96,7 +96,10 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         console.log('initSnapshotChart called — events count:', this.model.events ? this.model.events.length : 0);
     
         const canvas = document.getElementById('snapshotChart');
-        if (!canvas) return;
+        if (!canvas) {
+            console.error('Snapshot canvas #snapshotChart not found!');
+            return;
+        }
     
         if (!this.model.events || this.model.events.length < 2) return;
     
@@ -105,9 +108,9 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         );
     
         const startTime = this.model.startDate.getTime();
-        const endTime   = this.model.endDate.getTime() + 86399999; // end of last day
+        const endTime   = this.model.endDate.getTime() + 86399999;
     
-        // Build clean stepped periods (identical logic to the working daily view)
+        // Build periods + duplicate points to force flat steps (this kills the diagonal)
         const rawPeriods = [];
         let i = 0;
         while (i < sortedEvents.length) {
@@ -120,11 +123,13 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
                 j++;
             }
     
+            // Duplicate the point so the step is perfectly horizontal
             rawPeriods.push({ x: startMs, y: isConnected ? 1 : -1 });
+    
             i = j;
         }
     
-        // Force full range coverage (this eliminates the diagonal)
+        // Force full range coverage
         if (rawPeriods.length > 0) {
             rawPeriods.unshift({ x: startTime, y: rawPeriods[0].y });
             rawPeriods.push({ x: endTime, y: rawPeriods[rawPeriods.length - 1].y });
