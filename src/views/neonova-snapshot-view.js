@@ -110,7 +110,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         const startTime = this.model.startDate.getTime();
         const endTime   = this.model.endDate.getTime() + 86399999;
     
-        // Build periods + duplicate points to force flat steps (this kills the diagonal)
+        // Build periods + duplicate every status change point (this kills the diagonal)
         const rawPeriods = [];
         let i = 0;
         while (i < sortedEvents.length) {
@@ -123,7 +123,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
                 j++;
             }
     
-            // Duplicate the point so the step is perfectly horizontal
+            // Duplicate the point so Chart.js draws a perfectly flat step
             rawPeriods.push({ x: startMs, y: isConnected ? 1 : -1 });
     
             i = j;
@@ -176,13 +176,13 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
                         enabled: true,
                         intersect: false,
                         mode: 'index',
-                        title: (tooltipItems) => {
-                            if (!tooltipItems.length) return '';
-                            return new Date(tooltipItems[0].parsed.x).toLocaleString([], {
-                                month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
-                            });
-                        },
                         callbacks: {
+                            title: (tooltipItems) => {
+                                if (!tooltipItems.length) return '';
+                                return new Date(tooltipItems[0].parsed.x).toLocaleString([], {
+                                    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+                                });
+                            },
                             label: (context) => {
                                 if (context.parsed.y === 0) return '';
     
