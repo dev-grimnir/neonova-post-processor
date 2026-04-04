@@ -1,6 +1,34 @@
 class NeonovaAnalyzer {
 
     /**
+ * PRIVATE HELPER
+ * Normalizes the input argument so we always work with a clean array.
+ * Handles the legacy case where the caller passes the full stats object instead of just the array.
+ * Early logging for transparency. Returns empty array if nothing valid.
+ * @param {Array|Object} input - whatever was passed to computeMetrics
+ * @returns {{entries: Array}} normalized object
+ */
+static #normalizeInput(input) {
+    if (!input) {
+        return { entries: [], totalProcessed: 0, ignored: 0 };
+    }
+
+    if (Array.isArray(input)) {
+        return { entries: input, totalProcessed: input.length, ignored: 0 };
+    }
+
+    if (input.cleanedEntries !== undefined) {
+        return {
+            entries: input.cleanedEntries,
+            totalProcessed: input.totalProcessed || input.cleanedEntries.length,
+            ignored: input.ignored || 0
+        };
+    }
+
+    return { entries: [], totalProcessed: 0, ignored: 0 };
+}
+
+    /**
  * Handles the leading boundary gap for a requested analysis window.
  *
  * When the first real log entry occurs *after* the requestedStart timestamp,
@@ -173,34 +201,6 @@ static #computeLeadTime(normalized, requestedStart) {
     static #getSessionBonus(metricMin) {
         const metricHours = parseFloat(metricMin) / 60 || 0;
         return 25 * Math.tanh(metricHours / 6);
-    }
-
-    /**
-     * PRIVATE HELPER
-     * Normalizes the input argument so we always work with a clean array.
-     * Handles the legacy case where the caller passes the full stats object instead of just the array.
-     * Early logging for transparency. Returns empty array if nothing valid.
-     * @param {Array|Object} input - whatever was passed to computeMetrics
-     * @returns {{entries: Array}} normalized object
-     */
-    static #normalizeInput(input) {
-        if (!input) {
-            return { entries: [], totalProcessed: 0, ignored: 0 };
-        }
-
-        if (Array.isArray(input)) {
-            return { entries: input, totalProcessed: input.length, ignored: 0 };
-        }
-
-        if (input.cleanedEntries !== undefined) {
-            return {
-                entries: input.cleanedEntries,
-                totalProcessed: input.totalProcessed || input.cleanedEntries.length,
-                ignored: input.ignored || 0
-            };
-        }
-
-        return { entries: [], totalProcessed: 0, ignored: 0 };
     }
 
     /**
@@ -658,6 +658,73 @@ static #computeLeadTime(normalized, requestedStart) {
         
         return { rolling7Day, rollingLabels };
     }
+
+    static getEntries(cleanedEntries, requestedStart, requestedEnd = null) {
+        if (!requestedStart || !(requestedStart instanceof Date) || isNaN(requestedStart.getTime())) {
+            console.error('NeonovaAnalyzer.getEntries: requestedStart must be a valid Date');
+            return { entries: Array.isArray(cleanedEntries) ? cleanedEntries : [] };
+        }
+    
+        const normalized = this.#normalizeInput(cleanedEntries);   // or this.normalizeInput after removing #
+        const gapped = this.#computeLeadTime(normalized, requestedStart);
+    
+        return gapped || { entries: normalized.entries || [] };
+    }
+
+    /**
+     * PUBLIC API — SIGNATURE NOW EXTENDED (but fully backward-compatible)
+     * @param {Array|Object} cleanedEntries
+     * @param {Date|null} requestedStart - optional, from the date picker
+     * @param {Date|null} requestedEnd   - optional, from the date picker
+     */
+    static computeMetrics(cleanedEntries, requestedStart = null, requestedEnd = null) {
+        const normalized = this.#normalizeInput(cleanedEntries);
+
+        // New leading-gap handler (only thing that ever touches the entries array for boundaries)
+        const gapped = this.#computeLeadTime(normalized, requestedStart);
+        const counters = this.#initializeCounters();
+        this.#processAllEntries(gapped.entries, counters);
+        this.#calculateEndTime(counters, requestedEnd);
+
+        const totalConnectedSec = counters.sessionSeconds.reduce((a, b) => a + b, 0) || 0;
+        
+        const uptimeMetrics = this.#computeUptimeMetrics(
+            counters.sessionSeconds,
+            counters.firstDate,
+            counters.lastDate,
+            requestedStart,
+            requestedEnd,
+            totalConnectedSec
+        );
+
+        const peakMetrics = this.#computePeakMetrics(counters);
+        const timeSinceLast = this.#computeTimeSinceLast(counters.lastDisconnectDate);
+        const dailyAverages = this.#computeDailyAverages(counters.dailyCount);
+        const sessionMetrics = this.#computeSessionMetrics(counters.sessionSeconds);
+        const reconnectMetrics = this.#computeReconnectMetrics(counters.reconnectSeconds);
+        const stabilityScore = this.#computeStabilityScore({
+            uptimeMetrics,
+            sessionMetrics,
+            reconnectMetrics,
+            counters,
+            dailyAverages
+        });
+
+        return this.#assembleReturnObject({
+            peakMetrics,
+            timeSinceLast,
+            dailyAverages,
+            uptimeMetrics,
+            sessionMetrics,
+            reconnectMetrics,
+            stabilityScore,
+            counters,
+            entriesLength: normalized.entries.length,
+            totalResultsCounted: normalized.totalProcessed || 0,
+            ignoredAsDuplicates: normalized.ignored || 0
+        });
+    }
+    
 }
 
 if (typeof module !== 'undefined' && module.exports) {
