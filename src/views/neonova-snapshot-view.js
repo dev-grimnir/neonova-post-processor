@@ -1,9 +1,11 @@
 class NeonovaSnapshotView extends NeonovaBaseModalView {
     #hasShown = null;
     #snapshotChartInstance = null;
+    #history = null;
+    #model = null;
     constructor(controller, model) {
         super(controller);
-        this.model = model;
+        this.#model = model;
         this.#hasShown = false;
         this.#snapshotChartInstance = null;
         #history = [];  // stack of previous models for back navigation
@@ -24,9 +26,9 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
                                 ← Back
                             </button>
                             <div>
-                                <div class="text-emerald-400 text-xs font-mono tracking-widest" id="snapshot-subtitle">${this.model.friendlyName || 'Customer'} — Connection Timeline</div>
-                                <div class="text-3xl font-semibold text-white mt-1" id="snapshot-daterange">${this.model.getDateRangeString()}</div>
-                                <div class="text-lg font-medium text-emerald-400 mt-1" id="snapshot-uptime">Uptime: ${this.model.getUptimePercent()}%</div>
+                                <div class="text-emerald-400 text-xs font-mono tracking-widest" id="snapshot-subtitle">${this.#model.friendlyName || 'Customer'} — Connection Timeline</div>
+                                <div class="text-3xl font-semibold text-white mt-1" id="snapshot-daterange">${this.#model.getDateRangeString()}</div>
+                                <div class="text-lg font-medium text-emerald-400 mt-1" id="snapshot-uptime">Uptime: ${this.#model.getUptimePercent()}%</div>
                             </div>
                         </div>
                         <button id="close-snapshot-btn" class="px-6 py-2.5 text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-white rounded-2xl flex items-center gap-2 transition">
@@ -63,7 +65,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
 
     async drillDown(dateStr) {
         // Push current model onto history stack
-        this.#history.push(this.model);
+        this.#history.push(this.#model);
     
         // Fetch single day data
         const [year, month, day] = dateStr.split('-').map(Number);
@@ -83,7 +85,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
     
         try {
             const rawEntries = await NeonovaHTTPController.paginateReportLogs(
-                this.model.username,
+                this.#model.username,
                 startDate,
                 endDate,
                 0, 0, 23, 59
@@ -95,9 +97,9 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
             const events = metrics?.entries || cleaned;
     
             // Swap model to the single day
-            this.model = new NeonovaSnapshotModel(
-                this.model.username,
-                this.model.friendlyName,
+            this.#model = new NeonovaSnapshotModel(
+                this.#model.username,
+                this.#model.friendlyName,
                 startDate,
                 endDate,
                 events,
@@ -111,7 +113,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         } catch (err) {
             console.error('Drill-down failed:', err);
             // Pop history back since we failed
-            this.model = this.#history.pop();
+            this.#model = this.#history.pop();
             this.#updateHeader();
             this.render();
             setTimeout(() => this.#initChart(), 150);
@@ -120,7 +122,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
 
     goBack() {
         if (this.#history.length === 0) return;
-        this.model = this.#history.pop();
+        this.#model = this.#history.pop();
         this.#updateHeader();
         this.render();
         setTimeout(() => this.#initChart(), 150);
@@ -132,9 +134,9 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         const uptime = this.modal.querySelector('#snapshot-uptime');
         const backBtn = this.modal.querySelector('#back-btn');
     
-        if (subtitle)  subtitle.textContent  = `${this.model.friendlyName || 'Customer'} — Connection Timeline`;
-        if (daterange) daterange.textContent = this.model.getDateRangeString();
-        if (uptime)    uptime.textContent    = `Uptime: ${this.model.getUptimePercent()}%`;
+        if (subtitle)  subtitle.textContent  = `${this.#model.friendlyName || 'Customer'} — Connection Timeline`;
+        if (daterange) daterange.textContent = this.#model.getDateRangeString();
+        if (uptime)    uptime.textContent    = `Uptime: ${this.#model.getUptimePercent()}%`;
     
         // Show back button only when there's history to go back to
         if (backBtn) backBtn.classList.toggle('hidden', this.#history.length === 0);
@@ -149,15 +151,15 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
     
         content.innerHTML = this.generateSnapshotHTML();
     
-        if (!this.model.events || this.model.events.length < 2) {
+        if (!this.#model.events || this.#model.events.length < 2) {
             content.innerHTML += `<div class="text-center text-zinc-400 py-20 text-lg">No connection events found for this period.</div>`;
         } else {
-            console.log(`Rendered chart container with ${this.model.events.length} events`);
+            console.log(`Rendered chart container with ${this.#model.events.length} events`);
         }
     }
 
     generateSnapshotHTML() {
-        const days = Math.ceil((this.model.endDate - this.model.startDate) / (1000 * 60 * 60 * 24));
+        const days = Math.ceil((this.#model.endDate - this.#model.startDate) / (1000 * 60 * 60 * 24));
         const height = Math.max(620, 500 + days * 20); // scale a bit for longer periods
         return `
             <div class="max-w-6xl mx-auto">
@@ -179,12 +181,12 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         const canvas = document.getElementById('snapshotChart');
         if (!canvas) return;
     
-        const sortedEvents = [...this.model.events].sort((a, b) => 
+        const sortedEvents = [...this.#model.events].sort((a, b) => 
             (a.dateObj || new Date(0)) - (b.dateObj || new Date(0))
         );
     
-        const startTime = this.model.startDate.getTime();
-        const endTime   = this.model.endDate.getTime();
+        const startTime = this.#model.startDate.getTime();
+        const endTime   = this.#model.endDate.getTime();
 
         // Build periods FIRST — single source of truth for tooltip
         const periods = [];
