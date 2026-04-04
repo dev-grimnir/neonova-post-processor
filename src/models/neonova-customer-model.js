@@ -1,13 +1,13 @@
 class NeonovaCustomerModel {
-    constructor(radiusUsername, friendlyName = '', initialState = {}) {
-        const state = initialState || {};
-        this.radiusUsername = radiusUsername.trim();
-        this.friendlyName = (friendlyName.trim() || radiusUsername.trim());
-        this.status = initialState.status || 'Connecting...';
-        this.durationSec = initialState.durationSec ?? 0;
-        this.lastUpdate = initialState.lastUpdate || new Date().toLocaleString();
-        this.lastEventTime = initialState.lastEventTime ? new Date(initialState.lastEventTime) : null;
-    }
+constructor(radiusUsername, friendlyName = '', initialState = null) {
+    const state = initialState || {};
+    this.radiusUsername = radiusUsername.trim();
+    this.friendlyName = (friendlyName.trim() || radiusUsername.trim());
+    this.status = state.status || 'Connecting...';
+    this.durationSec = state.durationSec ?? 0;
+    this.lastUpdate = state.lastUpdate || new Date().toLocaleString();
+    this.lastEventTime = state.lastEventTime ? new Date(state.lastEventTime) : null;
+}
 
     getDurationStr() {
       const seconds = this.durationSec || 0;
