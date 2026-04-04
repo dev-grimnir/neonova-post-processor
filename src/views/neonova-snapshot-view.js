@@ -103,14 +103,6 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         const startTime = this.model.startDate.getTime();
         const endTime   = this.model.endDate.getTime() + 86399999;
 
-        // Build chart points from periods (two points each = no diagonals)
-        const rawPeriods = [];
-        periods.forEach(p => {
-            const y = p.isConnected ? 1 : -1;
-            rawPeriods.push({ x: p.startMs, y });
-            rawPeriods.push({ x: p.endMs,   y });
-        });
-
         // Build periods FIRST — single source of truth for tooltip
         const periods = [];
         let i = 0;
@@ -132,6 +124,14 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
             i = j;
         }
         this._periods = periods;
+
+        // Build chart points from periods (two points each = no diagonals)
+        const rawPeriods = [];
+        periods.forEach(p => {
+            const y = p.isConnected ? 1 : -1;
+            rawPeriods.push({ x: p.startMs, y });
+            rawPeriods.push({ x: p.endMs,   y });
+        });
         
         let z = 0;
         while (z < sortedEvents.length) {
