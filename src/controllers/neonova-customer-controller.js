@@ -27,14 +27,16 @@ class NeonovaCustomerController {
 
     // Serialization - store plain JSON
     toJSON() {
+        const eventTime = this.#model.lastEventTime;
         return {
             radiusUsername: this.#model.radiusUsername,
             friendlyName: this.#model.friendlyName,
             status: this.#model.status,
             durationSec: this.#model.durationSec,
-            lastEventTime: this.#model.lastEventTime?.toISOString(),
+            lastEventTime: eventTime instanceof Date
+                ? eventTime.toISOString()
+                : (typeof eventTime === 'number' ? new Date(eventTime).toISOString() : null),
             lastUpdate: this.#model.lastUpdate
-            // Add any other fields you want to persist
         };
     }
 
