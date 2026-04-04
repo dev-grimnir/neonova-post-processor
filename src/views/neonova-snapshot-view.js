@@ -132,26 +132,6 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
             rawPeriods.push({ x: p.startMs, y });
             rawPeriods.push({ x: p.endMs,   y });
         });
-        
-        let z = 0;
-        while (z < sortedEvents.length) {
-            const isConnected = (sortedEvents[z].status === 'Start' || sortedEvents[z].status === 'connected');
-            const startMs = sortedEvents[z].dateObj.getTime();
-        
-            let j = z + 1;
-            while (j < sortedEvents.length && 
-                   (sortedEvents[j].status === 'Start' || sortedEvents[j].status === 'connected') === isConnected) {
-                j++;
-            }
-        
-            const endMs = j < sortedEvents.length
-                ? sortedEvents[j].dateObj.getTime() - 1
-                : endTime;
-        
-            rawPeriods.push({ x: startMs, y: isConnected ? 1 : -1 });
-            rawPeriods.push({ x: endMs,   y: isConnected ? 1 : -1 });
-            z = j;
-        }
     
         if (this.#snapshotChartInstance) this.#snapshotChartInstance.destroy();
     
