@@ -1,12 +1,12 @@
 class NeonovaCustomerModel {
-constructor(radiusUsername, friendlyName = '', initialState = {}) {
-    this.radiusUsername = radiusUsername.trim();
-    this.friendlyName = (friendlyName.trim() || radiusUsername.trim());
-    this.status = initialState.status || 'Connecting...';
-    this.durationSec = initialState.durationSec ?? 0;
-    this.lastUpdate = initialState.lastUpdate || new Date().toLocaleString();
-    this.lastEventTime = initialState.lastEventTime ? new Date(initialState.lastEventTime) : null;
-}
+    constructor(radiusUsername, friendlyName = '', initialState = {}) {
+        this.radiusUsername = radiusUsername.trim();
+        this.friendlyName = (friendlyName.trim() || radiusUsername.trim());
+        this.status = initialState.status || 'Connecting...';
+        this.durationSec = initialState.durationSec ?? 0;
+        this.lastUpdate = initialState.lastUpdate || new Date().toLocaleString();
+        this.lastEventTime = initialState.lastEventTime ? new Date(initialState.lastEventTime) : null;
+    }
 
     getDurationStr() {
       const seconds = this.durationSec || 0;
@@ -43,16 +43,6 @@ constructor(radiusUsername, friendlyName = '', initialState = {}) {
         this.status = status;
         this.durationSec = durationSec;
         this.lastUpdate = new Date().toLocaleString();
-    }
-
-    static fromJSON(json, dashboardController) {
-        const ctrl = new NeonovaCustomerController(json.radiusUsername, json.friendlyName, dashboardController);
-        ctrl.#model.status = json.status || 'Connecting...';
-        ctrl.#model.durationSec = json.durationSec ?? 0;
-        ctrl.#model.lastEventTime = json.lastEventTime ? new Date(json.lastEventTime) : null;
-        ctrl.#model.lastUpdate = json.lastUpdate || new Date().toLocaleString();
-        ctrl.view.update();  // re-render with restored values
-        return ctrl;
     }
 
     toJSON() {
