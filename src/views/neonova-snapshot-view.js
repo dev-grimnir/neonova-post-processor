@@ -132,9 +132,6 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
     
         const startTime = this.model.startDate.getTime();
         const endTime   = this.model.endDate.getTime() + 86399999;
-    
-        // Force flat horizontal steps (this is what kills the diagonal)
-        const rawPeriods = [];
         
         let i = 0;
         while (i < sortedEvents.length) {
