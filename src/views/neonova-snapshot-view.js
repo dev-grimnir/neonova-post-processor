@@ -177,7 +177,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         `;
     }
 
-    initSnapshotChart() {
+    #initChart() {
         const canvas = document.getElementById('snapshotChart');
         if (!canvas) return;
     
