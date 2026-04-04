@@ -75,6 +75,7 @@ class NeonovaCustomerController {
         const endDate = new Date();                    // today
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - 3);    // 3 days ago
+        startDate.setHours(0, 0, 0, 0);
 
         console.log(`[Snapshot] Opening 3-day view for ${username}`);
 
