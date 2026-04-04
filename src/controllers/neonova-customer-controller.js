@@ -41,12 +41,17 @@ class NeonovaCustomerController {
 
     // Rehydrate from stored JSON
     static fromJSON(json, dashboardController) {
-        const ctrl = new NeonovaCustomerController(json.radiusUsername, json.friendlyName, dashboardController);
-        ctrl.#model.status = json.status || 'Connecting...';
-        ctrl.#model.durationSec = json.durationSec || 0;
-        ctrl.#model.lastEventTime = json.lastEventTime ? new Date(json.lastEventTime) : null;
-        ctrl.#model.lastUpdate = json.lastUpdate || new Date().toLocaleString();
-        ctrl.view.update();  // refresh row with loaded data
+        const ctrl = new NeonovaCustomerController(
+            json.radiusUsername,
+            json.friendlyName,
+            dashboardController,
+            {   
+                status: json.status || 'Connecting...',
+                durationSec: json.durationSec ?? 0,
+                lastUpdate: json.lastUpdate,
+                lastEventTime: json.lastEventTime
+            }
+        );
         return ctrl;
     }
 
