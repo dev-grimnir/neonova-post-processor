@@ -7,8 +7,8 @@ class NeonovaCustomerController {
         if (typeof radiusUsername !== 'string' || !radiusUsername.trim()) {
             throw new Error('radiusUsername must be a non-empty string');
         }
-        this.#model = new NeonovaCustomerModel(radiusUsername.trim(), friendlyName);
         this.dashboardController = dashboardController;
+        this.#model = new NeonovaCustomerModel(radiusUsername.trim(), friendlyName, initialState);
         this.view = new NeonovaCustomerView(this);
     }
 
