@@ -171,7 +171,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
                         enabled: true,
                         intersect: false,
                         mode: 'index',
-                        **title**: (tooltipItems) => {
+                        title: (tooltipItems) => {
                             if (!tooltipItems.length) return '';
                             return new Date(tooltipItems[0].parsed.x).toLocaleString([], {
                                 month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
