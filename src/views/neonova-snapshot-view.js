@@ -85,6 +85,13 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
                     <canvas id="snapshotChart" class="w-full h-full"></canvas>
                 </div>
             </div>
+            <style>
+                #snapshot-content::-webkit-scrollbar { width: 7px; }
+                #snapshot-content::-webkit-scrollbar-track { background: #18181b; border-radius: 9999px; }
+                #snapshot-content::-webkit-scrollbar-thumb { background: #34d399; border-radius: 9999px; border: 2px solid #18181b; }
+                #snapshot-content::-webkit-scrollbar-thumb:hover { background: #10b981; }
+                #snapshot-content { scrollbar-width: thin; scrollbar-color: #34d399 #18181b; }
+            </style>
         `;
     }
 
