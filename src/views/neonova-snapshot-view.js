@@ -125,9 +125,9 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
             rawPeriods.push({ x: endTime, y: rawPeriods[rawPeriods.length - 1].y });
         }
     
-        if (this._snapshotChartInstance) this._snapshotChartInstance.destroy();
+        if (this.#snapshotChartInstance) this.#snapshotChartInstance.destroy();
     
-        this._snapshotChartInstance = new Chart(canvas, {
+        this.#snapshotChartInstance = new Chart(canvas, {
             type: 'line',
             data: {
                 datasets: [
@@ -196,7 +196,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
             }
         });
     
-        setTimeout(() => this._snapshotChartInstance?.resize(), 100);
+        setTimeout(() => this.#snapshotChartInstance?.resize(), 100);
     }
     
     attachListeners() {
