@@ -93,36 +93,6 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
     }
 
     initSnapshotChart() {
-        // Build periods FIRST — single source of truth for tooltip
-        const periods = [];
-        let i = 0;
-        while (i < sortedEvents.length) {
-            const isConnected = (sortedEvents[i].status === 'Start' || sortedEvents[i].status === 'connected');
-            const startMs = sortedEvents[i].dateObj.getTime();
-        
-            let j = i + 1;
-            while (j < sortedEvents.length &&
-                   (sortedEvents[j].status === 'Start' || sortedEvents[j].status === 'connected') === isConnected) {
-                j++;
-            }
-        
-            const endMs = j < sortedEvents.length
-                ? sortedEvents[j].dateObj.getTime() - 1
-                : endTime;
-        
-            periods.push({ startMs, endMs, isConnected });
-            i = j;
-        }
-        this._periods = periods;
-        
-        // Build chart points from periods (two points each = no diagonals)
-        const rawPeriods = [];
-        periods.forEach(p => {
-            const y = p.isConnected ? 1 : -1;
-            rawPeriods.push({ x: p.startMs, y });
-            rawPeriods.push({ x: p.endMs,   y });
-        });
-        
         const canvas = document.getElementById('snapshotChart');
         if (!canvas) return;
     
@@ -152,6 +122,36 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
             rawPeriods.push({ x: endMs,   y: isConnected ? 1 : -1 });
             z = j;
         }
+
+        // Build periods FIRST — single source of truth for tooltip
+        const periods = [];
+        let i = 0;
+        while (i < sortedEvents.length) {
+            const isConnected = (sortedEvents[i].status === 'Start' || sortedEvents[i].status === 'connected');
+            const startMs = sortedEvents[i].dateObj.getTime();
+        
+            let j = i + 1;
+            while (j < sortedEvents.length &&
+                   (sortedEvents[j].status === 'Start' || sortedEvents[j].status === 'connected') === isConnected) {
+                j++;
+            }
+        
+            const endMs = j < sortedEvents.length
+                ? sortedEvents[j].dateObj.getTime() - 1
+                : endTime;
+        
+            periods.push({ startMs, endMs, isConnected });
+            i = j;
+        }
+        this._periods = periods;
+        
+        // Build chart points from periods (two points each = no diagonals)
+        const rawPeriods = [];
+        periods.forEach(p => {
+            const y = p.isConnected ? 1 : -1;
+            rawPeriods.push({ x: p.startMs, y });
+            rawPeriods.push({ x: p.endMs,   y });
+        });
     
         if (this.#snapshotChartInstance) this.#snapshotChartInstance.destroy();
     
