@@ -1,6 +1,6 @@
 class NeonovaSnapshotView extends NeonovaBaseModalView {
     #hasShown = null;
-    #snapshotChartInstance = null;
+    #chartInstance = null;
     #history = null;
     #model = null;
     #chartInstance = null;
@@ -9,7 +9,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         super(controller);
         this.#model = model;
         this.#hasShown = false;
-        this.#snapshotChartInstance = null;
+        this.#chartInstance = null;
         this.#history = [];  // stack of previous models for back navigation
     }
 
@@ -220,9 +220,9 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
             rawPeriods.push({ x: p.endMs,   y });
         });
     
-        if (this.#snapshotChartInstance) this.#snapshotChartInstance.destroy();
+        if (this.#chartInstance) this.#chartInstance.destroy();
     
-        this.#snapshotChartInstance = new Chart(canvas, {
+        this.#chartInstance = new Chart(canvas, {
             type: 'line',
             data: {
                 datasets: [
@@ -301,7 +301,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
             }
         });
     
-        setTimeout(() => this.#snapshotChartInstance?.resize(), 100);
+        setTimeout(() => this.#chartInstance?.resize(), 100);
 
         canvas.addEventListener('click', (e) => {
             const chart = this.#chartInstance;
@@ -350,9 +350,9 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
     }
 
     hide() {
-        if (this.#snapshotChartInstance) {
-            this.#snapshotChartInstance.destroy();
-            this.#snapshotChartInstance = null;
+        if (this.#chartInstance) {
+            this.#chartInstance.destroy();
+            this.#chartInstance = null;
         }
         super.hide();
     }
