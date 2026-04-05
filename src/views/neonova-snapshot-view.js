@@ -1,6 +1,5 @@
 class NeonovaSnapshotView extends NeonovaBaseModalView {
     #hasShown = null;
-    #chartInstance = null;
     #history = null;
     #model = null;
     #chartInstance = null;
