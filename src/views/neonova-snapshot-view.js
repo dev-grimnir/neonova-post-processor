@@ -308,10 +308,9 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
         
-            console.log('[canvas click] x:', x, 'y:', y, 'xAxis.top:', chart.scales.x.top, 'xAxis.bottom:', chart.scales.x.bottom, 'chartArea.bottom:', chart.chartArea.bottom);
-        
-            // Labels are between chartArea.bottom and xAxis.bottom
-            if (y < chart.chartArea.bottom) return;
+            // Only fire if click is below the chart plot area (in label zone or below)
+            // Labels render in bottom padding, above xAxis.top
+            if (y < chart.chartArea.bottom - 30) return;  // 30px tolerance above chartArea.bottom
         
             const clickedMs = chart.scales.x.getValueForPixel(x);
             const clickedDate = new Date(clickedMs);
@@ -326,15 +325,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
             if (!chart) return;
             const rect = canvas.getBoundingClientRect();
             const y = e.clientY - rect.top;
-            canvas.style.cursor = y > chart.chartArea.bottom ? 'pointer' : 'default';
-        });
-        
-        canvas.addEventListener('mousemove', (e) => {
-            const chart = this.#chartInstance;
-            if (!chart) return;
-            const rect = canvas.getBoundingClientRect();
-            const y = e.clientY - rect.top;
-            canvas.style.cursor = y > chart.scales.x.bottom ? 'pointer' : 'default';
+            canvas.style.cursor = y > chart.chartArea.bottom - 30 ? 'pointer' : 'default';
         });
         
     }
