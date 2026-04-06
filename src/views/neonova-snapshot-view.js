@@ -250,18 +250,6 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
                 ]
             },
             options: {
-                onClick: (e, elements, chart) => {
-                    const xAxis = chart.scales.x;
-                    const y = e.native.clientY - canvas.getBoundingClientRect().top;
-                    console.log('[onClick] y:', y, 'xAxis.bottom:', xAxis.bottom, 'passes:', y >= xAxis.bottom);
-                    // Fire if click is anywhere below the chart plot area
-                    if (y < xAxis.bottom) return;
-        
-                    const clickedMs = xAxis.getValueForPixel(e.native.clientX - canvas.getBoundingClientRect().left);
-                    const clickedDate = new Date(clickedMs);
-                    const dateStr = `${clickedDate.getFullYear()}-${String(clickedDate.getMonth() + 1).padStart(2, '0')}-${String(clickedDate.getDate()).padStart(2, '0')}`;
-                    this.drillDown(dateStr);
-                },
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
@@ -311,6 +299,34 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         });
     
         setTimeout(() => this.#chartInstance?.resize(), 100);
+
+        canvas.addEventListener('click', (e) => {
+            const chart = this.#chartInstance;
+            if (!chart) return;
+        
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+        
+            console.log('[canvas click] y:', y, 'xAxis.bottom:', chart.scales.x.bottom);
+        
+            if (y < chart.scales.x.bottom) return;
+        
+            const clickedMs = chart.scales.x.getValueForPixel(x);
+            const clickedDate = new Date(clickedMs);
+            const dateStr = `${clickedDate.getFullYear()}-${String(clickedDate.getMonth() + 1).padStart(2, '0')}-${String(clickedDate.getDate()).padStart(2, '0')}`;
+        
+            console.log('[canvas click] drillDown:', dateStr);
+            this.drillDown(dateStr);
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const chart = this.#chartInstance;
+            if (!chart) return;
+            const rect = canvas.getBoundingClientRect();
+            const y = e.clientY - rect.top;
+            canvas.style.cursor = y >= chart.scales.x.bottom ? 'pointer' : 'default';
+        });
         
         canvas.addEventListener('mousemove', (e) => {
             const chart = this.#chartInstance;
