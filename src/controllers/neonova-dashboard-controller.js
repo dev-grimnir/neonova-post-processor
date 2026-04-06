@@ -2,15 +2,14 @@ class NeonovaDashboardController {
     #modalActive;
     #tabController;
     constructor() {
-        this.customerControllers = new Map();
         this.model = new NeonovaDashboardModel();
+        this.tabController = new NeonovaTabController(this);
         this.masterPassphrase = null;    
         this.initialized = false;
         this.passphraseController = null;
         this.#modalActive = false;
         this.initAsync();
         this.view = new NeonovaDashboardView(this);
-        this.tabController = new NeonovaTabController(this);
     }
 
     isModalActive() {
