@@ -308,9 +308,10 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
         
-            console.log('[canvas click] y:', y, 'xAxis.bottom:', chart.scales.x.bottom);
+            console.log('[canvas click] x:', x, 'y:', y, 'xAxis.top:', chart.scales.x.top, 'xAxis.bottom:', chart.scales.x.bottom, 'chartArea.bottom:', chart.chartArea.bottom);
         
-            if (y < chart.scales.x.bottom) return;
+            // Labels are between chartArea.bottom and xAxis.bottom
+            if (y < chart.chartArea.bottom) return;
         
             const clickedMs = chart.scales.x.getValueForPixel(x);
             const clickedDate = new Date(clickedMs);
@@ -319,13 +320,13 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
             console.log('[canvas click] drillDown:', dateStr);
             this.drillDown(dateStr);
         });
-
+        
         canvas.addEventListener('mousemove', (e) => {
             const chart = this.#chartInstance;
             if (!chart) return;
             const rect = canvas.getBoundingClientRect();
             const y = e.clientY - rect.top;
-            canvas.style.cursor = y >= chart.scales.x.bottom ? 'pointer' : 'default';
+            canvas.style.cursor = y > chart.chartArea.bottom ? 'pointer' : 'default';
         });
         
         canvas.addEventListener('mousemove', (e) => {
