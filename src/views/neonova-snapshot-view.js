@@ -250,6 +250,18 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
                 ]
             },
             options: {
+                onClick: (e, elements, chart) => {
+                    const xAxis = chart.scales.x;
+                    const y = e.native.clientY - canvas.getBoundingClientRect().top;
+                    
+                    // Fire if click is anywhere below the chart plot area
+                    if (y < xAxis.bottom) return;
+        
+                    const clickedMs = xAxis.getValueForPixel(e.native.clientX - canvas.getBoundingClientRect().left);
+                    const clickedDate = new Date(clickedMs);
+                    const dateStr = `${clickedDate.getFullYear()}-${String(clickedDate.getMonth() + 1).padStart(2, '0')}-${String(clickedDate.getDate()).padStart(2, '0')}`;
+                    this.drillDown(dateStr);
+                }
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
@@ -324,7 +336,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
             if (!chart) return;
             const rect = canvas.getBoundingClientRect();
             const y = e.clientY - rect.top;
-            canvas.style.cursor = y > chart.scales.x.top ? 'pointer' : 'default';
+            canvas.style.cursor = y > chart.scales.x.bottom ? 'pointer' : 'default';
         });
         
     }
