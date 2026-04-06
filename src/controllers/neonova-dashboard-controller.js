@@ -254,7 +254,6 @@ class NeonovaDashboardController {
         try {
             const jsonStr = await NeonovaCryptoController.decryptData(data);
             const parsed = JSON.parse(jsonStr);
-    
             this.model.customers = parsed.customers || [];
     
             this.customerControllers.clear();
@@ -278,7 +277,6 @@ class NeonovaDashboardController {
      */
     async save() {
         try {
-            // Serialize from live controllers, not stale model.customers
             const customers = Array.from(this.customerControllers.values()).map(ctrl => ctrl.toJSON());
             const jsonStr = JSON.stringify({ customers });
             const encrypted = await NeonovaCryptoController.encryptData(jsonStr);
@@ -415,7 +413,7 @@ class NeonovaDashboardController {
 
             if (isNew) {
                 customer.update(status, durationSeconds);
-                customer.lastEventTime = eventMs;
+                customer.lastEventTime = new Date(eventMs);
             } else {
                 // No change — just keep incrementing duration
                 if (customer.lastEventTime !== null) {
