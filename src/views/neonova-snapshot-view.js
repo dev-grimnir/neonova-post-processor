@@ -64,7 +64,14 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         });
     }
 
-    async drillDown(dateStr) {
+    async #clearChart() {
+        if (this.#chartInstance) {
+            this.#chartInstance.destroy();
+            this.#chartInstance = null;
+        }
+    }
+
+    async #drillDown(dateStr) {
         // Push current model onto history stack
         this.#history.push(this.#model);
     
@@ -121,7 +128,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         }
     }
 
-    goBack() {
+    #goBack() {
         if (this.#history.length === 0) return;
         this.#model = this.#history.pop();
         this.#updateHeader();
@@ -317,7 +324,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
             const dateStr = `${clickedDate.getFullYear()}-${String(clickedDate.getMonth() + 1).padStart(2, '0')}-${String(clickedDate.getDate()).padStart(2, '0')}`;
         
             console.log('[canvas click] drillDown:', dateStr);
-            this.drillDown(dateStr);
+            this.#drillDown(dateStr);
         });
         
         canvas.addEventListener('mousemove', (e) => {
@@ -336,7 +343,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         const modalEl  = this.modal.querySelector('#snapshot-modal');
     
         closeBtn?.addEventListener('click', () => this.hide());
-        backBtn?.addEventListener('click',  () => this.goBack());
+        backBtn?.addEventListener('click',  () => this.#goBack());
         modalEl?.addEventListener('click', e => {
             if (e.target === modalEl) this.hide();
         });
