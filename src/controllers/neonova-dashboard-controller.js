@@ -12,6 +12,14 @@ class NeonovaDashboardController {
         this.view = new NeonovaDashboardView(this);
     }
 
+    mountTabView(containerEl) {
+        this.#tabController.view.mount(containerEl);
+    }
+
+    getTabController() {
+        return this.#tabController;
+    }
+
     isModalActive() {
         return this.#modalActive;
     }
