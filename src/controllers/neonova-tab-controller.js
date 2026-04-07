@@ -8,12 +8,87 @@ class NeonovaTabController {
     //methods from dashboard controller
     createCustomerController(customer) {
         const ctrl = new NeonovaCustomerController(customer, this);
-        this.customerControllers.set(customer.radiusUsername, ctrl);
+        this.addCustomerToActiveTab(ctrl);
         return ctrl;
     }
     
     getCustomerController(username) {
-        return this.customerControllers.get(username);
+        return this.getActiveTab().customers.find(c => c.radiusUsername === username) || null;
+    }
+    
+    rebuildTable() {
+        const rows = [];
+        for (const ctrl of this.getActiveTab().customers) {
+            const row = ctrl.getRowElement();
+            if (row) rows.push(row);
+        }
+    
+        rows.sort((a, b) => {
+            const aStatus = a.querySelector('td:nth-child(3)')?.textContent.trim() || '';
+            const bStatus = b.querySelector('td:nth-child(3)')?.textContent.trim() || '';
+    
+            const aDisconnected = aStatus !== 'Connected' && aStatus !== 'Connecting...';
+            const bDisconnected = bStatus !== 'Connected' && bStatus !== 'Connecting...';
+    
+            if (aDisconnected !== bDisconnected) {
+                return aDisconnected ? -1 : 1;
+            }
+    
+            if (!aDisconnected) {
+                const aDurationCell = a.querySelector('td:nth-child(4)')?.textContent.trim() || '';
+                const bDurationCell = b.querySelector('td:nth-child(4)')?.textContent.trim() || '';
+                const aSeconds = this.#parseDurationToSeconds(aDurationCell) || 0;
+                const bSeconds = this.#parseDurationToSeconds(bDurationCell) || 0;
+                return aSeconds - bSeconds;
+            }
+    
+            return 0;
+        });
+    
+        this.view.setRows(rows);
+    }
+    
+    async add(radiusUsername, friendlyName) {
+        if (!radiusUsername?.trim()) return;
+        const trimmed = radiusUsername.trim();
+    
+        const activeTab = this.getActiveTab();
+        if (activeTab.customers.find(c => c.radiusUsername === trimmed)) {
+            alert('Already added');
+            return;
+        }
+    
+        const ctrl = new NeonovaCustomerController(trimmed, friendlyName, this);
+        this.addCustomerToActiveTab(ctrl);
+    
+        this.rebuildTable();
+        this.dashboardController.view.updateHeader();
+    
+        try {
+            await this.dashboardController.updateCustomerStatus(ctrl.model);
+    
+            if (ctrl.model.status === 'Account Not Found') {
+                this.remove(trimmed);
+                this.dashboardController.view.showToast('Customer not found in RADIUS', { type: 'error', duration: 5000 });
+                return;
+            }
+    
+            ctrl.view.update();
+            await this.save();
+            this.rebuildTable();
+        } catch (err) {
+            console.error('Initial poll failed:', err);
+            ctrl.model.status = 'Error';
+            ctrl.view.update();
+        }
+    }
+    
+    async remove(radiusUsername) {
+        const activeTab = this.getActiveTab();
+        this.removeCustomerFromTab(radiusUsername, activeTab.label);
+        await this.save();
+        this.rebuildTable();
+        this.dashboardController.view.updateHeader();
     }
 
     #parseDurationToSeconds(durationStr) {
@@ -35,44 +110,6 @@ class NeonovaTabController {
         }
     
         return totalSeconds || 0;
-    }
-
-    rebuildTable() {
-        const rows = [];
-        for (const ctrl of this.customerControllers.values()) {
-            const row = ctrl.getRowElement();
-            if (row) rows.push(row);
-        }
-    
-        rows.sort((a, b) => {
-            // Primary: disconnected first
-            const aStatus = a.querySelector('td:nth-child(3)')?.textContent.trim() || '';
-            const bStatus = b.querySelector('td:nth-child(3)')?.textContent.trim() || '';
-    
-            const aDisconnected = aStatus !== 'Connected' && aStatus !== 'Connecting...';
-            const bDisconnected = bStatus !== 'Connected' && bStatus !== 'Connecting...';
-    
-            if (aDisconnected !== bDisconnected) {
-                return aDisconnected ? -1 : 1;
-            }
-    
-            // Secondary: among connected rows, shortest duration first
-            if (!aDisconnected) {
-                // Duration is always the 4th column (nth-child(4))
-                const aDurationCell = a.querySelector('td:nth-child(4)')?.textContent.trim() || '';
-                const bDurationCell = b.querySelector('td:nth-child(4)')?.textContent.trim() || '';
-    
-                // Convert to seconds (handle "<1min", "2d 3h 45m", etc.)
-                const aSeconds = this.#parseDurationToSeconds(aDurationCell) || 0;
-                const bSeconds = this.#parseDurationToSeconds(bDurationCell) || 0;
-    
-                return aSeconds - bSeconds;  // ascending = shortest first
-            }
-    
-            return 0;  // preserve original order within same category
-        });
-    
-        this.view.setRows(rows);
     }
 
     /**
@@ -120,55 +157,6 @@ class NeonovaTabController {
         } catch (e) {
             console.error("[NeonovaDashboardController.save] Encryption failed", e);
         }
-    }
-
-    async add(radiusUsername, friendlyName) {
-        if (!radiusUsername?.trim()) return;
-        const trimmed = radiusUsername.trim();
-    
-        if (this.model.getCustomer(trimmed)) {
-            alert('Already added');
-            return;
-        }
-    
-        // Create controller + view + row
-        const ctrl = new NeonovaCustomerController(trimmed, friendlyName, this);
-        this.customerControllers.set(trimmed, ctrl);
-        this.model.addOrUpdateCustomer(ctrl.toJSON());
-    
-        // Show the row immediately (with "Connecting...")
-        this.rebuildTable();  // or this.view.appendRow(ctrl.getRowElement()) for instant add
-        this.view.updateHeader();
-    
-        // Immediate single-customer poll to get real status
-        try {
-            await this.updateCustomerStatus(ctrl.model);  // uses the model object directly
-    
-            // If poll found nothing → auto-remove + toast
-            if (ctrl.model.status === 'Account Not Found') {
-                this.remove(trimmed);
-                this.view.showToast('Customer not found in RADIUS', { type: 'error', duration: 5000 });
-                return;
-            }
-    
-            // Otherwise → update the row with real status/duration
-            ctrl.view.update();
-    
-            await this.save();
-            this.rebuildTable();  // full refresh if needed
-        } catch (err) {
-            console.error('Initial poll failed:', err);
-            ctrl.model.status = 'Error';
-            ctrl.view.update();
-        }
-    }
-
-    async remove(radiusUsername) {
-        this.model.removeCustomer(radiusUsername);
-        this.customerControllers.delete(radiusUsername);
-        await this.save();
-        if (this.view) this.rebuildTable();
-        this.view.updateHeader();
     }
     
     //methods for tab controller
