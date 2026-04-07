@@ -181,7 +181,7 @@ class NeonovaDashboardView extends BaseNeonovaView {
     
         // Mount the tab view into the customer table body
         const tableBody = this.panel.querySelector('#customer-table-body');
-        this.controller.mountTabView(tableBody);
+        this.#tabController.mountTabView(tableBody);
     
         // Initial state
         this.applyMinimizedStyles();
