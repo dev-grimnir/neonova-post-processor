@@ -121,8 +121,9 @@ class NeonovaDashboardController {
             await this.passphraseController.show();
         }
     
-        await this.#tabController.load();           // ← customers (still works, key is there)
-        await this.model.loadSettings();   // ← now in the model
+        await this.#tabController.load(); 
+        if (this.view) this.view.renderTabBar();
+        await this.model.loadSettings();   
     
         // NO MORE this.settings lines — the model already synced polling values
         if (!this.model.isPollingPaused) this.startPolling();
