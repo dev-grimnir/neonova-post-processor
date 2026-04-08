@@ -193,19 +193,42 @@ class NeonovaTabController {
         }
     }
 
-    async load() {
-        const data = localStorage.getItem('novaDashboardTabs');
-        if (!data) {
-            this.initDefaultTab();
-            return;
-        }
-        try {
-            const json = JSON.parse(await NeonovaCryptoController.decryptData(data));
-            this.tabs = json.tabs.map(t => NeonovaTabModel.fromJSON(t, this.dashboardController));
-            this.view.render();
-        } catch (e) {
-            console.error('[NeonovaTabController.load]', e);
-            this.initDefaultTab();
-        }
+async load() {
+    const data = localStorage.getItem('novaDashboardTabs');
+    if (!data) {
+        await this.#migrateFromLegacy();
+        return;
     }
+    try {
+        const json = JSON.parse(await NeonovaCryptoController.decryptData(data));
+        this.tabs = json.tabs.map(t => NeonovaTabModel.fromJSON(t, this.dashboardController));
+        this.view.render();
+    } catch (e) {
+        console.error('[NeonovaTabController.load]', e);
+        this.initDefaultTab();
+    }
+}
+
+async #migrateFromLegacy() {
+    const legacy = localStorage.getItem('novaDashboardCustomers');
+    if (!legacy) {
+        this.initDefaultTab();
+        return;
+    }
+    try {
+        const jsonStr = await NeonovaCryptoController.decryptData(legacy);
+        const parsed = JSON.parse(jsonStr);
+        const defaultTab = new NeonovaTabModel('Customers', true);
+        for (const json of parsed.customers || []) {
+            const ctrl = NeonovaCustomerController.fromJSON(json, this.dashboardController);
+            defaultTab.addCustomer(ctrl);
+        }
+        this.tabs.push(defaultTab);
+        await this.save();
+        this.view.render();
+    } catch (e) {
+        console.error('[NeonovaTabController.migrateFromLegacy]', e);
+        this.initDefaultTab();
+    }
+}
 }
