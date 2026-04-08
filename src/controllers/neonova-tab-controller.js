@@ -16,6 +16,9 @@ class NeonovaTabController {
     }
     
     rebuildTable() {
+        const activeTab = this.getActiveTab();
+        if (!activeTab) return;
+        
         const rows = [];
         for (const ctrl of this.getActiveTab().customers) {
             const row = ctrl.getRowElement();
