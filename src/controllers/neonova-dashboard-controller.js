@@ -8,8 +8,8 @@ class NeonovaDashboardController {
         this.initialized = false;
         this.passphraseController = null;
         this.#modalActive = false;
-        this.initAsync();
         this.view = new NeonovaDashboardView(this);
+        this.initAsync();
     }
 
     mountTabView(containerEl) {
