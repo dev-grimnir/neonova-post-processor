@@ -24,6 +24,7 @@ class NeonovaDashboardController {
     }
 
     mountTabView(containerEl) {
+        this.#tabController.view = new NeonovaTabView(this.#tabController);
         this.#tabController.view.mount(containerEl);
     }
 
