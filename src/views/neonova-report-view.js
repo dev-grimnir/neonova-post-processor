@@ -160,8 +160,8 @@ class NeonovaReportView extends NeonovaBaseModalView {
                     dateStr = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
                 }
         
-                console.log('Daily bar clicked → requesting details for:', dateStr);
-                this.controller.openDailyDisconnectDetail(dateStr);
+                this.controller.openDailySnapshot(dateStr);
+                
             });
 
         // Rolling chart
