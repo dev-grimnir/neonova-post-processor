@@ -1,15 +1,25 @@
 class NeonovaDashboardController {
     #modalActive;
     #tabController;
-    constructor() {
-        this.model = new NeonovaDashboardModel();
-        this.#tabController = new NeonovaTabController(this);
-        this.masterPassphrase = null;    
+    constructor(model, tabController, view) {
+        this.model = model;
+        this.#tabController = tabController;
+        this.view = view;
+        this.masterPassphrase = null;
         this.initialized = false;
         this.passphraseController = null;
         this.#modalActive = false;
-        this.view = new NeonovaDashboardView(this);
-        this.initAsync();
+    }
+
+    static async create() {
+        const model = new NeonovaDashboardModel();
+        const controller = new NeonovaDashboardController(model, null, null);
+        const tabController = new NeonovaTabController(controller);
+        const view = new NeonovaDashboardView(controller);
+        controller.#tabController = tabController;
+        controller.view = view;
+        await controller.initAsync();
+        return controller;
     }
 
     mountTabView(containerEl) {
