@@ -9,14 +9,14 @@ class NeonovaAddCustomerController {
         this.view.show();
     }
 
-    handleSubmit(radiusUsername, friendlyName) {
+    async handleSubmit(radiusUsername, friendlyName) {
         this.view.hideError();  // ← clear any old error
     
         const un = this.#sanitizeAndValidateRadiusUsername(radiusUsername);
         if (!un) return;
     
         try {
-            this.#tabController.add(un, friendlyName);
+            await this.#tabController.add(un, friendlyName);
         } catch (err) {
             this.view.showError("Failed to add customer: " + err.message);
             return;
