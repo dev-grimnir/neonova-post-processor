@@ -1,6 +1,7 @@
 class NeonovaAddCustomerController {
-    constructor(dashboardController) {
-        this.dashboardController = dashboardController;
+    #tabController
+    constructor(tabController) {
+        this.#tabController = tabController;
         this.view = new NeonovaAddCustomerView(this);
     }
 
@@ -8,14 +9,14 @@ class NeonovaAddCustomerController {
         this.view.show();
     }
 
-    handleSubmit(radiusUsername, friendlyName) {
+    async handleSubmit(radiusUsername, friendlyName) {
         this.view.hideError();  // ← clear any old error
     
         const un = this.#sanitizeAndValidateRadiusUsername(radiusUsername);
         if (!un) return;
     
         try {
-            this.dashboardController.add(un, friendlyName);
+            await this.#tabController.add(un, friendlyName);
         } catch (err) {
             this.view.showError("Failed to add customer: " + err.message);
             return;
