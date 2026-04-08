@@ -9,7 +9,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         this.#model = model;
         this.#hasShown = false;
         this.#chartInstance = null;
-        this.#history = [];  // stack of previous models for back navigation
+        this.#history = [];
     }
 
     show() {
@@ -167,11 +167,9 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
     }
 
     generateSnapshotHTML() {
-        const days = Math.ceil((this.#model.endDate - this.#model.startDate) / (1000 * 60 * 60 * 24));
-        const height = Math.max(620, 500 + days * 20); // scale a bit for longer periods
         return `
             <div class="max-w-6xl mx-auto">
-                <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8" style="height: 620px; min-height: 620px;">
+                <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-4" style="height: 340px;">
                     <canvas id="snapshotChart" class="w-full h-full"></canvas>
                 </div>
             </div>
@@ -299,9 +297,9 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
                 },
                 scales: {
                     x: { type: 'linear', min: startTime, max: endTime, grid: { color: '#27272a' }, ticks: { color: '#64748b', maxTicksLimit: 5, callback: v => new Date(v).toLocaleDateString('en-US', {month:'short', day:'numeric'}) }},
-                    y: { min: -1.2, max: 1.2, ticks: { display: false }, grid: { color: ctx => ctx.tick.value === 0 ? '#a3a3a3' : '#27272a', lineWidth: ctx => ctx.tick.value === 0 ? 4 : 1.5 }}
+                    y: { min: -1.05, max: 1.05, ticks: { display: false }, grid: { color: ctx => ctx.tick.value === 0 ? '#a3a3a3' : '#27272a', lineWidth: ctx => ctx.tick.value === 0 ? 4 : 1.5 }}
                 },
-                layout: { padding: { right: 40, left: 20, top: 30, bottom: 20 } }
+                layout: { padding: { right: 40, left: 20, top: 8, bottom: 8 } }
             }
         });
     
