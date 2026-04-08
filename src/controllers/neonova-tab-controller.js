@@ -172,11 +172,6 @@ class NeonovaTabController {
         this.view.render();
         this.dashboardController.view.renderTabBar();
     }
-    renameTab(oldLabel, newLabel) {
-        const tab = this.tabs.find(t => t.label === oldLabel);
-        if (tab) tab.rename(newLabel);
-        this.view.render();
-    }
 
     async poll() {
         for (const tab of this.tabs) {
