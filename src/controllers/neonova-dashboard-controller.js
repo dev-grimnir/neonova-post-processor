@@ -1,6 +1,7 @@
 class NeonovaDashboardController {
     #modalActive;
     #tabController;
+    
     constructor(model, tabController, view) {
         this.model = model;
         this.#tabController = tabController;
@@ -13,10 +14,10 @@ class NeonovaDashboardController {
 
     static async create() {
         const model = new NeonovaDashboardModel();
-        const controller = new NeonovaDashboardController(model, null, null);
-        const tabController = new NeonovaTabController(controller);
-        const view = new NeonovaDashboardView(controller);
+        const controller = new NeonovaDashboardController(model);
+        const tabController = new NeonovaTabController(controller);  
         controller.#tabController = tabController;
+        const view = new NeonovaDashboardView(controller);  // createElements calls mountTabView here
         controller.view = view;
         await controller.initAsync();
         return controller;
