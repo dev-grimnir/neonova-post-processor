@@ -463,7 +463,7 @@ class NeonovaDashboardView extends BaseNeonovaView {
 
     // ====================== STYLE MORPH ======================
     applyMinimizedStyles() {
-        const headerHeight = this.header.offsetHeight;
+        const headerHeight = this.header.offsetHeight || 72;
         this.panel.style.height = `${headerHeight}px`;
         this.panel.style.top = `${window.innerHeight - headerHeight}px`;
         this.panel.style.bottom = 'auto';
