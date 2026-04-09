@@ -63,8 +63,8 @@ class NeonovaCustomerController {
         // this.view.update();
     }
 
-    remove() {
-        this.dashboardController.remove(this.radiusUsername);
+    async remove() {
+        await this.dashboardController.getTabController().remove(this.radiusUsername);
     }
 
     launchReport() {

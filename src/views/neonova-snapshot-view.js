@@ -9,14 +9,12 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         this.#model = model;
         this.#hasShown = false;
         this.#chartInstance = null;
-        this.#history = [];  // stack of previous models for back navigation
+        this.#history = [];
     }
 
     show() {
         if (this.#hasShown) return;
         this.#hasShown = true;
-    
-        console.log('=== NeonovaSnapshotView.show() START ===');
     
         const modalHTML = `
             <div id="snapshot-modal" class="fixed inset-0 bg-black/85 flex items-center justify-center z-[10001] opacity-0 transition-opacity duration-400">
@@ -27,151 +25,93 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
                                 ← Back
                             </button>
                             <div>
-                                <div class="text-emerald-400 text-xs font-mono tracking-widest" id="snapshot-subtitle">${this.#model.friendlyName || 'Customer'} — Connection Timeline</div>
-                                <div class="text-3xl font-semibold text-white mt-1" id="snapshot-daterange">${this.#model.getDateRangeString()}</div>
-                                <div class="text-lg font-medium text-emerald-400 mt-1" id="snapshot-uptime">Uptime: ${this.#model.getUptimePercent()}%</div>
+                                <div class="text-emerald-400 text-xs font-mono tracking-widest" id="snapshot-subtitle"></div>
+                                <div class="text-3xl font-semibold text-white mt-1" id="snapshot-daterange"></div>
+                                <div class="text-lg font-medium text-emerald-400 mt-1" id="snapshot-uptime"></div>
                             </div>
                         </div>
                         <button id="close-snapshot-btn" class="px-6 py-2.5 text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-white rounded-2xl flex items-center gap-2 transition">
                             ✕ Close
                         </button>
                     </div>
-                    <div id="snapshot-content" class="flex-1 overflow-y-auto p-8 bg-[#18181b] ...">
-                    </div>
+                    <div id="snapshot-content" class="flex-1 overflow-y-auto p-8 bg-[#18181b]"></div>
                 </div>
             </div>
         `;
     
         super.createModal(modalHTML).then(() => {
-            console.log('createModal resolved successfully');
-    
-            this.render();
             this.attachListeners();
     
-            // Ensure modal is visible + give layout time before charting
             const modalOverlay = this.modal.querySelector('#snapshot-modal');
             if (modalOverlay) {
                 modalOverlay.style.opacity = '1';
                 modalOverlay.style.transform = 'scale(1)';
             }
     
-            setTimeout(() => {
-                this.#initChart();
-            }, 150);
-    
+            this.render();
         }).catch(err => {
             console.error('Snapshot modal creation failed:', err);
         });
     }
-
-    async #clearChart() {
-        if (this.#chartInstance) {
-            this.#chartInstance.destroy();
-            this.#chartInstance = null;
-        }
-    }
-
-    async #drillDown(dateStr) {
-        // Push current model onto history stack
-        this.#history.push(this.#model);
     
-        // Fetch single day data
-        const [year, month, day] = dateStr.split('-').map(Number);
-        const startDate = new Date(year, month - 1, day);
-        startDate.setHours(0, 0, 0, 0);
-        const endDate = new Date(year, month - 1, day);
-        endDate.setHours(23, 59, 59, 999);
+    render() {
+        if (!this.modal) return;
     
-        // Show a loading state in the content area
+        const model = this.controller.model;
+    
+        // Header
+        const subtitle  = this.modal.querySelector('#snapshot-subtitle');
+        const daterange = this.modal.querySelector('#snapshot-daterange');
+        const uptime    = this.modal.querySelector('#snapshot-uptime');
+        if (subtitle)  subtitle.textContent  = `${model.friendlyName || 'Customer'} — Connection Timeline`;
+        if (daterange) daterange.textContent = model.getDateRangeString();
+        if (uptime)    uptime.textContent    = `Uptime: ${model.getUptimePercent()}%`;
+    
+        // Content
         const content = this.modal.querySelector('#snapshot-content');
-        if (content) content.innerHTML = `
+        if (!content) return;
+        content.innerHTML = this.generateSnapshotHTML();
+    
+        if (!model.events || model.events.length < 2) {
+            content.innerHTML += `<div class="text-center text-zinc-400 py-20 text-lg">No connection events found for this period.</div>`;
+            return;
+        }
+    
+        setTimeout(() => this.#initChart(), 150);
+    }
+    
+    showLoading(dateStr) {
+        const content = this.modal?.querySelector('#snapshot-content');
+        if (!content) return;
+        content.innerHTML = `
             <div class="flex items-center justify-center h-full gap-4">
                 <div class="w-8 h-8 rounded-full border-4 border-zinc-700 border-t-emerald-400 animate-spin"></div>
                 <span class="text-emerald-400 font-mono text-sm">Loading ${dateStr}...</span>
             </div>
         `;
-    
-        try {
-            const rawEntries = await NeonovaHTTPController.paginateReportLogs(
-                this.#model.username,
-                startDate,
-                endDate,
-                0, 0, 23, 59
-            );
-    
-            const cleanResult = NeonovaCollector.cleanEntries(rawEntries || []);
-            const cleaned = cleanResult.cleanedEntries || [];
-            const metrics = NeonovaAnalyzer.computeMetrics(cleaned, startDate, endDate);
-            const events = cleaned;
-    
-            // Swap model to the single day
-            this.#model = new NeonovaSnapshotModel(
-                this.#model.username,
-                this.#model.friendlyName,
-                startDate,
-                endDate,
-                events,
-                metrics
-            );
-    
-            this.#updateHeader();
-            this.render();
-            setTimeout(() => this.#initChart(), 150);
-    
-        } catch (err) {
-            console.error('Drill-down failed:', err);
-            // Pop history back since we failed
-            this.#model = this.#history.pop();
-            this.#updateHeader();
-            this.render();
-            setTimeout(() => this.#initChart(), 150);
-        }
     }
-
-    #goBack() {
-        if (this.#history.length === 0) return;
-        this.#model = this.#history.pop();
-        this.#updateHeader();
-        this.render();
-        setTimeout(() => this.#initChart(), 150);
+    
+    setBackButtonVisible(visible) {
+        const backBtn = this.modal?.querySelector('#back-btn');
+        if (backBtn) backBtn.classList.toggle('hidden', !visible);
     }
-
-    #updateHeader() {
-        const subtitle = this.modal.querySelector('#snapshot-subtitle');
-        const daterange = this.modal.querySelector('#snapshot-daterange');
-        const uptime = this.modal.querySelector('#snapshot-uptime');
-        const backBtn = this.modal.querySelector('#back-btn');
     
-        if (subtitle)  subtitle.textContent  = `${this.#model.friendlyName || 'Customer'} — Connection Timeline`;
-        if (daterange) daterange.textContent = this.#model.getDateRangeString();
-        if (uptime)    uptime.textContent    = `Uptime: ${this.#model.getUptimePercent()}%`;
+    attachListeners() {
+        const closeBtn = this.modal.querySelector('#close-snapshot-btn');
+        const backBtn  = this.modal.querySelector('#back-btn');
+        const modalEl  = this.modal.querySelector('#snapshot-modal');
     
-        // Show back button only when there's history to go back to
-        if (backBtn) backBtn.classList.toggle('hidden', this.#history.length === 0);
-    }
-
-    render() {
-        const content = this.modal?.querySelector('#snapshot-content');
-        if (!content) {
-            console.error('#snapshot-content not found in modal!');
-            return;
-        }
-    
-        content.innerHTML = this.generateSnapshotHTML();
-    
-        if (!this.#model.events || this.#model.events.length < 2) {
-            content.innerHTML += `<div class="text-center text-zinc-400 py-20 text-lg">No connection events found for this period.</div>`;
-        } else {
-            console.log(`Rendered chart container with ${this.#model.events.length} events`);
-        }
+        closeBtn?.addEventListener('click', () => this.hide());
+        backBtn?.addEventListener('click',  () => this.controller.goBack());
+        modalEl?.addEventListener('click', e => {
+            if (e.target === modalEl) this.hide();
+        });
     }
 
     generateSnapshotHTML() {
-        const days = Math.ceil((this.#model.endDate - this.#model.startDate) / (1000 * 60 * 60 * 24));
-        const height = Math.max(620, 500 + days * 20); // scale a bit for longer periods
         return `
             <div class="max-w-6xl mx-auto">
-                <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8" style="height: 620px; min-height: 620px;">
+                <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-4" style="height: 340px;">
                     <canvas id="snapshotChart" class="w-full h-full"></canvas>
                 </div>
             </div>
@@ -189,12 +129,12 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
         const canvas = document.getElementById('snapshotChart');
         if (!canvas) return;
     
-        const sortedEvents = [...this.#model.events].sort((a, b) => 
+        const model = this.controller.model;
+        const sortedEvents = [...model.events].sort((a, b) => 
             (a.dateObj || new Date(0)) - (b.dateObj || new Date(0))
         );
-    
-        const startTime = this.#model.startDate.getTime();
-        const endTime   = this.#model.endDate.getTime();
+        const startTime = model.startDate.getTime();
+        const endTime   = model.endDate.getTime();
 
         // Build periods FIRST — single source of truth for tooltip
         const periods = [];
@@ -299,9 +239,9 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
                 },
                 scales: {
                     x: { type: 'linear', min: startTime, max: endTime, grid: { color: '#27272a' }, ticks: { color: '#64748b', maxTicksLimit: 5, callback: v => new Date(v).toLocaleDateString('en-US', {month:'short', day:'numeric'}) }},
-                    y: { min: -1.2, max: 1.2, ticks: { display: false }, grid: { color: ctx => ctx.tick.value === 0 ? '#a3a3a3' : '#27272a', lineWidth: ctx => ctx.tick.value === 0 ? 4 : 1.5 }}
+                    y: { min: -1.05, max: 1.05, ticks: { display: false }, grid: { color: ctx => ctx.tick.value === 0 ? '#a3a3a3' : '#27272a', lineWidth: ctx => ctx.tick.value === 0 ? 4 : 1.5 }}
                 },
-                layout: { padding: { right: 40, left: 20, top: 30, bottom: 20 } }
+                layout: { padding: { right: 40, left: 20, top: 8, bottom: 8 } }
             }
         });
     
@@ -324,7 +264,7 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
             const dateStr = `${clickedDate.getFullYear()}-${String(clickedDate.getMonth() + 1).padStart(2, '0')}-${String(clickedDate.getDate()).padStart(2, '0')}`;
         
             console.log('[canvas click] drillDown:', dateStr);
-            this.#drillDown(dateStr);
+            this.controller.drillDown(dateStr);
         });
         
         canvas.addEventListener('mousemove', (e) => {
@@ -335,18 +275,6 @@ class NeonovaSnapshotView extends NeonovaBaseModalView {
             canvas.style.cursor = y > chart.chartArea.bottom - 30 ? 'pointer' : 'default';
         });
         
-    }
-    
-    attachListeners() {
-        const closeBtn = this.modal.querySelector('#close-snapshot-btn');
-        const backBtn  = this.modal.querySelector('#back-btn');
-        const modalEl  = this.modal.querySelector('#snapshot-modal');
-    
-        closeBtn?.addEventListener('click', () => this.hide());
-        backBtn?.addEventListener('click',  () => this.#goBack());
-        modalEl?.addEventListener('click', e => {
-            if (e.target === modalEl) this.hide();
-        });
     }
 
     hide() {
