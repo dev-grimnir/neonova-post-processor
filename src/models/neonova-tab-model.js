@@ -5,6 +5,16 @@ class NeonovaTabModel {
         this.customers = [];
     }
 
+    getConnectionCounts() {
+        let connected = 0;
+        let disconnected = 0;
+        for (const c of this.customers) {
+            if (c.model.status === 'Connected') connected++;
+            else disconnected++;
+        }
+        return { connected, disconnected };
+    }
+
     addCustomer(customerController) {
         if (!this.customers.find(c => c.radiusUsername === customerController.radiusUsername)) {
             this.customers.push(customerController);
