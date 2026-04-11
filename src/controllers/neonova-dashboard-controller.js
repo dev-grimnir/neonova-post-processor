@@ -171,19 +171,37 @@ class NeonovaDashboardController {
             // only fetch events newer than the buffer's tail. Failures are
             // silent — the status-pill path below runs regardless.
             try {
-                let bufferSince;
                 if (customer.eventHistory.length > 0) {
+                    // Steady state — incremental fetch from buffer's tail with 1-min overlap
                     const lastMs = customer.eventHistory[customer.eventHistory.length - 1].dateObj.getTime();
-                    bufferSince = new Date(lastMs - 60 * 1000);
+                    const bufferSince = new Date(lastMs - 60 * 1000);
+                    const newEvents = await NeonovaHTTPController.paginateReportLogs(
+                        customer.radiusUsername, bufferSince, new Date(), 0, 0, 23, 59
+                    );
+                    if (Array.isArray(newEvents) && newEvents.length > 0) {
+                        customer.ingestEvents(newEvents);
+                    }
                 } else {
-                    bufferSince = new Date(Date.now() - NeonovaCustomerModel.RETENTION_MS);
-                }
-    
-                const newEvents = await NeonovaHTTPController.paginateReportLogs(
-                    customer.radiusUsername, bufferSince, new Date(), 0, 0, 23, 59
-                );
-                if (Array.isArray(newEvents) && newEvents.length > 0) {
-                    customer.ingestEvents(newEvents);
+                    // Cold start — progressive lookback, same widths as the status-pill path
+                    const lookbackPeriods = [
+                        1   * 24 * 60 * 60 * 1000,    // 1 day
+                        7   * 24 * 60 * 60 * 1000,    // 7 days
+                        30  * 24 * 60 * 60 * 1000,    // 30 days
+                        90  * 24 * 60 * 60 * 1000,    // 3 months
+                        180 * 24 * 60 * 60 * 1000,    // 6 months
+                        335 * 24 * 60 * 60 * 1000     // ~11 months
+                    ];
+            
+                    for (const lookbackMs of lookbackPeriods) {
+                        const since = new Date(Date.now() - lookbackMs);
+                        const events = await NeonovaHTTPController.paginateReportLogs(
+                            customer.radiusUsername, since, new Date(), 0, 0, 23, 59
+                        );
+                        if (Array.isArray(events) && events.length > 0) {
+                            customer.ingestEvents(events);
+                            break;   // Found something — stop widening
+                        }
+                    }
                 }
             } catch (bufferErr) {
                 console.warn('[updateCustomerStatus] buffer update failed (non-fatal):', bufferErr);
