@@ -7,7 +7,15 @@ constructor(radiusUsername, friendlyName = '', initialState = null) {
     this.durationSec = state.durationSec ?? 0;
     this.lastUpdate = state.lastUpdate || new Date().toLocaleString();
     this.lastEventTime = state.lastEventTime ? new Date(state.lastEventTime) : null;
-    this.eventHistory = Array.isArray(state.eventHistory) ? ... : [];
+    this.eventHistory = [];
+    if (Array.isArray(state.eventHistory)) {
+        for (const e of state.eventHistory) {
+            const d = new Date(e.dateObj);
+            if (!isNaN(d.getTime())) {
+                this.eventHistory.push({ dateObj: d, status: e.status });
+            }
+        }
+    }
 }
 
     getDurationStr() {
