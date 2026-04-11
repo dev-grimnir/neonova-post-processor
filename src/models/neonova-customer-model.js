@@ -1,4 +1,7 @@
 class NeonovaCustomerModel {
+
+    static RETENTION_MS = 24 * 60 * 60 * 1000;
+    
     constructor(radiusUsername, friendlyName = '', initialState = null) {
         const state = initialState || {};
         this.radiusUsername = radiusUsername.trim();
@@ -101,6 +104,10 @@ class NeonovaCustomerModel {
             lastEventTime: this.lastEventTime instanceof Date 
                 ? this.lastEventTime.toISOString() 
                 : (this.lastEventTime || null)
+            eventHistory: this.eventHistory.map(e => ({
+                dateObj: e.dateObj.toISOString(),
+                status: e.status
+            }))
         };
     }
 }
