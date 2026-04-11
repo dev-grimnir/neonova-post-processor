@@ -103,7 +103,7 @@ class NeonovaCustomerModel {
             lastUpdate: this.lastUpdate,
             lastEventTime: this.lastEventTime instanceof Date 
                 ? this.lastEventTime.toISOString() 
-                : (this.lastEventTime || null)
+                : (this.lastEventTime || null),
             eventHistory: this.eventHistory.map(e => ({
                 dateObj: e.dateObj.toISOString(),
                 status: e.status
