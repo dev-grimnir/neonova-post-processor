@@ -1,28 +1,25 @@
 class NeonovaSnapshotModel {
-    constructor(username, friendlyName, startDate, endDate, events, metrics) {
-        this.username = username;
-        this.friendlyName = friendlyName;
-        this.startDate = startDate;   // Date object
-        this.endDate = endDate;       // Date object
-        this.events = events || [];   // Array of processed connection events
-        this.metrics = metrics || {}; // uptimePercent, totalSeconds, disconnectSeconds, longDisconnects, etc.
+    constructor(username, friendlyName, startDate, endDate, metrics, entries = []) {
+        this.username     = username;
+        this.friendlyName = friendlyName || username;
+        this.startDate    = startDate;
+        this.endDate      = endDate;
+        this.metrics      = metrics || {};
+        this.entries      = entries || [];
     }
 
-    getDateRangeString() {
-        const options = { 
-            weekday: 'short', 
-            month: 'short', 
-            day: 'numeric', 
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit'
-        };
-        const startStr = this.startDate.toLocaleString('en-US', options);
-        const endStr   = this.endDate.toLocaleString('en-US', options);
-        return `${startStr} – ${endStr}`;
-    }
+    getUsername()     { return this.username; }
+    getFriendlyName() { return this.friendlyName; }
+    getStartDate()    { return this.startDate; }
+    getEndDate()      { return this.endDate; }
+    getMetrics()      { return this.metrics; }
+    getEntries()      { return this.entries; }
 
-    getUptimePercent() {
-        return this.metrics.percentConnected
+    getLongDisconnects() {
+        return this.metrics.longDisconnects || [];
     }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = NeonovaSnapshotModel;
 }
