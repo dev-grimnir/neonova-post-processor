@@ -38,6 +38,7 @@ class NeonovaProgressController {
             );
 
             const sanitizedEntries = NeonovaCollector.cleanEntries(rawEntries);
+            console.log('[debug] sanitizedEntries:', sanitizedEntries, 'isArray:', Array.isArray(sanitizedEntries));
             const metrics = NeonovaAnalyzer.computeMetrics(sanitizedEntries, startDate, endDate);
 
             // longDisconnects now ride on metrics (analyzer output). Pull them
