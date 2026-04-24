@@ -16,7 +16,6 @@
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-insight/dev/src/models/neonova-dashboard-model.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-insight/dev/src/models/neonova-tab-model.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-insight/dev/src/models/neonova-report-model.js
-// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-insight/dev/src/models/neonova-daily-disconnect-model.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-insight/dev/src/models/neonova-snapshot-model.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-insight/dev/src/controllers/neonova-crypto-controller.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-insight/dev/src/controllers/neonova-http-controller.js
@@ -38,8 +37,9 @@
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-insight/dev/src/views/neonova-passphrase-view.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-insight/dev/src/views/neonova-customer-view.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-insight/dev/src/views/neonova-tab-view.js
+// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-insight/dev/src/views/neonova-snapshot-chart.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-insight/dev/src/views/neonova-snapshot-view.js
-// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-insight/dev/src/views/neonova-daily-disconnect-view.js
+// @require      https://raw.githubusercontent.com/dev-grimnir/neonova-insight/dev/src/views/neonova-report-snapshot-view.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-insight/dev/src/views/neonova-report-order-view.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-insight/dev/src/views/neonova-progress-view.js
 // @require      https://raw.githubusercontent.com/dev-grimnir/neonova-insight/dev/src/views/neonova-report-view.js
@@ -50,6 +50,7 @@
 (function() {
     'use strict';
 
+    
     // Only run in the MAIN content frame
     if (window.name !== 'MAIN') {
         return;
