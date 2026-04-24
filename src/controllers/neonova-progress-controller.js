@@ -37,9 +37,16 @@ class NeonovaProgressController {
                 signal || progressView.signal
             );
 
-            const sanitizedEntries = NeonovaCollector.cleanEntries(rawEntries);
-            console.log('[debug] sanitizedEntries:', sanitizedEntries, 'isArray:', Array.isArray(sanitizedEntries));
-            const metrics = NeonovaAnalyzer.computeMetrics(sanitizedEntries, startDate, endDate);
+            const cleanResult = NeonovaCollector.cleanEntries(rawEntries);
+
+            // cleanEntries returns { cleanedEntries, totalProcessed, ignored }.
+            // Analyzer handles both shapes, but the report/snapshot models
+            // expect a plain array of entries. Unwrap once here.
+            const sanitizedEntries = Array.isArray(cleanResult)
+                ? cleanResult
+                : (cleanResult?.cleanedEntries || []);
+
+            const metrics = NeonovaAnalyzer.computeMetrics(cleanResult, startDate, endDate);
 
             // longDisconnects now ride on metrics (analyzer output). Pull them
             // out here so the report model receives them explicitly, matching
