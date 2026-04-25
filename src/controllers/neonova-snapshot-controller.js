@@ -48,13 +48,17 @@ class NeonovaSnapshotController {
      */
     static async buildData(username, friendlyName, startDate, endDate) {
         try {
-            const raw = await NeonovaHttpController.paginateReportLogs(
+            const raw = await NeonovaHTTPController.paginateReportLogs(
                 username, startDate, endDate
             );
-            const cleaned = NeonovaCollector.cleanLogs(raw);
-            const metrics = NeonovaAnalyzer.computeMetrics(cleaned, startDate, endDate);
+            const cleanResult = NeonovaCollector.cleanEntries(raw);
+            const cleaned = Array.isArray(cleanResult)
+                ? cleanResult
+                : (cleanResult?.cleanedEntries || []);
+            const metrics = NeonovaAnalyzer.computeMetrics(cleanResult, startDate, endDate);
             if (!metrics) return null;
-            const entries = NeonovaAnalyzer.getEntries(cleaned, startDate).entries || [];
+            const entriesResult = NeonovaAnalyzer.getEntries(cleanResult, startDate);
+            const entries = entriesResult?.entries || cleaned;
 
             return new NeonovaSnapshotModel(
                 username,
