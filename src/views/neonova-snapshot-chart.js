@@ -25,6 +25,25 @@ class NeonovaSnapshotChart {
         const startTime = model.startDate.getTime();
         const endTime   = model.endDate.getTime();
 
+        // If the first real event is after the chart range start, prepend a
+        // synthetic boundary event so the first period covers from start.
+        // Without this, Chart.js draws a diagonal line from (startTime, 0) up
+        // to the first real point. The synthetic event's status is the inverse
+        // of the first real event — if the first event is "Start" (came up),
+        // we were down before; if it's "Stop" (went down), we were up before.
+        if (sortedEvents.length > 0) {
+            const first = sortedEvents[0];
+            if (first.dateObj.getTime() > startTime) {
+                const inverseStatus = (first.status === 'Start' || first.status === 'connected')
+                    ? 'Stop'
+                    : 'Start';
+                sortedEvents.unshift({
+                    dateObj: new Date(startTime),
+                    status: inverseStatus
+                });
+            }
+        }
+
         // Build periods FIRST — single source of truth for tooltip
         const periods = [];
         let i = 0;
