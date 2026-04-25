@@ -42,13 +42,10 @@ class NeonovaReportController {
             this.sanitizedEntries
         );
 
-        // Headless controller — no ViewClass, so no spinner-and-show flow runs.
-        const snapshotController = new NeonovaSnapshotController(
+        // Headless controller — no fetch, no view.
+        const snapshotController = NeonovaSnapshotController.createHeadless(
             this.username,
-            this.friendlyName,
-            this.requestedStart,
-            this.requestedEnd,
-            null
+            this.friendlyName
         );
         snapshotController.seedHistory(snapshotModel);
 
