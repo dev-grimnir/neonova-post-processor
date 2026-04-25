@@ -35,7 +35,7 @@ class NeonovaReportSnapshotView {
                     </div>
                 </div>
                 <div id="report-snap-body" class="p-6">
-                    <div style="height: 620px; min-height: 620px;">
+                    <div style="height: 420px;">
                         <canvas id="report-snap-canvas"></canvas>
                     </div>
                 </div>
@@ -54,7 +54,7 @@ class NeonovaReportSnapshotView {
         const body = this.container.querySelector('#report-snap-body');
         if (!body) return;
         body.innerHTML = `
-            <div style="height: 620px; min-height: 620px;">
+            <div style="height: 420px;">
                 <canvas id="report-snap-canvas"></canvas>
             </div>
         `;
