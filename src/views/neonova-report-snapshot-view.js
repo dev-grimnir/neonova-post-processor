@@ -35,7 +35,7 @@ class NeonovaReportSnapshotView {
                     </div>
                 </div>
                 <div id="report-snap-body" class="p-6">
-                    <div style="height: 420px;">
+                    <div style="height: 320px;">
                         <canvas id="report-snap-canvas"></canvas>
                     </div>
                 </div>
@@ -54,7 +54,7 @@ class NeonovaReportSnapshotView {
         const body = this.container.querySelector('#report-snap-body');
         if (!body) return;
         body.innerHTML = `
-            <div style="height: 420px;">
+            <div style="height: 320px;">
                 <canvas id="report-snap-canvas"></canvas>
             </div>
         `;
@@ -76,7 +76,7 @@ class NeonovaReportSnapshotView {
         const result = NeonovaSnapshotChart.build(
             canvas,
             this.model,
-            (dateStr) => this.#onDayClick(dateStr)
+            (startDate, endDate) => this.#onRangeClick(startDate, endDate)
         );
         this.#chartInstance = result.chart;
     }
@@ -103,23 +103,21 @@ class NeonovaReportSnapshotView {
         backBtn?.addEventListener('click', () => this.#onBack());
     }
 
-    async #onDayClick(dateStr) {
-        const [year, month, day] = dateStr.split('-').map(Number);
-        const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
-        const endDate   = new Date(year, month - 1, day, 23, 59, 59, 999);
-
+    async #onRangeClick(startDate, endDate) {
+        const fmt = (d) => d.toLocaleDateString();
         const body = this.container.querySelector('#report-snap-body');
         if (body) {
             body.innerHTML = `
                 <div class="flex items-center justify-center gap-4 py-20">
                     <div class="w-8 h-8 rounded-full border-4 border-zinc-700 border-t-emerald-400 animate-spin"></div>
-                    <span class="text-emerald-400 font-mono text-sm">Loading ${dateStr}...</span>
+                    <span class="text-emerald-400 font-mono text-sm">Loading ${fmt(startDate)} — ${fmt(endDate)}...</span>
                 </div>
             `;
         }
 
         const model = await this.controller.drillTo(startDate, endDate);
         if (!model) {
+            // Drill failed; redraw current model.
             this.#renderBody();
             setTimeout(() => this.#initChart(), 150);
             return;
