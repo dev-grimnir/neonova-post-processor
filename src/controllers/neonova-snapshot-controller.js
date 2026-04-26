@@ -1,82 +1,142 @@
+/**
+ * Owns the data pipeline and history stack for a snapshot session.
+ * Views are dumb: they call drillTo / goBack / canGoBack and re-render.
+ *
+ * Public surface:
+ *   static async buildData(username, friendlyName, startDate, endDate)
+ *       -> NeonovaSnapshotModel | null
+ *   static createHeadless(username, friendlyName)
+ *       -> NeonovaSnapshotController (no fetch, no view, no history)
+ *   constructor(username, friendlyName, startDate, endDate)
+ *       -> immediately fetches and shows the modal snapshot
+ *   async drillTo(startDate, endDate) -> NeonovaSnapshotModel | null
+ *   async goBack() -> NeonovaSnapshotModel | null
+ *   canGoBack() -> boolean
+ *   seedHistory(model) -> void  (used by inline callers)
+ */
 class NeonovaSnapshotController {
-    #history;
 
-    constructor(username, friendlyName, startDate, endDate) {
+    constructor(username, friendlyName, startDate = null, endDate = null) {
         this.username = username;
-        this.friendlyName = friendlyName;
-        this.startDate = startDate instanceof Date ? startDate : new Date(startDate);
-        this.endDate   = endDate   instanceof Date ? endDate   : new Date(endDate);
-
-        // Freeze the "captured at" moment — endDate never extends past now
-        const now = new Date();
-        if (this.endDate > now) this.endDate = now;
-
-        this.spinnerView = new NeonovaSpinnerView(friendlyName);
-        this.model = null;
+        this.friendlyName = friendlyName || username;
+        this.historyStack = [];
         this.view = null;
-        this.#history = [];
 
-        this.#loadInitial();
-    }
-
-    async #loadInitial() {
-        this.spinnerView.show();
-        try {
-            this.model = await this.#buildModel(this.startDate, this.endDate);
-            this.spinnerView.hide();
-            this.view = new NeonovaSnapshotView(this);
-            this.view.show();
-        } catch (err) {
-            this.spinnerView.hide();
-            console.error('Failed to load snapshot:', err);
-            alert('Could not load connection snapshot. Check console.');
+        // Modal flow is the default. Callers that want a headless controller
+        // (report view embedding) should use NeonovaSnapshotController.createHeadless().
+        if (startDate && endDate) {
+            this.#loadAndShow(startDate, endDate);
         }
     }
 
-    async drillDown(dateStr) {   // "YYYY-MM-DD"
-        const [year, month, day] = dateStr.split('-').map(Number);
-        const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
-        let   endDate   = new Date(year, month - 1, day, 23, 59, 59, 999);
+    /**
+     * Build a controller that does NO fetching and owns NO view.
+     * Caller seeds its history with a model and hands it to an inline view.
+     */
+    static createHeadless(username, friendlyName) {
+        return new NeonovaSnapshotController(username, friendlyName);
+    }
 
-        // Inherit the parent's frozen cap — drilling into today never extends past it
-        if (endDate > this.model.endDate) endDate = this.model.endDate;
+    /* ============================================================
+     *  STATIC DATA PIPELINE
+     * ============================================================ */
 
-        this.view.showLoading(dateStr);
-
+    /**
+     * Fetch → clean → compute → return NeonovaSnapshotModel.
+     * Used by both the modal flow and any inline caller that wants a
+     * snapshot model for a specific range without owning the pipeline.
+     */
+    static async buildData(username, friendlyName, startDate, endDate) {
         try {
-            const newModel = await this.#buildModel(startDate, endDate);
-            this.#history.push(this.model);
-            this.model = newModel;
-            this.view.render();
-            this.view.setBackButtonVisible(true);
+            const raw = await NeonovaHTTPController.paginateReportLogs(
+                username, startDate, endDate
+            );
+            const cleanResult = NeonovaCollector.cleanEntries(raw);
+            const cleaned = Array.isArray(cleanResult)
+                ? cleanResult
+                : (cleanResult?.cleanedEntries || []);
+            const metrics = NeonovaAnalyzer.computeMetrics(cleanResult, startDate, endDate);
+            if (!metrics) return null;
+            const entriesResult = NeonovaAnalyzer.getEntries(cleanResult, startDate);
+            const entries = entriesResult?.entries || cleaned;
+
+            return new NeonovaSnapshotModel(
+                username,
+                friendlyName || username,
+                startDate,
+                endDate,
+                metrics,
+                entries
+            );
         } catch (err) {
-            console.error('Drill-down failed:', err);
-            this.view.render();   // restore the previous model's view
+            console.error('NeonovaSnapshotController.buildData failed', err);
+            return null;
         }
     }
 
+    /* ============================================================
+     *  MODAL FLOW (spinner + view)
+     * ============================================================ */
+
+    async #loadAndShow(startDate, endDate) {
+        const spinner = new NeonovaSpinnerView('Building snapshot…');
+        spinner.show();
+
+        const model = await NeonovaSnapshotController.buildData(
+            this.username, this.friendlyName, startDate, endDate
+        );
+        spinner.hide();
+
+        if (!model) {
+            alert('No connection data found for this range.');
+            return;
+        }
+
+        this.historyStack = [model];
+        this.view = new NeonovaSnapshotView(this, model);
+        this.view.show();
+    }
+
+    /* ============================================================
+     *  INSTANCE HISTORY API
+     * ============================================================ */
+
+    /**
+     * Push current onto history, fetch new range, return new model.
+     * Caller (view) re-renders with the returned model. Null on failure.
+     */
+    async drillTo(startDate, endDate) {
+        const model = await NeonovaSnapshotController.buildData(
+            this.username, this.friendlyName, startDate, endDate
+        );
+        if (!model) return null;
+        this.historyStack.push(model);
+        return model;
+    }
+
+    /**
+     * Pop top of history, return the now-current model. Null if nothing to go back to.
+     */
     goBack() {
-        if (this.#history.length === 0) return;
-        this.model = this.#history.pop();
-        this.view.render();
-        this.view.setBackButtonVisible(this.#history.length > 0);
+        if (this.historyStack.length <= 1) return null;
+        this.historyStack.pop();
+        return this.historyStack[this.historyStack.length - 1];
     }
 
-    async #buildModel(startDate, endDate) {
-        const rawEntries = await NeonovaHTTPController.paginateReportLogs(
-            this.username, startDate, endDate, 0, 0, 23, 59
-        );
-        const cleanResult = NeonovaCollector.cleanEntries(rawEntries || []);
-        const cleaned = cleanResult.cleanedEntries || [];
-        const metrics = NeonovaAnalyzer.computeMetrics(cleaned, startDate, endDate);
-
-        return new NeonovaSnapshotModel(
-            this.username,
-            this.friendlyName,
-            startDate,
-            endDate,
-            cleaned,
-            metrics
-        );
+    canGoBack() {
+        return this.historyStack.length > 1;
     }
+
+    /**
+     * Used by inline callers (report view) to seed history when the initial
+     * model was built directly from in-memory metrics, without going through
+     * buildData.
+     */
+    seedHistory(model) {
+        this.historyStack = [model];
+    }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = NeonovaSnapshotController;
 }

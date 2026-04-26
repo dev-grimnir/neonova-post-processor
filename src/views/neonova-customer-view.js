@@ -31,8 +31,6 @@ class NeonovaCustomerView extends BaseNeonovaView {
         // Default to safe values if somehow undefined (shouldn't happen after model defaults)
         const status = cust.status ?? 'Connecting...';
         const durationStr = cust.getDurationStr?.() ?? '—';
-
-        console.log('[snapshot]', cust.radiusUsername, 'events:', cust.eventHistory?.length ?? 'undefined', cust.eventHistory);
         const inlineSnapshot = new NeonovaInlineSnapshotView(cust).render();
     
         // Status → style mapping (expand as needed)
@@ -79,7 +77,7 @@ class NeonovaCustomerView extends BaseNeonovaView {
             </td>
             <td class="px-2 py-1 text-sm text-gray-400 font-mono">${cust.radiusUsername}</td>
             <td class="px-2 py-1">
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border cursor-pointer hover:brightness-125 hover:scale-105 transition-all ${style.bg} ${style.text} ${style.border}" title="Click to view connection timeline">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border cursor-pointer hover:brightness-125 hover:scale-105 transition-all ${style.bg} ${style.text} ${style.border}" title="Click to view 72 hour connection timeline">
                     <span class="flex h-2 w-2 rounded-full ${style.dot} ring-1 ring-offset-1 ring-offset-gray-900"></span>
                     ${status}
                 </span>

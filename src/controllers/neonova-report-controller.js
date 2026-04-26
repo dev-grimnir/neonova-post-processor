@@ -1,29 +1,58 @@
 class NeonovaReportController {
-    model;
-    constructor(username, friendlyName, metrics, length, longDisconnects) {
-        this.model = new NeonovaReportModel(
-            username,
-            friendlyName,
-            metrics,
-            length,
-            metrics.longDisconnects || []
-        );
 
+    constructor(username, friendlyName, metrics, entryCount, longDisconnects, sanitizedEntries = [], requestedStart = null, requestedEnd = null) {
+        this.username        = username;
+        this.friendlyName    = friendlyName || username;
+        this.metrics         = metrics;
+        this.entryCount      = entryCount;
+        this.longDisconnects = longDisconnects || [];
+        this.sanitizedEntries = sanitizedEntries;
+
+        // Used to seed the inline snapshot without a refetch
+        this.requestedStart = requestedStart;
+        this.requestedEnd   = requestedEnd;
+
+        this.model = new NeonovaReportModel(
+            username, friendlyName, metrics, entryCount, longDisconnects
+        );
         this.view = new NeonovaReportView(this, this.model);
         this.view.show();
     }
 
-    openDailySnapshot(dateStr) {   // dateStr like "2026-03-22"
-        const [year, month, day] = dateStr.split('-').map(Number);
-        const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
-        const endDate   = new Date(year, month - 1, day, 23, 59, 59, 999);
-    
-        new NeonovaSnapshotController(
-            this.model.username,
-            this.model.friendlyName,
-            startDate,
-            endDate
+    /**
+     * Called by NeonovaReportView when it's ready to mount the inline
+     * snapshot. Builds the snapshot model from in-memory report data
+     * (no refetch), creates a headless snapshot controller, and seeds
+     * its history stack so "Back" returns to the report's original range.
+     *
+     * Returns { snapshotController, snapshotModel } or nulls on failure.
+     */
+    createInlineSnapshot() {
+        if (!this.requestedStart || !this.requestedEnd) {
+            console.warn('NeonovaReportController: cannot mount inline snapshot without a requested range');
+            return { snapshotController: null, snapshotModel: null };
+        }
+
+        const snapshotModel = new NeonovaSnapshotModel(
+            this.username,
+            this.friendlyName,
+            this.requestedStart,
+            this.requestedEnd,
+            this.metrics,
+            this.sanitizedEntries
         );
+
+        // Headless controller — no fetch, no view.
+        const snapshotController = NeonovaSnapshotController.createHeadless(
+            this.username,
+            this.friendlyName
+        );
+        snapshotController.seedHistory(snapshotModel);
+
+        return { snapshotController, snapshotModel };
     }
-    
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = NeonovaReportController;
 }

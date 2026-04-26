@@ -1,28 +1,39 @@
 class NeonovaSnapshotModel {
-    constructor(username, friendlyName, startDate, endDate, events, metrics) {
-        this.username = username;
-        this.friendlyName = friendlyName;
-        this.startDate = startDate;   // Date object
-        this.endDate = endDate;       // Date object
-        this.events = events || [];   // Array of processed connection events
-        this.metrics = metrics || {}; // uptimePercent, totalSeconds, disconnectSeconds, longDisconnects, etc.
+    constructor(username, friendlyName, startDate, endDate, metrics, events = []) {
+        this.username     = username;
+        this.friendlyName = friendlyName || username;
+        this.startDate    = startDate;
+        this.endDate      = endDate;
+        this.metrics      = metrics || {};
+        this.events       = events || [];
+    }
+
+    getUsername()     { return this.username; }
+    getFriendlyName() { return this.friendlyName; }
+    getStartDate()    { return this.startDate; }
+    getEndDate()      { return this.endDate; }
+    getMetrics()      { return this.metrics; }
+    getEvents()       { return this.events; }
+
+    getLongDisconnects() {
+        return this.metrics.longDisconnects || [];
     }
 
     getDateRangeString() {
-        const options = { 
-            weekday: 'short', 
-            month: 'short', 
-            day: 'numeric', 
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit'
-        };
-        const startStr = this.startDate.toLocaleString('en-US', options);
-        const endStr   = this.endDate.toLocaleString('en-US', options);
-        return `${startStr} – ${endStr}`;
+        const fmt = (d) => d.toLocaleString([], {
+            year: 'numeric', month: 'short', day: 'numeric',
+            hour: 'numeric', minute: '2-digit'
+        });
+        return `${fmt(this.startDate)} — ${fmt(this.endDate)}`;
     }
 
     getUptimePercent() {
-        return this.metrics.percentConnected
+        const v = this.metrics.percentConnected;
+        if (v == null || v === '' || isNaN(Number(v))) return '0.0';
+        return Number(v).toFixed(1);
     }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = NeonovaSnapshotModel;
 }
