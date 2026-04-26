@@ -304,48 +304,91 @@ class NeonovaSnapshotChart {
             }
         });
 
-        setTimeout(() => chart?.resize(), 100);
-
-        // Click in bottom tick-label strip to drill down. Range matches
-        // current granularity: month / day. Hour is terminal.
-        canvas.addEventListener('click', (e) => {
-            if (!onRangeClick || granularity === 'hour') return;
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            if (y < chart.chartArea.bottom - 30) return;
-
-            const clickedMs = chart.scales.x.getValueForPixel(x);
-            if (clickedMs == null || isNaN(clickedMs)) return;
-
-            const clicked = new Date(clickedMs);
-            let drillStart, drillEnd;
-
-            if (granularity === 'month') {
-                drillStart = new Date(clicked.getFullYear(), clicked.getMonth(), 1, 0, 0, 0, 0);
-                drillEnd   = new Date(clicked.getFullYear(), clicked.getMonth() + 1, 1, 0, 0, 0, 0);
-                drillEnd   = new Date(drillEnd.getTime() - 1);
-                if (drillStart.getTime() < startTime) drillStart = new Date(startTime);
-                if (drillEnd.getTime()   > endTime)   drillEnd   = new Date(endTime);
-            } else {
-                drillStart = new Date(clicked.getFullYear(), clicked.getMonth(), clicked.getDate(), 0, 0, 0, 0);
-                drillEnd   = new Date(clicked.getFullYear(), clicked.getMonth(), clicked.getDate(), 23, 59, 59, 999);
-            }
-
-            onRangeClick(drillStart, drillEnd);
-        });
-
-        canvas.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const y = e.clientY - rect.top;
-            if (granularity === 'hour') {
-                canvas.style.cursor = 'default';
-                return;
-            }
-            canvas.style.cursor = y > chart.chartArea.bottom - 30 ? 'pointer' : 'default';
-        });
+        setTimeout(() => {
+            chart?.resize();
+            this.#mountTickClickTargets(canvas, chart, tickValues, granularity, startTime, endTime, onRangeClick);
+        }, 100);
 
         return { chart, periods };
+    }
+
+    /**
+     * Position invisible clickable elements over each x-axis tick label.
+     * Each tick is its own DOM target — no pixel math at click time, real
+     * hover state on the actual label region. Re-runs on resize.
+     */
+    static #mountTickClickTargets(canvas, chart, tickValues, granularity, startTime, endTime, onRangeClick) {
+        if (!onRangeClick || granularity === 'hour') return;
+
+        const parent = canvas.parentElement;
+        if (!parent) return;
+
+        // Make the parent a positioning context so absolutely-positioned
+        // overlays sit relative to the canvas.
+        const computedPos = getComputedStyle(parent).position;
+        if (computedPos === 'static') parent.style.position = 'relative';
+
+        // Clear any prior overlays from a previous build (drill re-renders).
+        parent.querySelectorAll('[data-tick-target]').forEach(el => el.remove());
+
+        const xScale = chart.scales.x;
+        if (!xScale) return;
+
+        const canvasRect = canvas.getBoundingClientRect();
+        const parentRect = parent.getBoundingClientRect();
+        const offsetLeft = canvasRect.left - parentRect.left;
+        const offsetTop  = canvasRect.top  - parentRect.top;
+
+        const labelTop    = chart.chartArea.bottom + offsetTop;
+        const labelHeight = canvas.height - chart.chartArea.bottom + offsetTop;
+
+        tickValues.forEach((tickMs, idx) => {
+            const px = xScale.getPixelForValue(tickMs);
+            if (px == null || isNaN(px)) return;
+
+            // Determine the click target's horizontal extent — half-distance
+            // to neighboring ticks. Edge ticks extend out to the chart edge.
+            const prevMs = idx > 0 ? tickValues[idx - 1] : startTime;
+            const nextMs = idx < tickValues.length - 1 ? tickValues[idx + 1] : endTime;
+            const prevPx = xScale.getPixelForValue(prevMs);
+            const nextPx = xScale.getPixelForValue(nextMs);
+
+            const leftPx  = (prevPx + px) / 2;
+            const rightPx = (px + nextPx) / 2;
+            const widthPx = rightPx - leftPx;
+
+            const target = document.createElement('div');
+            target.setAttribute('data-tick-target', '1');
+            target.style.cssText = `
+                position: absolute;
+                left: ${leftPx + offsetLeft}px;
+                top: ${labelTop}px;
+                width: ${widthPx}px;
+                height: ${labelHeight}px;
+                cursor: pointer;
+                z-index: 10;
+            `;
+
+            target.addEventListener('click', () => {
+                const clicked = new Date(tickMs);
+                let drillStart, drillEnd;
+
+                if (granularity === 'month') {
+                    drillStart = new Date(clicked.getFullYear(), clicked.getMonth(), 1, 0, 0, 0, 0);
+                    drillEnd   = new Date(clicked.getFullYear(), clicked.getMonth() + 1, 1, 0, 0, 0, 0);
+                    drillEnd   = new Date(drillEnd.getTime() - 1);
+                    if (drillStart.getTime() < startTime) drillStart = new Date(startTime);
+                    if (drillEnd.getTime()   > endTime)   drillEnd   = new Date(endTime);
+                } else {
+                    drillStart = new Date(clicked.getFullYear(), clicked.getMonth(), clicked.getDate(), 0, 0, 0, 0);
+                    drillEnd   = new Date(clicked.getFullYear(), clicked.getMonth(), clicked.getDate(), 23, 59, 59, 999);
+                }
+
+                onRangeClick(drillStart, drillEnd);
+            });
+
+            parent.appendChild(target);
+        });
     }
 }
 
