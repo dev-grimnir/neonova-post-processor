@@ -58,7 +58,7 @@ class NeonovaDashboardView extends BaseNeonovaView {
         return `
             <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-800 bg-zinc-900 shrink-0 relative z-10">
                 <div class="flex items-center gap-4">
-                    <img src="https://raw.githubusercontent.com/dev-grimnir/coronova-post-processor/main/src/assets/nova-subscriber-logo.png"
+                    <img src="https://raw.githubusercontent.com/dev-grimnir/neonova-insight/main/src/assets/nova-subscriber-logo.png"
                          alt="Nova Subscriber" class="h-10 w-auto">
                     <button id="privacy-toggle-btn"
                             class="px-6 py-2.5 font-medium rounded-2xl flex items-center justify-center transition-all border shadow-sm"
