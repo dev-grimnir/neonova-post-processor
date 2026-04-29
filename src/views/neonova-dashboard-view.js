@@ -31,8 +31,7 @@ class NeonovaDashboardView extends BaseNeonovaView {
         const toast = document.createElement('div');
         toast.textContent = message;
         toast.className = `fixed bottom-6 right-6 px-6 py-3 rounded-xl text-white shadow-2xl z-[10000] animate-fade-in-up transition-opacity duration-300`;
-    
-        // Style based on type (dark theme friendly)
+
         if (type === 'error') {
             toast.classList.add('bg-red-700/90', 'border', 'border-red-500/50');
         } else if (type === 'success') {
@@ -40,10 +39,9 @@ class NeonovaDashboardView extends BaseNeonovaView {
         } else {
             toast.classList.add('bg-zinc-800/90', 'border', 'border-zinc-600');
         }
-    
+
         document.body.appendChild(toast);
-    
-        // Fade out and remove
+
         setTimeout(() => {
             toast.style.opacity = '0';
             setTimeout(() => toast.remove(), 300);
@@ -134,15 +132,15 @@ class NeonovaDashboardView extends BaseNeonovaView {
                 box-shadow 500ms cubic-bezier(0.32, 0.72, 0, 1);
         `;
         document.body.appendChild(this.panel);
-    
+
         this.panel.innerHTML = `
             <div class="flex flex-col h-full">
                 <div id="header-container"></div>
                 <div id="content-area" class="flex-1 overflow-hidden flex flex-col">
-    
+
                     <!-- Tab bar -->
                     <div id="tab-bar" class="flex items-center gap-2 px-6 pt-3 pb-0 border-b border-zinc-800 bg-zinc-900 shrink-0"></div>
-    
+
                     <!-- Card -->
                     <div class="flex-1 bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden flex flex-col">
                             <!-- Static column header -->
@@ -152,7 +150,7 @@ class NeonovaDashboardView extends BaseNeonovaView {
                                 ${NeonovaDashboardView.buildTheadHTML()}
                             </table>
                         </div>
-                        
+
                         <!-- Scrollable body — owned by NeonovaTabView -->
                         <div class="flex-1 overflow-y-auto px-6 neonova-scroll">
                             <table class="w-full table-fixed">
@@ -164,61 +162,51 @@ class NeonovaDashboardView extends BaseNeonovaView {
                 </div>
             </div>
         `;
-    
+
         this.headerContainer = this.panel.querySelector('#header-container');
         this.contentArea = this.panel.querySelector('#content-area');
         this.tabBar = this.panel.querySelector('#tab-bar');
         this.tabBar.addEventListener('click', (e) => e.stopPropagation());
-    
+
         const temp = document.createElement('div');
         temp.innerHTML = this.getHeaderHTML();
         this.header = temp.firstElementChild;
         this.headerContainer.appendChild(this.header);
-    
-        // Mount the tab view into the customer table body
+
         const tableBody = this.panel.querySelector('#customer-table-body');
         this.controller.mountTabView(tableBody);
-    
-        // Initial state
-        // Hide content immediately so nothing flashes
+
         this.contentArea.style.display = 'none';
         this.isMinimized = true;
-        
-        // Kill transitions for the first layout pass
+
         const savedTransition = this.panel.style.transition;
         this.panel.style.transition = 'none';
-        
-        // Apply minimized sizing after the browser has laid out the header,
-        // and again once fonts/images load so we can't get stuck on a stale measurement.
+
         const applyWhenReady = () => {
             if (this.isMinimized) this.applyMinimizedStyles();
         };
-        
+
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
                 applyWhenReady();
-                // Restore transitions for future user-driven toggles
                 this.panel.style.transition = savedTransition;
             });
         });
-        
-        // Re-measure when the header's real size changes (fonts, icons, logo)
+
         const ro = new ResizeObserver(() => applyWhenReady());
         ro.observe(this.header);
         this.headerResizeObserver = ro;
-        
-        // Also re-run after the logo finishes loading
+
         const logoImg = this.header.querySelector('img');
         if (logoImg && !logoImg.complete) {
             logoImg.addEventListener('load', applyWhenReady, { once: true });
             logoImg.addEventListener('error', applyWhenReady, { once: true });
         }
-        
-        // And after fonts load (Font Awesome shifts button heights)
+
         if (document.fonts?.ready) {
             document.fonts.ready.then(applyWhenReady);
         }
-    
+
         if (!document.getElementById('neonova-scroll-style')) {
             const style = document.createElement('style');
             style.id = 'neonova-scroll-style';
@@ -303,16 +291,16 @@ class NeonovaDashboardView extends BaseNeonovaView {
             `;
             document.head.appendChild(style);
         }
-    
+
         this.attachHeaderListeners();
         this.renderTabBar();
-    
+
         this.panel.addEventListener('click', (e) => {
             if (this.isMinimized && !e.target.closest('button')) {
                 this.toggleMinimize();
             }
         });
-    
+
         this.escListener = (e) => {
             if (e.key !== 'Escape') return;
             if (!this.isMinimized && !this.controller.isModalActive()) {
@@ -321,7 +309,7 @@ class NeonovaDashboardView extends BaseNeonovaView {
             }
         };
         document.addEventListener('keydown', this.escListener, { capture: true });
-    
+
         this.outsideListener = (e) => {
             if (document.querySelector('.neonova-modal, #add-customer-modal, #passphrase-modal, [id*="modal"]')) return;
             if (this.controller.isModalActive() || this.isMinimized) return;
@@ -333,7 +321,7 @@ class NeonovaDashboardView extends BaseNeonovaView {
         window.addEventListener('resize', () => {
             if (this.isMinimized) this.applyMinimizedStyles();
         });
-    
+
         this.render();
     }
 
@@ -347,18 +335,19 @@ class NeonovaDashboardView extends BaseNeonovaView {
             btn.dataset.label = tab.label;
             const { connected, disconnected } = tab.getConnectionCounts();
 
-            const bellIcon = tab.isNetworkTab ? 'fa-bell' : 'fa-bell-slash';
-            const bellColor = tab.isNetworkTab ? '#34d399' : '#71717a';
+            const bellColor = tab.isNetworkTab ? '#34d399' : '#ef4444';
             const bellTitle = tab.isNetworkTab
                 ? 'Notifications ON for this tab (click to disable)'
                 : 'Notifications OFF for this tab (click to enable)';
 
             btn.innerHTML = `
-                <span class="tab-bell" title="${bellTitle}" style="margin-right:6px; color:${bellColor}; cursor:pointer;">
-                    <i class="fas ${bellIcon}"></i>
+                <span class="tab-bell"
+                      title="${bellTitle}"
+                      style="margin-right:8px; color:${bellColor}; cursor:pointer; display:inline-block; width:14px; text-align:center;">
+                    <i class="fas fa-bell"></i>
                 </span>
                 <span class="tab-label">${tab.label}</span>
-                <span style="margin-left: 6px; font-size: 12px; font-weight: 600; font-family: ui-monospace, monospace;">
+                <span style="margin-left: 8px; font-size: 12px; font-weight: 600; font-family: ui-monospace, monospace;">
                     <span style="color: #34d399;">${connected}</span><span style="color: #71717a;">/</span><span style="color: #ef4444;">${disconnected}</span>
                 </span>
                 <span class="tab-close" title="Close tab">&times;</span>
@@ -368,6 +357,7 @@ class NeonovaDashboardView extends BaseNeonovaView {
                 e.stopPropagation();
                 await this.controller.getTabController().toggleNetworkTab(tab.label);
                 this.renderTabBar();
+                this.controller.getTabController().rebuildTable();
             });
 
             btn.querySelector('.tab-label').addEventListener('click', () => {
@@ -409,22 +399,20 @@ class NeonovaDashboardView extends BaseNeonovaView {
         });
         this.tabBar.appendChild(addBtn);
     }
-    
+
     attachHeaderListeners() {
         const privacyBtn = this.header.querySelector('#privacy-toggle-btn');
         if (privacyBtn) {
             privacyBtn.addEventListener('click', () => this.togglePrivacy());
-            this.updatePrivacyButton(privacyBtn);  // set correct eye / eye-slash on load
+            this.updatePrivacyButton(privacyBtn);
         }
-        
-        // Polling toggle
+
         const pollBtn = this.header.querySelector('#poll-toggle-btn');
         pollBtn?.addEventListener('click', () => {
             this.controller.togglePolling();
             this.updatePollingButton(pollBtn);
         });
 
-        // Slider
         const slider = this.header.querySelector('#polling-interval-slider-tooltip');
         const intervalDisplay = this.header.querySelector('#interval-value-tooltip');
         slider?.addEventListener('input', () => {
@@ -436,19 +424,15 @@ class NeonovaDashboardView extends BaseNeonovaView {
             if (mainSpan) mainSpan.textContent = `· ${minutes} min`;
         });
 
-        // Refresh
         this.header.querySelector('.refresh-btn')?.addEventListener('click', () => this.controller.poll());
 
-        // Add customer
         this.header.querySelector('#add-customer-btn')?.addEventListener('click', () => {
             this.controller.showAddCustomer();
         });
 
-        // Admins modal
         this.header.querySelector('#admins-btn')?.addEventListener('click', () => {
             this.controller.showAdminModal();
         });
-        
     }
 
     updatePollingButton(btn) {
@@ -474,20 +458,15 @@ class NeonovaDashboardView extends BaseNeonovaView {
         const slider = this.header.querySelector('#polling-interval-slider-tooltip');
         if (slider) slider.value = this.controller.model.pollingIntervalMinutes;
 
-        // Last Updated now comes straight from the model (view does zero work)
         this.updateLastUpdated();
     }
 
     updateLastUpdated() {
         const valueSpan = this.header.querySelector('#last-updated-value');
         if (!valueSpan) return;
-
-        // This is the ONLY place the view touches the timestamp
-        // → Your MODEL/CONTROLLER is now responsible for the string
         valueSpan.textContent = this.controller.model.lastUpdatedDisplay || 'Never';
     }
 
-    // ====================== STYLE MORPH ======================
     applyMinimizedStyles() {
         const headerHeight = this.header.offsetHeight || 72;
         this.panel.style.height = `${headerHeight}px`;
@@ -513,14 +492,11 @@ class NeonovaDashboardView extends BaseNeonovaView {
         this.panel.classList.remove('minimized');
     }
 
-    // ====================== RENDER ===================
     render() {
-        // No more row generation here
-        this.updateHeader();          // keep — updates polling button, last-updated, etc.
-        this.updateLastUpdated();     // if separate; or fold into updateHeader()
+        this.updateHeader();
+        this.updateLastUpdated();
     }
 
-    // ====================== TOGGLE (now pure morph – no duplicate DOM, no black box) ======================
     toggleMinimize() {
         this.isMinimized = !this.isMinimized;
 
@@ -538,17 +514,17 @@ class NeonovaDashboardView extends BaseNeonovaView {
     async togglePrivacy() {
         this.controller.model.settings.privacyEnabled = !this.controller.model.settings.privacyEnabled;
         await this.controller.model.saveSettings();
-    
+
         this.applyPrivacyBlur();
-        
+
         const btn = this.header.querySelector('#privacy-toggle-btn');
         this.updatePrivacyButton(btn);
     }
-    
+
     updatePrivacyButton(btn) {
         if (!btn) return;
         const enabled = this.controller.model.settings.privacyEnabled;
-        
+
         if (enabled) {
             btn.textContent = 'Privacy On';
             btn.className = 'px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-2xl flex items-center justify-center transition-all border border-zinc-700 shadow-sm';
@@ -559,12 +535,11 @@ class NeonovaDashboardView extends BaseNeonovaView {
             btn.title = 'Privacy OFF — names visible';
         }
     }
-    
+
     applyPrivacyBlur() {
         const tbody = this.panel.querySelector('#customer-table-body');
         if (tbody) {
             tbody.classList.toggle('neonova-privacy-mode', this.controller.model.settings.privacyEnabled);
         }
     }
-
 }
