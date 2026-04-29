@@ -39,8 +39,7 @@ class NeonovaCustomerView extends BaseNeonovaView {
         };
         const style = statusStyles[status] || statusStyles['Unknown'];
 
-        const bellIcon       = cust.alertsSuppressed ? 'fa-bell-slash' : 'fa-bell';
-        const bellColor      = cust.alertsSuppressed ? 'text-zinc-500' : 'text-emerald-400';
+        const bellColor = cust.alertsSuppressed ? 'text-red-400' : 'text-emerald-400';
         const bellTitle      = cust.alertsSuppressed
             ? 'Alerts SUPPRESSED for this modem (click to enable)'
             : 'Alerts ACTIVE for this modem (click to suppress)';
@@ -50,7 +49,7 @@ class NeonovaCustomerView extends BaseNeonovaView {
                 <span class="alert-bell-toggle cursor-pointer mr-1.5 align-middle ${bellColor} hover:brightness-125"
                       title="${bellTitle}"
                       aria-label="Toggle alerts for this modem">
-                    <i class="fas ${bellIcon}"></i>
+                    <i class="fas fa-bell"></i>
                 </span>
                 <span class="friendly-name cursor-pointer select-none" title="Click to edit name">
                     ${cust.friendlyName || cust.radiusUsername}
