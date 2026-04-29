@@ -253,7 +253,7 @@ class NeonovaDashboardView extends BaseNeonovaView {
                     display: block !important;
                 }
                 .neonova-tab-btn {
-                    padding: 6px 18px;
+                    padding: 6px 14px;
                     border-radius: 12px 12px 0 0;
                     font-size: 13px;
                     font-weight: 500;
@@ -409,31 +409,7 @@ class NeonovaDashboardView extends BaseNeonovaView {
         });
         this.tabBar.appendChild(addBtn);
     }
-
-    /**
-    clearRows() {
-        const tbody = this.panel.querySelector('#customer-table-body');
-        if (tbody) tbody.replaceChildren();  // modern, clean (or innerHTML = '')
-    }
     
-    appendRow(trElement) {
-        const tbody = this.panel.querySelector('#customer-table-body');
-        if (tbody && trElement instanceof HTMLElement) {
-            tbody.appendChild(trElement);
-        }
-    }
-    
-    setRows(rowElements) {
-        this.clearRows();
-        if (!Array.isArray(rowElements)) return;
-        const fragment = document.createDocumentFragment();
-        rowElements.forEach(tr => {
-            if (tr instanceof HTMLElement) fragment.appendChild(tr);
-        });
-        const tbody = this.panel.querySelector('#customer-table-body');
-        if (tbody) tbody.appendChild(fragment);
-    }
-**/
     attachHeaderListeners() {
         const privacyBtn = this.header.querySelector('#privacy-toggle-btn');
         if (privacyBtn) {
