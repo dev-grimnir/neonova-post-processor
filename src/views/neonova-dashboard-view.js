@@ -467,6 +467,12 @@ class NeonovaDashboardView extends BaseNeonovaView {
         this.header.querySelector('#add-customer-btn')?.addEventListener('click', () => {
             this.controller.showAddCustomer();
         });
+
+        // Admins modal
+        this.header.querySelector('#admins-btn')?.addEventListener('click', () => {
+            this.controller.showAdminModal();
+        });
+        
     }
 
     updatePollingButton(btn) {
