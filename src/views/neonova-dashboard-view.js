@@ -344,7 +344,7 @@ class NeonovaDashboardView extends BaseNeonovaView {
                 <span class="tab-bell"
                       title="${bellTitle}"
                       style="margin-right:8px; color:${bellColor}; cursor:pointer; display:inline-block; width:14px; text-align:center;">
-                    <i class="fas fa-bell"></i>
+                    <i class="far fa-bell"></i>
                 </span>
                 <span class="tab-label">${tab.label}</span>
                 <span style="margin-left: 8px; font-size: 12px; font-weight: 600; font-family: ui-monospace, monospace;">
